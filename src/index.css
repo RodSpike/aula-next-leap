@@ -2,39 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Aula Click Design System - Modern Educational Platform
+All colors MUST be HSL for consistency and theming.
 */
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 215 25% 27%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 27%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Brand Colors - Modern Blue & Green */
+    --primary: 212 95% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 212 95% 65%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 158 64% 52%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 158 64% 95%;
+    --accent-foreground: 158 64% 20%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 212 95% 50%;
+
+    /* Educational Theme Colors */
+    --success: 158 64% 52%;
+    --success-foreground: 0 0% 100%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 43 96% 10%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(212 95% 50%), hsl(158 64% 52%));
+    --gradient-secondary: linear-gradient(135deg, hsl(158 64% 52%), hsl(212 95% 65%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(214 32% 98%));
+    --gradient-hero: linear-gradient(135deg, hsl(212 95% 50% / 0.1), hsl(158 64% 52% / 0.05));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px hsl(215 25% 27% / 0.05);
+    --shadow-md: 0 4px 6px hsl(215 25% 27% / 0.07);
+    --shadow-lg: 0 10px 15px hsl(215 25% 27% / 0.1);
+    --shadow-xl: 0 20px 25px hsl(215 25% 27% / 0.15);
+    --shadow-glow: 0 0 40px hsl(212 95% 50% / 0.3);
+
+    /* Animations */
+    --transition-base: all 0.2s ease;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --radius: 0.5rem;
 

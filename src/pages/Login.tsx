@@ -1,0 +1,124 @@
+import { useState } from "react";
+import { Navigation } from "@/components/Navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle login logic here
+    console.log("Login attempt:", { email, password });
+  };
+
+  const handleGoogleLogin = () => {
+    // Handle Google login logic here
+    console.log("Google login attempted");
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-subtle">
+      <Navigation />
+      
+      <div className="flex items-center justify-center px-4 sm:px-6 lg:px-8 py-20">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-2xl font-bold">Bem-vindo de volta!</CardTitle>
+            <p className="text-muted-foreground">
+              Faça login para continuar sua jornada de aprendizado
+            </p>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {/* Google Login Button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleLogin}
+            >
+              <Chrome className="mr-2 h-5 w-5" />
+              Continuar com Google
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Ou continue com email
+                </span>
+              </div>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    className="pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                    Esqueceu a senha?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              
+              <Button type="submit" variant="hero" className="w-full">
+                Entrar
+              </Button>
+            </form>
+            
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">Não tem uma conta? </span>
+              <Link to="/signup" className="text-primary font-medium hover:underline">
+                Cadastre-se gratuitamente
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
