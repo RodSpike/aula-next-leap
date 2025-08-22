@@ -72,10 +72,11 @@ export default function AiChat() {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error('Error sending message:', error);
+      const details = error?.message || error?.error || 'Unknown error';
       toast({
-        title: "Error",
-        description: "Failed to get response from AI tutor. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to get response from AI tutor. ${details}`,
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);

@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
@@ -17,6 +18,7 @@ serve(async (req) => {
   try {
     const { message, conversation_history } = await req.json();
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    console.log('OPENAI key present:', !!openAIApiKey);
 
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
