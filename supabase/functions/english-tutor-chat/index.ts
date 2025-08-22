@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Read OPENAI_API_KEY inside the handler to ensure the latest value is used
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +16,7 @@ serve(async (req) => {
 
   try {
     const { message, conversation_history } = await req.json();
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
