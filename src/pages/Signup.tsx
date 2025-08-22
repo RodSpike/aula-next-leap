@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, User, Chrome, Gift } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,26 +23,117 @@ export default function Signup() {
     agreeToTerms: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { signUp, signInWithGoogle, user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
-      alert("Senhas não conferem!");
+      toast({
+        title: "Erro",
+        description: "As senhas não conferem!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 8 caracteres.",
+        variant: "destructive",
+      });
       return;
     }
     
     if (!formData.agreeToTerms) {
-      alert("Você deve aceitar os termos de uso!");
+      toast({
+        title: "Erro",
+        description: "Você deve aceitar os termos de uso!",
+        variant: "destructive",
+      });
       return;
     }
+
+    setLoading(true);
     
-    // Handle signup logic here
-    console.log("Signup attempt:", formData);
+    try {
+      const { error } = await signUp(formData.email, formData.password, formData.name);
+      
+      if (error) {
+        toast({
+          title: "Erro no cadastro",
+          description: error.message === "User already registered" 
+            ? "Este email já está cadastrado. Tente fazer login."
+            : "Erro ao criar conta. Tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Conta criada!",
+          description: "Bem-vindo ao Aula Click! Seus 3 dias grátis começaram agora.",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Algo deu errado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleSignup = () => {
-    // Handle Google signup logic here
-    console.log("Google signup attempted");
+  const handleGoogleSignup = async () => {
+    if (!formData.agreeToTerms) {
+      toast({
+        title: "Erro",
+        description: "Você deve aceitar os termos de uso!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        toast({
+          title: "Erro no cadastro",
+          description: "Erro ao criar conta com Google. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Algo deu errado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: keyof typeof formData) => (
@@ -76,6 +170,7 @@ export default function Signup() {
               variant="outline"
               className="w-full"
               onClick={handleGoogleSignup}
+              disabled={loading}
             >
               <Chrome className="mr-2 h-5 w-5" />
               Continuar com Google
@@ -193,8 +288,8 @@ export default function Signup() {
                 </Label>
               </div>
               
-              <Button type="submit" variant="hero" className="w-full">
-                Começar Teste Grátis
+              <Button type="submit" variant="hero" className="w-full" disabled={loading}>
+                {loading ? "Criando conta..." : "Começar Teste Grátis"}
               </Button>
             </form>
             

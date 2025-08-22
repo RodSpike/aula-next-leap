@@ -1,11 +1,37 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, Users, Star } from "lucide-react";
+import { Menu, X, BookOpen, Users, Star, User, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logout realizado",
+        description: "Até logo!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer logout.",
+        variant: "destructive",
+      });
+    }
+  };
   
   const navigation = [
     { name: "Início", href: "/", icon: BookOpen },
@@ -48,12 +74,37 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/login">Entrar</Link>
-            </Button>
-            <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Começar Agora</Link>
-            </Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <User className="h-4 w-4 mr-2" />
+                    Minha Conta
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard">
+                      <User className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">Entrar</Link>
+                </Button>
+                <Button variant="hero" size="sm" asChild>
+                  <Link to="/signup">Começar Agora</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -89,12 +140,25 @@ export const Navigation = () => {
               </Link>
             ))}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
-              </Button>
-              <Button variant="hero" size="sm" asChild>
-                <Link to="/signup" onClick={() => setIsOpen(false)}>Começar Agora</Link>
-              </Button>
+              {user ? (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setIsOpen(false); handleSignOut(); }}>
+                    Sair
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+                  </Button>
+                  <Button variant="hero" size="sm" asChild>
+                    <Link to="/signup" onClick={() => setIsOpen(false)}>Começar Agora</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
