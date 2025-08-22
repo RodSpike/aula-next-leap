@@ -16,66 +16,66 @@ import {
 import { Link } from "react-router-dom";
 
 const Index = () => {
-  const stats = [
-    { icon: Users, label: "Estudantes Ativos", value: "10.000+" },
-    { icon: BookOpen, label: "Cursos Disponíveis", value: "500+" },
-    { icon: Star, label: "Avaliação Média", value: "4.9/5" },
-    { icon: MessageSquare, label: "Comunidade", value: "50+" },
+const stats = [
+    { icon: Users, label: "Active Students", value: "10,000+" },
+    { icon: BookOpen, label: "English Courses", value: "50+" },
+    { icon: Star, label: "Average Rating", value: "4.9/5" },
+    { icon: MessageSquare, label: "Community Groups", value: "100+" },
   ];
 
-  const featuredCourses = [
+const featuredCourses = [
     {
       id: "1",
-      title: "Desenvolvimento Web Completo",
-      instructor: "Ana Silva",
+      title: "Complete English Grammar",
+      instructor: "Sarah Johnson",
       students: 1250,
       rating: 4.8,
       duration: "40h",
       image: "/placeholder.svg",
-      price: "R$ 197"
+      price: "$49"
     },
     {
       id: "2", 
-      title: "Design UI/UX Moderno",
-      instructor: "Carlos Mendes",
+      title: "Business English Mastery",
+      instructor: "Michael Brown",
       students: 890,
       rating: 4.9,
       duration: "25h",
       image: "/placeholder.svg",
-      price: "R$ 149"
+      price: "$39"
     },
     {
       id: "3",
-      title: "Marketing Digital Avançado", 
-      instructor: "Marina Costa",
+      title: "Advanced Conversation Skills", 
+      instructor: "Emma Davis",
       students: 2100,
       rating: 4.7,
       duration: "30h",
       image: "/placeholder.svg",
-      price: "R$ 179"
+      price: "$45"
     }
   ];
 
-  const features = [
+const features = [
     {
       icon: BookOpen,
-      title: "Cursos Completos",
-      description: "Centenas de cursos estruturados com conteúdo atualizado e projetos práticos."
+      title: "Complete English Courses",
+      description: "Structured English courses with updated content and practical exercises."
     },
     {
       icon: Users,
-      title: "Comunidade Ativa",
-      description: "Conecte-se com outros estudantes, tire dúvidas e compartilhe conhecimento."
+      title: "Active Community",
+      description: "Connect with other English learners, ask questions and share knowledge."
     },
     {
       icon: MessageSquare,
-      title: "IA Assistant",
-      description: "Seu professor virtual está sempre disponível para esclarecer dúvidas."
+      title: "AI English Tutor",
+      description: "Your virtual English teacher is always available to help you learn."
     },
     {
       icon: Star,
-      title: "Qualidade Garantida",
-      description: "Todos os cursos são avaliados pela comunidade e constantemente atualizados."
+      title: "Quality Guaranteed",
+      description: "All courses are evaluated by the community and constantly updated."
     }
   ];
 
@@ -106,10 +106,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Por que escolher a Aula Click?
+              Why choose English Academy?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Uma plataforma completa de aprendizado online com tudo que você precisa para alcançar seus objetivos.
+              A complete online English learning platform with everything you need to achieve your goals.
             </p>
           </div>
           
@@ -136,10 +136,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Cursos em Destaque
+              Featured English Courses
             </h2>
             <p className="text-lg text-muted-foreground">
-              Descubra os cursos mais populares da nossa plataforma
+              Discover the most popular English courses on our platform
             </p>
           </div>
           
@@ -151,7 +151,7 @@ const Index = () => {
                     <Play className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-                    Destaque
+                    Featured
                   </Badge>
                 </div>
                 
@@ -159,7 +159,7 @@ const Index = () => {
                   <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
                     {course.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">por {course.instructor}</p>
+                  <p className="text-sm text-muted-foreground mb-4">by {course.instructor}</p>
                   
                   <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                     <div className="flex items-center space-x-1">
@@ -179,7 +179,7 @@ const Index = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-primary">{course.price}</span>
                     <Button variant="outline" size="sm">
-                      Ver Curso
+                      View Course
                     </Button>
                   </div>
                 </CardContent>
@@ -190,7 +190,7 @@ const Index = () => {
           <div className="text-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/courses">
-                Ver Todos os Cursos
+                View All Courses
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -204,29 +204,29 @@ const Index = () => {
           <Card className="bg-gradient-primary text-white p-12">
             <CardContent className="space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold">
-                Comece sua jornada de aprendizado hoje
+                Start your English learning journey today
               </h2>
               <p className="text-lg opacity-90 max-w-2xl mx-auto">
-                Junte-se a milhares de estudantes que já transformaram suas carreiras 
-                com nossos cursos. Teste grátis por 3 dias!
+                Join thousands of students who have already improved their English skills 
+                with our courses. Free 3-day trial!
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Button variant="secondary" size="xl" asChild>
                   <Link to="/signup">
                     <CheckCircle className="mr-2 h-5 w-5" />
-                    Começar Teste Grátis
+                    Start Free Trial
                   </Link>
                 </Button>
                 <Button variant="outline" size="xl" className="bg-transparent border-white text-white hover:bg-white hover:text-primary" asChild>
                   <Link to="/pricing">
-                    Ver Preços
+                    View Pricing
                   </Link>
                 </Button>
               </div>
               
               <p className="text-sm opacity-75">
-                ✓ Sem compromisso  ✓ Cancele quando quiser  ✓ Acesso completo
+                ✓ No commitment  ✓ Cancel anytime  ✓ Full access
               </p>
             </CardContent>
           </Card>

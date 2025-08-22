@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, Users, Star, User, LogOut } from "lucide-react";
+import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,23 +21,23 @@ export const Navigation = () => {
     try {
       await signOut();
       toast({
-        title: "Logout realizado",
-        description: "Até logo!",
+        title: "Signed out",
+        description: "See you later!",
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Erro ao fazer logout.",
+        title: "Error",
+        description: "Error signing out.",
         variant: "destructive",
       });
     }
   };
   
   const navigation = [
-    { name: "Início", href: "/", icon: BookOpen },
-    { name: "Cursos", href: "/courses", icon: BookOpen },
-    { name: "Comunidade", href: "/community", icon: Users },
-    { name: "Preços", href: "/pricing", icon: Star },
+    { name: "Home", href: "/", icon: BookOpen },
+    { name: "Courses", href: "/courses", icon: BookOpen },
+    { name: "Community", href: "/community", icon: Users },
+    { name: "AI Chat", href: "/ai-chat", icon: MessageSquare },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -51,7 +51,7 @@ export const Navigation = () => {
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">Aula Click</span>
+            <span className="text-xl font-bold text-foreground">English Academy</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -79,7 +79,7 @@ export const Navigation = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
                     <User className="h-4 w-4 mr-2" />
-                    Minha Conta
+                    My Account
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -91,17 +91,17 @@ export const Navigation = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sair
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Entrar</Link>
+                  <Link to="/login">Sign In</Link>
                 </Button>
                 <Button variant="hero" size="sm" asChild>
-                  <Link to="/signup">Começar Agora</Link>
+                  <Link to="/signup">Get Started</Link>
                 </Button>
               </>
             )}
@@ -146,16 +146,16 @@ export const Navigation = () => {
                     <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => { setIsOpen(false); handleSignOut(); }}>
-                    Sair
+                    Sign Out
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+                    <Link to="/login" onClick={() => setIsOpen(false)}>Sign In</Link>
                   </Button>
                   <Button variant="hero" size="sm" asChild>
-                    <Link to="/signup" onClick={() => setIsOpen(false)}>Começar Agora</Link>
+                    <Link to="/signup" onClick={() => setIsOpen(false)}>Get Started</Link>
                   </Button>
                 </>
               )}

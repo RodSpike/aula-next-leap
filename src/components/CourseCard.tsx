@@ -14,7 +14,7 @@ interface Course {
   rating: number;
   price: string;
   image: string;
-  level: "Iniciante" | "Intermediário" | "Avançado";
+  level: "Beginner" | "Intermediate" | "Advanced";
   category: string;
 }
 
@@ -25,11 +25,11 @@ interface CourseCardProps {
 export const CourseCard = ({ course }: CourseCardProps) => {
   const getLevelColor = (level: string) => {
     switch (level) {
-      case "Iniciante":
+      case "Beginner":
         return "bg-success/10 text-success border-success/20";
-      case "Intermediário":
+      case "Intermediate":
         return "bg-warning/10 text-warning border-warning/20";
-      case "Avançado":
+      case "Advanced":
         return "bg-destructive/10 text-destructive border-destructive/20";
       default:
         return "bg-muted text-muted-foreground";
@@ -78,7 +78,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
         </div>
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>por {course.instructor}</span>
+          <span>by {course.instructor}</span>
         </div>
 
         <div className="flex items-center justify-between">
@@ -101,7 +101,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
       <CardFooter className="p-6 pt-0">
         <Button variant="outline" className="w-full group-hover:variant-primary" asChild>
           <Link to={`/courses/${course.id}`}>
-            Ver Curso
+            View Course
           </Link>
         </Button>
       </CardFooter>

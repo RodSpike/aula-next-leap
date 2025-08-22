@@ -4,108 +4,108 @@ import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, BookOpen, Code, Palette, TrendingUp } from "lucide-react";
+import { Search, Filter, BookOpen, MessageSquare, Users, Clock } from "lucide-react";
 
-// Mock courses data
+// English courses data
 const courses = [
   {
     id: "1",
-    title: "Desenvolvimento Web Completo com React e Node.js",
-    description: "Aprenda a criar aplicações web modernas do zero, desde o frontend até o backend, com as tecnologias mais utilizadas no mercado.",
-    instructor: "Ana Silva",
+    title: "Complete English Grammar Mastery",
+    description: "Master English grammar from basic to advanced level with practical exercises and real-world examples.",
+    instructor: "Sarah Johnson",
     duration: "40h",
     students: 1250,
     rating: 4.8,
-    price: "R$ 197",
+    price: "$49",
     image: "/placeholder.svg",
-    level: "Intermediário" as const,
-    category: "Desenvolvimento",
+    level: "Intermediate" as const,
+    category: "Grammar",
   },
   {
     id: "2",
-    title: "Design UI/UX: Do Conceito ao Protótipo",
-    description: "Domine os princípios fundamentais do design de interfaces e experiência do usuário, criando protótipos profissionais.",
-    instructor: "Carlos Mendes",
+    title: "Business English Communication",
+    description: "Professional English for workplace communication, presentations, and business writing.",
+    instructor: "Michael Brown",
     duration: "25h",
     students: 890,
     rating: 4.9,
-    price: "R$ 149",
+    price: "$39",
     image: "/placeholder.svg",
-    level: "Iniciante" as const,
-    category: "Design",
+    level: "Advanced" as const,
+    category: "Business",
   },
   {
     id: "3",
-    title: "Marketing Digital Avançado",
-    description: "Estratégias avançadas de marketing digital, SEO, redes sociais e análise de dados para maximizar seus resultados online.",
-    instructor: "Marina Costa",
+    title: "English Conversation Practice",
+    description: "Improve your speaking skills with interactive conversations and pronunciation practice.",
+    instructor: "Emma Davis",
     duration: "30h",
     students: 2100,
     rating: 4.7,
-    price: "R$ 179",
+    price: "$45",
     image: "/placeholder.svg",
-    level: "Avançado" as const,
-    category: "Marketing",
+    level: "Intermediate" as const,
+    category: "Speaking",
   },
   {
     id: "4",
-    title: "Python para Análise de Dados",
-    description: "Utilize Python e suas bibliotecas para análise de dados, visualização e machine learning básico.",
-    instructor: "Dr. Roberto Lima",
+    title: "English for Beginners",
+    description: "Start your English learning journey with basic vocabulary, grammar, and everyday conversations.",
+    instructor: "James Wilson",
     duration: "35h",
     students: 1680,
     rating: 4.8,
-    price: "R$ 189",
+    price: "$35",
     image: "/placeholder.svg",
-    level: "Intermediário" as const,
-    category: "Dados",
+    level: "Beginner" as const,
+    category: "Basic",
   },
   {
     id: "5",
-    title: "Fotografia Digital Profissional",
-    description: "Técnicas avançadas de fotografia digital, edição e composição para criar imagens impactantes.",
-    instructor: "Lucas Ferreira",
+    title: "IELTS Preparation Course",
+    description: "Comprehensive preparation for IELTS exam with practice tests and expert strategies.",
+    instructor: "Lisa Chen",
     duration: "20h",
     students: 750,
     rating: 4.9,
-    price: "R$ 129",
+    price: "$65",
     image: "/placeholder.svg",
-    level: "Iniciante" as const,
-    category: "Fotografia",
+    level: "Advanced" as const,
+    category: "Test Prep",
   },
   {
     id: "6",
-    title: "Empreendedorismo Digital",
-    description: "Aprenda a criar e escalar seu negócio digital do zero, com estratégias práticas e cases de sucesso.",
-    instructor: "Paula Santos",
+    title: "English Writing Skills",
+    description: "Improve your English writing for essays, emails, and creative expression.",
+    instructor: "Robert Taylor",
     duration: "28h",
     students: 980,
     rating: 4.6,
-    price: "R$ 167",
+    price: "$42",
     image: "/placeholder.svg",
-    level: "Intermediário" as const,
-    category: "Negócios",
+    level: "Intermediate" as const,
+    category: "Writing",
   },
 ];
 
 const categories = [
-  { name: "Todos", icon: BookOpen },
-  { name: "Desenvolvimento", icon: Code },
-  { name: "Design", icon: Palette },
-  { name: "Marketing", icon: TrendingUp },
-  { name: "Dados", icon: Filter },
-  { name: "Fotografia", icon: Filter },
-  { name: "Negócios", icon: TrendingUp },
+  { name: "All", icon: BookOpen },
+  { name: "Basic", icon: Users },
+  { name: "Grammar", icon: BookOpen },
+  { name: "Business", icon: MessageSquare },
+  { name: "Speaking", icon: MessageSquare },
+  { name: "Writing", icon: Filter },
+  { name: "Test Prep", icon: Clock },
 ];
 
 export default function Courses() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   
   const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "Todos" || course.category === selectedCategory;
+    const matchesCategory = selectedCategory === "All" || course.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -118,18 +118,18 @@ export default function Courses() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-              Catálogo de Cursos
+              English Course Catalog
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Descubra centenas de cursos online ministrados por especialistas. 
-              Comece sua jornada de aprendizado hoje mesmo.
+              Discover our comprehensive English courses taught by expert instructors. 
+              Start your learning journey today.
             </p>
             
             {/* Search */}
             <div className="max-w-md mx-auto relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cursos..."
+                placeholder="Search for courses..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,7 +164,7 @@ export default function Courses() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-foreground">
-              {filteredCourses.length} curso{filteredCourses.length !== 1 ? 's' : ''} encontrado{filteredCourses.length !== 1 ? 's' : ''}
+              {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''} found
             </h2>
             
             <div className="flex items-center space-x-2">
@@ -186,10 +186,10 @@ export default function Courses() {
                 <Search className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                Nenhum curso encontrado
+                No courses found
               </h3>
               <p className="text-muted-foreground">
-                Tente ajustar sua busca ou filtros para encontrar cursos.
+                Try adjusting your search or filters to find courses.
               </p>
             </div>
           )}
