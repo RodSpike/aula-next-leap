@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Set up auth state listener
@@ -74,6 +78,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         redirectTo: redirectUrl,
       }
     });
+    
+    // Check if user needs onboarding after Google signup
+    if (!error) {
+      // Wait a moment for the session to be established
+      setTimeout(async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('birthdate, cambridge_level')
+            .eq('user_id', session.user.id)
+            .single();
+            
+          if (!profile?.birthdate) {
+            navigate("/onboarding");
+          }
+        }
+      }, 1000);
+    }
     
     return { error };
   };

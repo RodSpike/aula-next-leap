@@ -87,10 +87,12 @@ export default function Signup() {
         });
       } else {
         toast({
-          title: "Conta criada!",
-          description: "Bem-vindo ao Aula Click! Seus 3 dias grátis começaram agora.",
+          title: "Success!",
+          description: "Account created successfully! Please check your email to verify your account.",
         });
-        navigate("/");
+        
+        // Redirect to onboarding after successful signup
+        navigate("/onboarding");
       }
     } catch (error) {
       toast({
