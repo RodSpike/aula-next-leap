@@ -724,83 +724,175 @@ export default function AdminPanel() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gerenciamento de Usuários</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Função</TableHead>
-                      <TableHead>Criado em</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => {
-                      const subscription = getSubscriptionStatus(user.user_subscriptions);
-                      const userRole = user.user_roles?.[0]?.role || 'user';
-                      
-                      return (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">
-                            {user.profiles.display_name || 'Sem nome'}
-                          </TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={user.user_subscriptions.plan}
-                              onValueChange={(value) => updateUserSubscription(user.id, value)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="free">Gratuito</SelectItem>
-                                <SelectItem value="paid">Pago</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={userRole}
-                              onValueChange={(value) => updateUserRole(user.id, value as 'user' | 'admin')}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user">Usuário</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteUser(user.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* User Management */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gerenciamento de Usuários</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Função</TableHead>
+                          <TableHead>Criado em</TableHead>
+                          <TableHead>Ações</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => {
+                          const subscription = getSubscriptionStatus(user.user_subscriptions);
+                          const userRole = user.user_roles?.[0]?.role || 'user';
+                          const isCurrentUser = user.id === user?.id;
+                          
+                          return (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">
+                                {user.profiles.display_name || 'Sem nome'}
+                                {user.email === 'luccadtoledo@gmail.com' && (
+                                  <Badge variant="default" className="ml-2">Super Admin</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>
+                                <Select
+                                  value={user.user_subscriptions.plan}
+                                  onValueChange={(value) => updateUserSubscription(user.id, value)}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="free">Gratuito</SelectItem>
+                                    <SelectItem value="paid">Pago</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={userRole}
+                                  onValueChange={(value) => updateUserRole(user.id, value as 'user' | 'admin')}
+                                  disabled={user.email === 'luccadtoledo@gmail.com'}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="user">Usuário</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(user.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  {user.email !== 'luccadtoledo@gmail.com' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => deleteUser(user.id)}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Admin Management Panel */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Gerenciar Admins
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Administradores Atuais</h4>
+                    {users
+                      .filter(u => u.user_roles?.some(role => role.role === 'admin'))
+                      .map((admin) => (
+                        <div key={admin.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">
+                              {admin.profiles.display_name || 'Sem nome'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{admin.email}</p>
+                            {admin.email === 'luccadtoledo@gmail.com' && (
+                              <Badge variant="default" className="mt-1">Super Admin</Badge>
+                            )}
+                          </div>
+                          {admin.email !== 'luccadtoledo@gmail.com' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateUserRole(admin.id, 'user')}
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t">
+                    <h4 className="text-sm font-medium text-muted-foreground">Promover a Admin</h4>
+                    {users
+                      .filter(u => !u.user_roles?.some(role => role.role === 'admin'))
+                      .slice(0, 5)
+                      .map((user) => (
+                        <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">
+                              {user.profiles.display_name || 'Sem nome'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateUserRole(user.id, 'admin')}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Shield className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Privilégios de Admin:</span>
+                      </div>
+                      <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                        <li>• Acesso completo ao painel admin</li>
+                        <li>• Gerenciar usuários e conteúdo</li>
+                        <li>• Moderar grupos e mensagens</li>
+                        <li>• Controlar assinaturas</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Content Tab */}
