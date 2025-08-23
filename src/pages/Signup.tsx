@@ -23,14 +23,12 @@ export default function Signup() {
     agreeToTerms: false,
   });
 
-  const { signUp, signInWithGoogle, user } = useAuth();
+  const { signUp, signInWithGoogle, user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
+    // Não redirecionar automaticamente: permite sair e criar outra conta nesta página
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,6 +170,24 @@ export default function Signup() {
           </CardHeader>
           
           <CardContent className="space-y-6">
+            {user && (
+              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm mb-2">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">Você já está logado</div>
+                    <p className="text-blue-800 dark:text-blue-200">Se deseja criar outra conta, saia primeiro.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/dashboard">Ir para o Dashboard</Link>
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={async () => { await signOut(); toast({ title: "Saiu da conta", description: "Agora você pode criar uma nova conta." }); }}>
+                      Sair e criar outra conta
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Google Signup Button */}
             <Button
               variant="outline"

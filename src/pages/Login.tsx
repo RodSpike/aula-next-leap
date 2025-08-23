@@ -16,14 +16,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signInWithGoogle, user } = useAuth();
+  const { signIn, signInWithGoogle, user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
+    // Não redirecionar automaticamente: permite trocar de conta na página de login
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
