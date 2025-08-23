@@ -17,14 +17,12 @@ serve(async (req) => {
 
   try {
     const { message, conversation_history } = await req.json();
-    const openAIApiKeyRaw = Deno.env.get('OPENAI_API_KEY') ?? '';
-    const openAIApiKey = openAIApiKeyRaw.trim();
-    console.log('OPENAI key present:', !!openAIApiKey, 'length:', openAIApiKey?.length || 0);
-
-    if (!openAIApiKey || openAIApiKey.length < 20) {
-      console.error('OpenAI API key not configured or invalid');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY') ?? '';
+    
+    if (!geminiApiKey) {
+      console.error('Gemini API key not configured');
       return new Response(JSON.stringify({
-        error: 'OpenAI API key not configured'
+        error: 'Gemini API key not configured'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -34,11 +32,8 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('Conversation history length:', conversation_history?.length || 0);
 
-    // Prepare conversation context
-    const messages = [
-      {
-        role: 'system',
-        content: `You are an expert English tutor AI assistant. Your role is to help users learn and improve their English skills. You should:
+    // Prepare conversation context for Gemini
+    let conversationText = `You are an expert English tutor AI assistant. Your role is to help users learn and improve their English skills. You should:
 
 1. Be patient, encouraging, and supportive
 2. Provide clear explanations for grammar, vocabulary, and pronunciation
@@ -51,47 +46,49 @@ serve(async (req) => {
 9. Adapt your teaching style to the user's level
 10. Provide cultural context when relevant
 
-Always respond in a helpful, educational manner focused on English learning.`
-      }
-    ];
+Always respond in a helpful, educational manner focused on English learning.
+
+`;
 
     // Add conversation history (last 10 messages for context)
     if (conversation_history && Array.isArray(conversation_history)) {
       conversation_history.slice(-10).forEach((msg: any) => {
-        messages.push({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        });
+        conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
       });
     }
 
     // Add current message
-    messages.push({
-      role: 'user',
-      content: message
-    });
+    conversationText += `User: ${message}\nAssistant:`;
 
-    console.log('Sending request to OpenAI with', messages.length, 'messages');
+    console.log('Sending request to Gemini');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: messages,
-        max_tokens: 1000,
-        temperature: 0.7,
+        contents: [
+          {
+            parts: [
+              {
+                text: conversationText
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+        },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('Gemini API error:', response.status, errorText);
       return new Response(JSON.stringify({
-        error: `OpenAI API error: ${response.status} - ${errorText}`
+        error: `Gemini API error: ${response.status} - ${errorText}`
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -99,14 +96,14 @@ Always respond in a helpful, educational manner focused on English learning.`
     }
 
     const data = await response.json();
-    console.log('Received response from OpenAI');
+    console.log('Received response from Gemini');
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response structure from OpenAI:', data);
-      throw new Error('Invalid response from OpenAI');
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+      console.error('Invalid response structure from Gemini:', data);
+      throw new Error('Invalid response from Gemini');
     }
 
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.candidates[0].content.parts[0].text;
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
