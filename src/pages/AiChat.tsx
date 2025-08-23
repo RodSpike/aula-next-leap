@@ -61,9 +61,16 @@ export default function AiChat() {
       });
       if (error) throw error;
       if (data?.error) {
+        let errorMessage = 'Something went wrong with the AI tutor. Please try again.';
+        if (data.error.includes('OpenAI API key')) {
+          errorMessage = 'AI service is currently unavailable. Please try again later.';
+        } else if (data.error.includes('OpenAI API error')) {
+          errorMessage = 'AI service is experiencing issues. Please try again shortly.';
+        }
+        
         toast({
           title: 'Error',
-          description: data.error,
+          description: errorMessage,
           variant: 'destructive',
         });
         return;
