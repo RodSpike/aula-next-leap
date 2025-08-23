@@ -26,10 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Handle successful email confirmation
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Check if user needs onboarding
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('birthdate, cambridge_level')
+            .eq('user_id', session.user.id)
+            .single();
+            
+          if (!profile?.birthdate) {
+            navigate("/onboarding");
+          }
+        }
       }
     );
 
@@ -41,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;

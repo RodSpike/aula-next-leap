@@ -87,12 +87,13 @@ export default function Signup() {
         });
       } else {
         toast({
-          title: "Success!",
-          description: "Account created successfully! Please check your email to verify your account.",
+          title: "Conta criada com sucesso!",
+          description: "Verifique seu email e clique no link de confirmação para fazer login.",
+          duration: 8000,
         });
         
-        // Redirect to onboarding after successful signup
-        navigate("/onboarding");
+        // Don't redirect immediately, let user confirm email first
+        // They will be redirected after email confirmation
       }
     } catch (error) {
       toast({

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Chrome, Info } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -43,11 +43,19 @@ export default function Login() {
       const { error } = await signIn(email, password);
       
       if (error) {
+        let errorMessage = "Erro ao fazer login. Tente novamente.";
+        
+        if (error.message === "Invalid login credentials") {
+          errorMessage = "Email ou senha incorretos.";
+        } else if (error.message === "Email not confirmed") {
+          errorMessage = "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.";
+        }
+        
         toast({
           title: "Erro no login",
-          description: error.message === "Invalid login credentials" 
-            ? "Email ou senha incorretos."
-            : "Erro ao fazer login. Tente novamente.",
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -126,6 +134,17 @@ export default function Login() {
                   Ou continue com email
                 </span>
               </div>
+            </div>
+
+            {/* Email Confirmation Notice */}
+            <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-900 dark:text-blue-100">Primeira vez aqui?</span>
+              </div>
+              <p className="text-blue-800 dark:text-blue-200">
+                Se você criou uma conta via email, verifique sua caixa de entrada e clique no link de confirmação antes de fazer login.
+              </p>
             </div>
 
             {/* Login Form */}
