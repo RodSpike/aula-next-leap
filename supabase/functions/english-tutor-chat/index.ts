@@ -26,7 +26,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         error: 'OpenAI API key not configured'
       }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -93,7 +93,7 @@ Always respond in a helpful, educational manner focused on English learning.`
       return new Response(JSON.stringify({
         error: `OpenAI API error: ${response.status} - ${errorText}`
       }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -116,7 +116,7 @@ Always respond in a helpful, educational manner focused on English learning.`
     return new Response(JSON.stringify({ 
       error: (error as Error)?.message || 'Unknown error'
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

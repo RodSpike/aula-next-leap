@@ -60,7 +60,14 @@ export default function AiChat() {
         }
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        toast({
+          title: 'Error',
+          description: data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.response,
