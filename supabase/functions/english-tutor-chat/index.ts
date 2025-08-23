@@ -17,16 +17,16 @@ serve(async (req) => {
 
   try {
     const { message, conversation_history } = await req.json();
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    console.log('OPENAI key present:', !!openAIApiKey);
+    const openAIApiKeyRaw = Deno.env.get('OPENAI_API_KEY') ?? '';
+    const openAIApiKey = openAIApiKeyRaw.trim();
+    console.log('OPENAI key present:', !!openAIApiKey, 'length:', openAIApiKey?.length || 0);
 
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
+    if (!openAIApiKey || openAIApiKey.length < 20) {
+      console.error('OpenAI API key not configured or invalid');
       return new Response(JSON.stringify({
-        response: "I'm currently unable to access my language model. Please try again in a moment.",
         error: 'OpenAI API key not configured'
       }), {
-        status: 200,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -91,10 +91,9 @@ Always respond in a helpful, educational manner focused on English learning.`
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
       return new Response(JSON.stringify({
-        response: "I'm having trouble reaching the AI service right now. Please try again shortly.",
         error: `OpenAI API error: ${response.status} - ${errorText}`
       }), {
-        status: 200,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -115,10 +114,9 @@ Always respond in a helpful, educational manner focused on English learning.`
   } catch (error) {
     console.error('Error in english-tutor-chat function:', error);
     return new Response(JSON.stringify({ 
-      response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment.",
       error: (error as Error)?.message || 'Unknown error'
     }), {
-      status: 200,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

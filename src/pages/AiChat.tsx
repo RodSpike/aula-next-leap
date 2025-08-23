@@ -59,9 +59,8 @@ export default function AiChat() {
           conversation_history: messages.slice(-10) // Last 10 messages for context
         }
       });
-
       if (error) throw error;
-
+      if (data?.error) throw new Error(data.error);
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.response,
