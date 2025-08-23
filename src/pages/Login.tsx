@@ -46,9 +46,9 @@ export default function Login() {
         let errorMessage = "Erro ao fazer login. Tente novamente.";
         
         if (error.message === "Invalid login credentials") {
-          errorMessage = "Email ou senha incorretos.";
+          errorMessage = "Email ou senha incorretos. Você já tem uma conta? Verifique suas credenciais ou crie uma conta nova.";
         } else if (error.message === "Email not confirmed") {
-          errorMessage = "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.";
+          errorMessage = "Você já tem uma conta, mas precisa confirmar seu email. Verifique sua caixa de entrada.";
         } else if (error.message.includes("Email not confirmed")) {
           errorMessage = "Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.";
         }
@@ -59,11 +59,11 @@ export default function Login() {
           variant: "destructive",
         });
       } else {
+        // Don't navigate immediately, let auth state handle it
         toast({
           title: "Login realizado!",
           description: "Bem-vindo de volta!",
         });
-        navigate("/");
       }
     } catch (error) {
       toast({
@@ -87,6 +87,12 @@ export default function Login() {
           title: "Erro no login",
           description: "Erro ao fazer login com Google. Tente novamente.",
           variant: "destructive",
+        });
+      } else {
+        // Don't navigate here, let auth state handle it
+        toast({
+          title: "Login realizado!",
+          description: "Bem-vindo!",
         });
       }
     } catch (error) {
@@ -142,8 +148,14 @@ export default function Login() {
                 <Info className="h-4 w-4 text-blue-600" />
                 <span className="font-medium text-blue-900 dark:text-blue-100">Primeira vez aqui?</span>
               </div>
-              <p className="text-blue-800 dark:text-blue-200">
+              <p className="text-blue-800 dark:text-blue-200 mb-2">
                 Se você criou uma conta via email, verifique sua caixa de entrada e clique no link de confirmação antes de fazer login.
+              </p>
+              <p className="text-blue-800 dark:text-blue-200">
+                <strong>Não tem uma conta?</strong>{" "}
+                <Link to="/signup" className="font-medium underline hover:no-underline">
+                  Crie uma conta gratuitamente
+                </Link>
               </p>
             </div>
 

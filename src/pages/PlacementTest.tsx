@@ -37,6 +37,7 @@ const PlacementTest = () => {
         description: "Please log in to take the placement test",
         variant: "destructive",
       });
+      navigate("/login");
       return;
     }
 
@@ -46,15 +47,24 @@ const PlacementTest = () => {
         body: { action: 'start' }
       });
 
-      if (error) throw error;
+      console.log('Placement test response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to start placement test');
+      }
+
+      if (!data || !data.question) {
+        throw new Error('Invalid response from placement test service');
+      }
 
       setCurrentQuestion(data);
       setTestStarted(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting test:', error);
       toast({
         title: "Error",
-        description: "Failed to start the placement test. Please try again.",
+        description: error.message || "Failed to start the placement test. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -76,21 +86,40 @@ const PlacementTest = () => {
         }
       });
 
-      if (error) throw error;
+      console.log('Submit answer response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to submit answer');
+      }
+
+      if (!data) {
+        throw new Error('Invalid response from placement test service');
+      }
 
       if (data.finalAssessment) {
         setFinalResult(data);
         setCurrentQuestion(null);
+        
+        // Update user profile with the result
+        try {
+          await supabase
+            .from('profiles')
+            .update({ cambridge_level: data.level })
+            .eq('user_id', user.id);
+        } catch (profileError) {
+          console.error('Error updating profile:', profileError);
+        }
       } else {
         setCurrentQuestion(data);
       }
       
       setSelectedAnswer("");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting answer:', error);
       toast({
         title: "Error",
-        description: "Failed to submit answer. Please try again.",
+        description: error.message || "Failed to submit answer. Please try again.",
         variant: "destructive",
       });
     } finally {
