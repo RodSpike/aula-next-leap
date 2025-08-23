@@ -26,23 +26,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Handle successful email confirmation
+        // Handle successful email confirmation (defer Supabase calls)
         if (event === 'SIGNED_IN' && session?.user) {
-          // Check if user needs onboarding
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('birthdate, cambridge_level')
-            .eq('user_id', session.user.id)
-            .single();
-            
-          if (!profile?.birthdate) {
-            navigate("/onboarding");
-          }
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('birthdate, cambridge_level')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (!profile?.birthdate) {
+                navigate("/onboarding");
+              }
+            } catch (e) {
+              // no-op
+            }
+          }, 0);
         }
       }
     );
