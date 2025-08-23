@@ -274,10 +274,10 @@ export default function Community() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-              English Learning Community
+            Comunidade de Aprendizado
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Connect with fellow English learners, practice together, and share your progress.
+              Conecte-se com outros estudantes, pratique juntos e compartilhe seu progresso.
             </p>
           </div>
         </div>

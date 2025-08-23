@@ -67,7 +67,7 @@ export default function AiChat() {
         // If no messages exist, set welcome message
         const welcomeMessage: Message = {
           id: 'welcome',
-          content: "Hello! I'm your AI English tutor. I'm here to help you practice English, answer questions about grammar, vocabulary, and much more. What would you like to learn today?",
+          content: "Olá! Sou seu tutor de IA personalizado. Estou aqui para ajudá-lo a aprender, responder perguntas e oferecer suporte em seus estudos. No que posso ajudá-lo hoje?",
           role: 'assistant',
           timestamp: new Date()
         };
@@ -126,15 +126,15 @@ export default function AiChat() {
       });
       if (error) throw error;
       if (data?.error) {
-        let errorMessage = 'Something went wrong with the AI tutor. Please try again.';
+        let errorMessage = 'Algo deu errado com o tutor IA. Tente novamente.';
         if (data.error.includes('Gemini API key')) {
-          errorMessage = 'AI service is currently unavailable. Please try again later.';
+          errorMessage = 'Serviço de IA está temporariamente indisponível. Tente novamente mais tarde.';
         } else if (data.error.includes('Gemini API error')) {
-          errorMessage = 'AI service is experiencing issues. Please try again shortly.';
+          errorMessage = 'Serviço de IA está com problemas. Tente novamente em breve.';
         }
         
         toast({
-          title: 'Error',
+          title: 'Erro',
           description: errorMessage,
           variant: 'destructive',
         });
@@ -154,8 +154,8 @@ export default function AiChat() {
       console.error('Error sending message:', error);
       const details = error?.message || error?.error || 'Unknown error';
       toast({
-        title: 'Error',
-        description: `Failed to get response from AI tutor. ${details}`,
+        title: 'Erro',
+        description: `Falha ao obter resposta do tutor IA. ${details}`,
         variant: 'destructive',
       });
     } finally {
@@ -178,12 +178,12 @@ export default function AiChat() {
           <Card className="w-full max-w-md">
             <CardContent className="text-center p-8">
               <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">AI English Tutor</h3>
+              <h3 className="text-lg font-semibold mb-2">Tutor IA Personalizado</h3>
               <p className="text-muted-foreground mb-4">
-                Sign in to start practicing English with your AI tutor.
+                Entre para começar seus estudos com seu tutor de IA pessoal.
               </p>
               <Button asChild>
-                <a href="/login">Sign In</a>
+                <a href="/login">Entrar</a>
               </Button>
             </CardContent>
           </Card>
@@ -198,7 +198,7 @@ export default function AiChat() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            English Learning Chat
+            Chat de Aprendizado
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -274,7 +274,7 @@ export default function AiChat() {
               <div className="bg-muted rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">AI tutor is typing...</span>
+                  <span className="text-sm">O tutor IA está digitando...</span>
                 </div>
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function AiChat() {
       <div className="border-t p-4">
         <div className="flex gap-2">
           <Input
-            placeholder="Type your message here... (press Enter to send)"
+            placeholder="Digite sua mensagem aqui... (pressione Enter para enviar)"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -308,7 +308,7 @@ export default function AiChat() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Ask me about grammar, vocabulary, pronunciation, or practice conversations!
+          Faça perguntas sobre qualquer assunto, tire dúvidas ou pratique conversação!
         </p>
       </div>
     </Card>
@@ -325,11 +325,11 @@ export default function AiChat() {
               <div className="flex items-center justify-center gap-3">
                 <Bot className="h-12 w-12 text-primary" />
                 <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                  AI English Tutor
+                  Tutor IA Personalizado
                 </h1>
               </div>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Practice English conversation, get grammar help, and improve your skills with your personal AI tutor.
+                Converse, aprenda e tire suas dúvidas com seu tutor de IA pessoal disponível 24/7.
               </p>
             </div>
           </div>

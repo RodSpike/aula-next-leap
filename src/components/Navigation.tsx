@@ -21,23 +21,23 @@ export const Navigation = () => {
     try {
       await signOut();
       toast({
-        title: "Signed out",
-        description: "See you later!",
+        title: "Desconectado",
+        description: "Até mais!",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Error signing out.",
+        title: "Erro",
+        description: "Erro ao desconectar.",
         variant: "destructive",
       });
     }
   };
   
   const navigation = [
-    { name: "Home", href: "/", icon: BookOpen },
-    { name: "Courses", href: "/courses", icon: BookOpen },
-    { name: "Community", href: "/community", icon: Users },
-    { name: "AI Chat", href: "/ai-chat", icon: MessageSquare },
+    { name: "Início", href: "/", icon: BookOpen },
+    { name: "Cursos", href: "/courses", icon: BookOpen },
+    { name: "Comunidade", href: "/community", icon: Users },
+    { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -51,7 +51,7 @@ export const Navigation = () => {
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">English Academy</span>
+            <span className="text-xl font-bold text-foreground">Aula Click</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -79,7 +79,7 @@ export const Navigation = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
                     <User className="h-4 w-4 mr-2" />
-                    My Account
+                    Minha Conta
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -91,17 +91,17 @@ export const Navigation = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    Sair
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Sign In</Link>
+                  <Link to="/login">Entrar</Link>
                 </Button>
                 <Button variant="hero" size="sm" asChild>
-                  <Link to="/signup">Get Started</Link>
+                  <Link to="/signup">Começar</Link>
                 </Button>
               </>
             )}
@@ -146,16 +146,16 @@ export const Navigation = () => {
                     <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => { setIsOpen(false); handleSignOut(); }}>
-                    Sign Out
+                    Sair
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to="/login" onClick={() => setIsOpen(false)}>Sign In</Link>
+                    <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
                   </Button>
                   <Button variant="hero" size="sm" asChild>
-                    <Link to="/signup" onClick={() => setIsOpen(false)}>Get Started</Link>
+                    <Link to="/signup" onClick={() => setIsOpen(false)}>Começar</Link>
                   </Button>
                 </>
               )}

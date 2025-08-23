@@ -69,8 +69,8 @@ const features = [
     },
     {
       icon: MessageSquare,
-      title: "AI English Tutor",
-      description: "Your virtual English teacher is always available to help you learn."
+      title: "Tutor IA Personalizado",
+      description: "Seu tutor virtual está sempre disponível para ajudá-lo a aprender."
     },
     {
       icon: Star,
@@ -106,10 +106,10 @@ const features = [
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Why choose English Academy?
+              Por que escolher a Aula Click?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              A complete online English learning platform with everything you need to achieve your goals.
+              Uma plataforma completa de aprendizado online com tudo que você precisa para alcançar seus objetivos.
             </p>
           </div>
           
@@ -204,10 +204,10 @@ const features = [
           <Card className="bg-gradient-primary text-white p-12">
             <CardContent className="space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold">
-                Start your English learning journey today
+                Comece sua jornada de aprendizado hoje mesmo
               </h2>
               <p className="text-lg opacity-90 max-w-2xl mx-auto">
-                Join thousands of students who have already improved their English skills 
+                Junte-se a milhares de estudantes que já melhoraram suas habilidades 
                 with our courses. Free 3-day trial!
               </p>
               
