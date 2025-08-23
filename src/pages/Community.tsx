@@ -18,6 +18,7 @@ import {
   Settings,
   Send
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface CommunityGroup {
   id: string;
@@ -255,9 +256,9 @@ export default function Community() {
               <p className="text-muted-foreground mb-4">
                 Sign in to access community groups and connect with other English learners.
               </p>
-              <Button asChild>
-                <a href="/login">Sign In</a>
-              </Button>
+            <Button asChild>
+              <Link to="/login">Sign In</Link>
+            </Button>
             </CardContent>
           </Card>
         </div>

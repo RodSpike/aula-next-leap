@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 import { 
   Shield, 
   Users, 
@@ -545,7 +546,7 @@ export default function AdminPanel() {
                 Please sign in to access the admin panel.
               </p>
               <Button asChild>
-                <a href="/login">Sign In</a>
+                <Link to="/login">Sign In</Link>
               </Button>
             </CardContent>
           </Card>

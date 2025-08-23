@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -182,9 +183,9 @@ export default function AiChat() {
               <p className="text-muted-foreground mb-4">
                 Entre para começar seus estudos com seu tutor de IA pessoal.
               </p>
-              <Button asChild>
-                <a href="/login">Entrar</a>
-              </Button>
+            <Button asChild>
+              <Link to="/login">Entrar</Link>
+            </Button>
             </CardContent>
           </Card>
         </div>
