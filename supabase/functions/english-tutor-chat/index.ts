@@ -21,7 +21,14 @@ serve(async (req) => {
     console.log('OPENAI key present:', !!openAIApiKey);
 
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({
+        response: "I'm currently unable to access my language model. Please try again in a moment.",
+        error: 'OpenAI API key not configured'
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Received message:', message);
@@ -83,7 +90,13 @@ Always respond in a helpful, educational manner focused on English learning.`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      return new Response(JSON.stringify({
+        response: "I'm having trouble reaching the AI service right now. Please try again shortly.",
+        error: `OpenAI API error: ${response.status} - ${errorText}`
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
@@ -101,12 +114,11 @@ Always respond in a helpful, educational manner focused on English learning.`
     });
   } catch (error) {
     console.error('Error in english-tutor-chat function:', error);
-    
     return new Response(JSON.stringify({ 
-      error: error.message,
-      response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment."
+      response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment.",
+      error: (error as Error)?.message || 'Unknown error'
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
