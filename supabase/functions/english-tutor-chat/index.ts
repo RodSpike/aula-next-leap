@@ -62,10 +62,11 @@ Always respond in a helpful, educational manner focused on English learning.
 
     console.log('Sending request to Gemini');
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-goog-api-key': geminiApiKey,
       },
       body: JSON.stringify({
         contents: [
