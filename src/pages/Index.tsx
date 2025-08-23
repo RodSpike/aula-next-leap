@@ -198,6 +198,60 @@ const features = [
         </div>
       </section>
 
+      {/* Placement Test Section */}
+      <section className="py-20 bg-card">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Descubra seu nível de inglês
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Faça nosso teste de nivelamento Cambridge gratuito e descubra exatamente onde você está no seu aprendizado de inglês.
+            </p>
+          </div>
+          
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-8 space-y-6">
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Teste de Nivelamento Cambridge</h3>
+                  <p className="text-muted-foreground">Grátis • 10-15 minutos • Resultado imediato</p>
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <span>Níveis A1 a C2</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <span>Certificado gratuito</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <span>Recomendações personalizadas</span>
+                </div>
+              </div>
+              
+              <Button size="xl" asChild className="w-full md:w-auto">
+                <Link to="/placement-test">
+                  <Play className="mr-2 h-5 w-5" />
+                  Fazer Teste Gratuito
+                </Link>
+              </Button>
+              
+              <p className="text-xs text-muted-foreground">
+                Não é necessário criar conta para fazer o teste
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -219,8 +273,8 @@ const features = [
                   </Link>
                 </Button>
                 <Button variant="outline" size="xl" className="bg-transparent border-white text-white hover:bg-white hover:text-primary" asChild>
-                  <Link to="/pricing">
-                    View Pricing
+                  <Link to="/login">
+                    Já tenho conta
                   </Link>
                 </Button>
               </div>

@@ -46,7 +46,7 @@ export default function Login() {
         let errorMessage = "Erro ao fazer login. Tente novamente.";
         
         if (error.message === "Invalid login credentials") {
-          errorMessage = "Email ou senha incorretos. Você já tem uma conta? Verifique suas credenciais ou crie uma conta nova.";
+          errorMessage = "Email ou senha incorretos. Se você ainda não tem uma conta, clique em 'Cadastre-se' abaixo.";
         } else if (error.message === "Email not confirmed") {
           errorMessage = "Você já tem uma conta, mas precisa confirmar seu email. Verifique sua caixa de entrada.";
         } else if (error.message.includes("Email not confirmed")) {

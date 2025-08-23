@@ -78,11 +78,15 @@ export default function Signup() {
       const { error } = await signUp(formData.email, formData.password, formData.name);
       
       if (error) {
+        let errorMessage = "Erro ao criar conta. Tente novamente.";
+        
+        if (error.message === "User already registered") {
+          errorMessage = "Este email já está cadastrado. Se você já tem uma conta, clique em 'Fazer login' abaixo.";
+        }
+        
         toast({
-          title: "Erro no cadastro",
-          description: error.message === "User already registered" 
-            ? "Este email já está cadastrado. Tente fazer login."
-            : "Erro ao criar conta. Tente novamente.",
+          title: "Erro no cadastro", 
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
