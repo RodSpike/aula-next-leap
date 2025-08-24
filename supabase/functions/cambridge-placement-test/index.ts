@@ -53,8 +53,28 @@ Start with a basic A1 level question. Return ONLY a JSON object with this exact 
         }),
       });
 
+      if (!response.ok) {
+        console.error('Gemini API error:', response.status, response.statusText);
+        throw new Error(`Gemini API failed with status ${response.status}`);
+      }
+
       const data = await response.json();
-      const questionData = JSON.parse(data.candidates[0].content.parts[0].text);
+      console.log('Gemini response data:', data);
+
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+
+      const textContent = data.candidates[0].content.parts[0].text;
+      console.log('Generated text:', textContent);
+      
+      let questionData;
+      try {
+        questionData = JSON.parse(textContent);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Content:', textContent);
+        throw new Error('Failed to parse AI response as JSON');
+      }
 
       return new Response(JSON.stringify(questionData), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -100,15 +120,43 @@ Otherwise, return a question in this format:
         }),
       });
 
+      if (!response.ok) {
+        console.error('Gemini API error:', response.status, response.statusText);
+        throw new Error(`Gemini API failed with status ${response.status}`);
+      }
+
       const data = await response.json();
-      const result = JSON.parse(data.candidates[0].content.parts[0].text);
+      console.log('Gemini response data:', data);
+
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+
+      const textContent = data.candidates[0].content.parts[0].text;
+      console.log('Generated text:', textContent);
+      
+      let result;
+      try {
+        result = JSON.parse(textContent);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Content:', textContent);
+        throw new Error('Failed to parse AI response as JSON');
+      }
 
       // If this is a final assessment, save to user profile
       if (result.finalAssessment && userId) {
-        await supabase
-          .from('profiles')
-          .update({ cambridge_level: result.level })
-          .eq('user_id', userId);
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ cambridge_level: result.level })
+            .eq('user_id', userId);
+            
+          if (profileError) {
+            console.error('Profile update error:', profileError);
+          }
+        } catch (profileError) {
+          console.error('Profile update failed:', profileError);
+        }
       }
 
       return new Response(JSON.stringify(result), {
@@ -121,10 +169,29 @@ Otherwise, return a question in this format:
   } catch (error) {
     console.error('Error in cambridge-placement-test function:', error);
     
+    // Return appropriate status code based on error type
+    let statusCode = 500;
+    let errorMessage = 'Internal server error';
+    
+    if (error.message?.includes('API key not configured')) {
+      statusCode = 500;
+      errorMessage = 'Service configuration error';
+    } else if (error.message?.includes('Gemini API failed')) {
+      statusCode = 502;
+      errorMessage = 'External service error';
+    } else if (error.message?.includes('Failed to parse')) {
+      statusCode = 502;
+      errorMessage = 'Service response error';
+    } else if (error.message?.includes('Invalid action')) {
+      statusCode = 400;
+      errorMessage = 'Invalid request action';
+    }
+    
     return new Response(JSON.stringify({ 
-      error: error.message
+      error: errorMessage,
+      details: error.message
     }), {
-      status: 500,
+      status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
