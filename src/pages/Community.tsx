@@ -16,7 +16,11 @@ import {
   MessageSquare, 
   UserPlus, 
   Settings,
-  Send
+  Send,
+  Upload,
+  Image as ImageIcon,
+  FileText,
+  X
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -39,6 +43,11 @@ interface GroupPost {
   content: string;
   created_at: string;
   user_id: string;
+  attachments?: {
+    url: string;
+    type: string;
+    name: string;
+  }[];
   profiles: {
     display_name: string;
   } | null;
@@ -54,6 +63,7 @@ export default function Community() {
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [newGroupLevel, setNewGroupLevel] = useState("Basic");
   const [newPost, setNewPost] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -210,20 +220,50 @@ export default function Community() {
   };
 
   const createPost = async () => {
-    if (!user || !selectedGroup || !newPost.trim()) return;
+    if (!user || !selectedGroup || (!newPost.trim() && selectedFiles.length === 0)) return;
 
     try {
+      let attachments: any[] = [];
+
+      // Upload files if any
+      if (selectedFiles.length > 0) {
+        const uploadPromises = selectedFiles.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+          const { data, error } = await supabase.storage
+            .from('community-files')
+            .upload(fileName, file);
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('community-files')
+            .getPublicUrl(data.path);
+
+          return {
+            url: publicUrl,
+            type: file.type,
+            name: file.name
+          };
+        });
+
+        attachments = await Promise.all(uploadPromises);
+      }
+
       const { error } = await supabase
         .from('group_posts')
         .insert({
           group_id: selectedGroup.id,
           user_id: user.id,
-          content: newPost
+          content: newPost,
+          attachments: attachments
         });
 
       if (error) throw error;
 
       setNewPost("");
+      setSelectedFiles([]);
       fetchPosts(selectedGroup.id);
       toast({
         title: "Success",
@@ -237,6 +277,46 @@ export default function Community() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      // Validate file types and sizes
+      const validFiles = fileArray.filter(file => {
+        const isValidType = file.type.startsWith('image/') || 
+                           file.type === 'application/pdf' ||
+                           file.type.startsWith('text/');
+        const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+        
+        if (!isValidType) {
+          toast({
+            title: "Erro",
+            description: `Tipo de arquivo não suportado: ${file.name}`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        
+        if (!isValidSize) {
+          toast({
+            title: "Erro", 
+            description: `Arquivo muito grande: ${file.name}`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        
+        return true;
+      });
+      
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const filteredGroups = groups.filter(group =>
@@ -426,8 +506,63 @@ export default function Community() {
                           value={newPost}
                           onChange={(e) => setNewPost(e.target.value)}
                         />
+                        
+                        {/* File Upload */}
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*,application/pdf,.txt,.doc,.docx"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id="file-upload"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('file-upload')?.click()}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              Anexar Arquivos
+                            </Button>
+                          </div>
+                          
+                          {/* Selected Files Preview */}
+                          {selectedFiles.length > 0 && (
+                            <div className="space-y-2">
+                              {selectedFiles.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                                  <div className="flex items-center gap-2">
+                                    {file.type.startsWith('image/') ? (
+                                      <ImageIcon className="h-4 w-4" />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                    <span className="text-sm">{file.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFile(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
                         <div className="flex justify-end">
-                          <Button onClick={createPost} disabled={!newPost.trim()}>
+                          <Button 
+                            onClick={createPost} 
+                            disabled={!newPost.trim() && selectedFiles.length === 0}
+                          >
                             <Send className="h-4 w-4 mr-2" />
                             Post
                           </Button>
@@ -461,6 +596,34 @@ export default function Community() {
                             </div>
                           </div>
                           <p className="text-sm">{post.content}</p>
+                          
+                          {/* Post Attachments */}
+                          {post.attachments && post.attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {post.attachments.map((attachment, index) => (
+                                <div key={index}>
+                                  {attachment.type.startsWith('image/') ? (
+                                    <img
+                                      src={attachment.url}
+                                      alt={attachment.name}
+                                      className="max-w-full h-auto rounded-lg border"
+                                      style={{ maxHeight: '300px' }}
+                                    />
+                                  ) : (
+                                    <a
+                                      href={attachment.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                      <span className="text-sm">{attachment.name}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))

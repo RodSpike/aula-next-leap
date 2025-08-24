@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
+import Friends from "./pages/Friends";
 import AiChat from "./pages/AiChat";
 import AdminPanel from "./pages/AdminPanel";
 import Login from "./pages/Login";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/friends" element={<Friends />} />
             <Route path="/ai-chat" element={<AiChat />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/login" element={<Login />} />
