@@ -17,6 +17,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -34,10 +35,30 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate username format
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(formData.username)) {
+      toast({
+        title: "Erro",
+        description: "Nome de usuário deve conter apenas letras, números e underscore.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.username.length < 3) {
+      toast({
+        title: "Erro",
+        description: "Nome de usuário deve ter pelo menos 3 caracteres.",
         variant: "destructive",
       });
       return;
@@ -73,7 +94,7 @@ export default function Signup() {
     setLoading(true);
     
     try {
-      const { error } = await signUp(formData.email, formData.password, formData.name);
+      const { error } = await signUp(formData.email, formData.password, formData.name, formData.username);
       
       if (error) {
         let errorMessage = "Erro ao criar conta. Tente novamente.";
@@ -226,6 +247,26 @@ export default function Signup() {
                     required
                   />
                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="username">Nome de usuário</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="@seunomeusuario"
+                    className="pl-10"
+                    value={formData.username}
+                    onChange={handleInputChange("username")}
+                    required
+                    minLength={3}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Apenas letras, números e underscore. Mínimo 3 caracteres.
+                </p>
               </div>
               
               <div className="space-y-2">

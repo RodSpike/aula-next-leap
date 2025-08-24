@@ -77,6 +77,33 @@ export type Database = {
         }
         Relationships: []
       }
+      friends: {
+        Row: {
+          created_at: string
+          id: string
+          requested_id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requested_id: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requested_id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           can_post: boolean | null
@@ -117,6 +144,7 @@ export type Database = {
       }
       group_posts: {
         Row: {
+          attachments: Json | null
           content: string
           created_at: string
           group_id: string
@@ -125,6 +153,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           content: string
           created_at?: string
           group_id: string
@@ -133,6 +162,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           content?: string
           created_at?: string
           group_id?: string
@@ -160,6 +190,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           birthdate?: string | null
@@ -170,6 +201,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           birthdate?: string | null
@@ -180,6 +212,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
