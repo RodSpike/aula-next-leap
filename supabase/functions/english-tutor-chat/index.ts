@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversation_history } = await req.json();
+    const { message, conversation_history, file_data } = await req.json();
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY') ?? '';
     
     if (!geminiApiKey) {
@@ -31,22 +31,33 @@ serve(async (req) => {
 
     console.log('Received message:', message);
     console.log('Conversation history length:', conversation_history?.length || 0);
+    console.log('File data received:', !!file_data);
 
-    // Prepare conversation context for Gemini
-    let conversationText = `Você é um assistente de IA tutor especializado. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em qualquer área de estudo. Você deve:
+    // Enhanced system prompt for file analysis
+    let conversationText = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
 
 1. Ser paciente, encorajador e solidário
-2. Fornecer explicações claras sobre qualquer tópico solicitado
+2. Fornecer explicações claras sobre gramática, vocabulário e pronunciação
 3. Corrigir erros gentilmente e explicar por que a correção é necessária
-4. Oferecer exemplos práticos e exercícios
+4. Oferecer exemplos práticos e exercícios de inglês
 5. Ajudar com prática de conversação e discussões
-6. Responder perguntas sobre regras, conceitos e metodologias
-7. Sugerir melhorias para estudos e aprendizado
+6. Responder perguntas sobre regras gramaticais e conceitos do inglês
+7. Sugerir melhorias para estudos e aprendizado de inglês
 8. Ser envolvente e tornar o aprendizado divertido
 9. Adaptar seu estilo de ensino ao nível do usuário
 10. Fornecer contexto cultural quando relevante
 11. Criar exercícios interativos fazendo perguntas como "Agora vamos fazer um exercício. Qual é..." ou "Você pode me dizer..."
 12. Guiar estudantes através de aprendizado passo a passo com perguntas de acompanhamento
+
+ANÁLISE DE ARQUIVOS:
+- Quando receber um arquivo de texto, analise completamente o conteúdo em inglês
+- Corrija erros de gramática, ortografia e estrutura
+- Explique as regras por trás das correções
+- Sugira melhorias de vocabulário e estilo
+- Para imagens com texto, extraia e analise qualquer texto em inglês visível
+- Forneça feedback detalhado e educativo
+- Sugira exercícios relacionados ao conteúdo do arquivo
+- Identifique padrões de erro para foco de estudo
 
 REGRAS DE FORMATAÇÃO:
 - Use texto simples sem formatação markdown
@@ -58,7 +69,7 @@ REGRAS DE FORMATAÇÃO:
 - Use letras maiúsculas para ênfase quando necessário
 - Use aspas para exemplos
 
-Sempre responda de forma útil e educacional, focado no aprendizado com formatação limpa e legível.
+Sempre responda de forma útil e educacional, focado no ensino de inglês com formatação limpa e legível.
 
 `;
 
@@ -69,8 +80,24 @@ Sempre responda de forma útil e educacional, focado no aprendizado com formata�
       });
     }
 
+    // Add file analysis if present
+    if (file_data) {
+      conversationText += `\nFILE ANALYSIS REQUEST:\n`;
+      conversationText += `File name: ${file_data.name}\n`;
+      conversationText += `File type: ${file_data.type}\n`;
+      
+      if (file_data.type.startsWith('image/')) {
+        conversationText += `Content: [Image file - analyze any English text visible in the image]\n`;
+        // Note: For image analysis with Gemini, we'd need to use the multimodal API
+        // For now, we'll handle it as a request to analyze image content
+        conversationText += `User uploaded an image file. Please ask them to describe any English text they see in the image for analysis.\n`;
+      } else {
+        conversationText += `File content to analyze:\n${file_data.content}\n\n`;
+      }
+    }
+
     // Add current message
-    conversationText += `User: ${message}\nAssistant:`;
+    conversationText += `User: ${message || 'Please analyze the uploaded file and provide feedback on the English content.'}\nAssistant:`;
 
     console.log('Sending request to Gemini');
 

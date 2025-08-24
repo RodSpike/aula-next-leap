@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X } from "lucide-react";
+import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Message {
@@ -24,7 +24,11 @@ export default function AiChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -101,30 +105,177 @@ export default function AiChat() {
     setIsFullscreen(!isFullscreen);
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        await processVoiceInput(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível acessar o microfone. Verifique as permissões.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const processVoiceInput = async (audioBlob: Blob) => {
+    setIsLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+        
+        const { data, error } = await supabase.functions.invoke('voice-to-text', {
+          body: { audio: base64Audio }
+        });
+        
+        if (error) throw error;
+        
+        if (data?.text) {
+          setInputMessage(data.text);
+          toast({
+            title: 'Sucesso',
+            description: 'Áudio convertido para texto!',
+          });
+        }
+      };
+      reader.readAsDataURL(audioBlob);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao processar o áudio. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type and size (max 10MB)
+      const allowedTypes = ['text/plain', 'application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: 'Erro',
+          description: 'Tipo de arquivo não suportado. Use: texto, PDF ou imagens.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        toast({
+          title: 'Erro',
+          description: 'Arquivo muito grande. O tamanho máximo é 10MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      setUploadedFile(file);
+      setInputMessage(`Arquivo anexado: ${file.name}. Por favor, analise este arquivo e forneça feedback ou sugestões.`);
+    }
+  };
+
+  const processFileWithMessage = async (file: File, message: string) => {
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onload = () => {
+        resolve({
+          content: reader.result,
+          type: file.type,
+          name: file.name
+        });
+      };
+      reader.onerror = reject;
+      
+      if (file.type.startsWith('image/')) {
+        reader.readAsDataURL(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !user) return;
 
+    let messageContent = inputMessage;
+    let fileData = null;
+
+    // Process file if uploaded
+    if (uploadedFile) {
+      try {
+        fileData = await processFileWithMessage(uploadedFile, inputMessage);
+        messageContent = `${inputMessage}\n\n[Arquivo anexado: ${uploadedFile.name}]`;
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao processar o arquivo anexado.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
-      content: inputMessage,
+      content: messageContent,
       role: 'user',
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage("");
+    setUploadedFile(null);
     setIsLoading(true);
 
     // Save user message
     await saveMessage(userMessage);
 
     try {
+      const requestBody: any = {
+        message: currentInput,
+        conversation_history: messages.slice(-10)
+      };
+
+      // Add file data if present
+      if (fileData) {
+        requestBody.file_data = fileData;
+      }
+
       const { data, error } = await supabase.functions.invoke('english-tutor-chat', {
-        body: {
-          message: inputMessage,
-          conversation_history: messages.slice(-10) // Last 10 messages for context
-        }
+        body: requestBody
       });
+      
       if (error) throw error;
       if (data?.error) {
         let errorMessage = 'Algo deu errado com o tutor IA. Tente novamente.';
@@ -193,7 +344,8 @@ export default function AiChat() {
     );
   }
 
-  const ChatInterface = () => (
+  // Fix for cursor jumping - memoize ChatInterface component
+  const ChatInterface = useCallback(() => (
     <Card className={`flex flex-col ${isFullscreen ? 'h-screen' : 'h-[600px]'}`}>
       <CardHeader className="border-b">
         <div className="flex items-center justify-between">
@@ -287,6 +439,22 @@ export default function AiChat() {
       
       {/* Input */}
       <div className="border-t p-4">
+        {uploadedFile && (
+          <div className="mb-3 p-2 bg-muted rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="text-sm">{uploadedFile.name}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setUploadedFile(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Input
             placeholder="Digite sua mensagem aqui... (pressione Enter para enviar)"
@@ -296,6 +464,36 @@ export default function AiChat() {
             disabled={isLoading}
             className="flex-1"
           />
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".txt,.pdf,.jpg,.jpeg,.png,.gif"
+            className="hidden"
+          />
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            title="Anexar arquivo"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading}
+            title={isRecording ? "Parar gravação" : "Gravar áudio"}
+            className={isRecording ? "text-red-500" : ""}
+          >
+            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+          
           <Button 
             onClick={sendMessage} 
             disabled={!inputMessage.trim() || isLoading}
@@ -308,12 +506,13 @@ export default function AiChat() {
             )}
           </Button>
         </div>
+        
         <p className="text-xs text-muted-foreground mt-2">
-          Faça perguntas sobre qualquer assunto, tire dúvidas ou pratique conversação!
+          Faça perguntas, grave áudio, ou envie arquivos para análise! Use Enter para enviar.
         </p>
       </div>
     </Card>
-  );
+  ), [messages, isLoading, inputMessage, uploadedFile, isRecording, isFullscreen]);
 
   return (
     <div className={isFullscreen ? "fixed inset-0 z-50 bg-background" : "min-h-screen bg-background"}>
