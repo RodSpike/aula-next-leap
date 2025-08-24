@@ -85,29 +85,37 @@ Sempre responda de forma útil e educacional, focado no ensino de inglês com fo
       conversationText += `\nFILE ANALYSIS REQUEST:\n`;
       conversationText += `File name: ${file_data.name}\n`;
       conversationText += `File type: ${file_data.type}\n`;
-      
-      if (file_data.type.startsWith('image/')) {
-        conversationText += `Content: [Image file - analyze any English text visible in the image]\n`;
-        // Note: For image analysis with Gemini, we'd need to use the multimodal API
-        // For now, we'll handle it as a request to analyze image content
-        conversationText += `User uploaded an image file. Please ask them to describe any English text they see in the image for analysis.\n`;
-      } else {
-        conversationText += `File content to analyze:\n${file_data.content}\n\n`;
+      if (!String(file_data.type || '').startsWith('image/')) {
+        conversationText += `File content to analyze (if text-based):\n${file_data.content}\n\n`;
       }
     }
 
     // Add current message
     conversationText += `User: ${message || 'Please analyze the uploaded file and provide feedback on the English content.'}\nAssistant:`;
 
-    console.log('Sending request to Gemini');
+console.log('Sending request to Gemini');
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-goog-api-key': geminiApiKey,
-      },
-      body: JSON.stringify({
+    // Build request payload (supports image inline_data if provided)
+    let requestPayload: any;
+    if (file_data && typeof file_data.type === 'string' && file_data.type.startsWith('image/')) {
+      let contentStr = typeof file_data.content === 'string' ? file_data.content : '';
+      let base64Image = contentStr.includes(',') ? contentStr.split(',')[1] : contentStr;
+      requestPayload = {
+        contents: [
+          {
+            parts: [
+              { text: conversationText + '\n\nAnalise a imagem anexada e extraia/avalie qualquer texto em inglês visível. Forneça correções e explicações.' },
+              { inline_data: { mime_type: file_data.type, data: base64Image } }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+        },
+      };
+    } else {
+      requestPayload = {
         contents: [
           {
             parts: [
@@ -121,7 +129,16 @@ Sempre responda de forma útil e educacional, focado no ensino de inglês com fo
           temperature: 0.7,
           maxOutputTokens: 1000,
         },
-      }),
+      };
+    }
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-goog-api-key': geminiApiKey,
+      },
+      body: JSON.stringify(requestPayload),
     });
 
     if (!response.ok) {

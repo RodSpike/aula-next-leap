@@ -22,6 +22,7 @@ interface AudioState {
   currentAudio: HTMLAudioElement | null;
   messageId: string | null;
   speed: number;
+  usingSynth: boolean;
 }
 
 export default function AiChat() {
@@ -40,12 +41,14 @@ export default function AiChat() {
     isPaused: false,
     currentAudio: null,
     messageId: null,
-    speed: 1.0
+    speed: 1.0,
+    usingSynth: false,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const synthUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
