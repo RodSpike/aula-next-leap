@@ -283,6 +283,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      search_profiles_public: {
+        Args: { search_term: string }
+        Returns: {
+          display_name: string
+          user_id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"

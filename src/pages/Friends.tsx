@@ -163,11 +163,7 @@ export default function Friends() {
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, username')
-        .ilike('username', `%${searchUsername}%`)
-        .neq('user_id', user?.id)
-        .limit(10);
+        .rpc('search_profiles_public', { search_term: searchUsername });
 
       if (error) throw error;
       setSearchResults(data || []);
