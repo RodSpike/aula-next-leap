@@ -390,6 +390,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_group_creator: {
+        Args: { group_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
       search_profiles_public: {
         Args: { search_term: string }
         Returns: {
@@ -397,6 +401,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      user_has_admin_role: {
+        Args: { user_uuid: string }
+        Returns: boolean
       }
     }
     Enums: {
