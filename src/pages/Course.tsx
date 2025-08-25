@@ -353,10 +353,15 @@ export default function Course() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div 
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: currentLesson.content }}
-                    />
+                    <div className="prose prose-sm max-w-none space-y-4">
+                      {currentLesson.content.split('\n').map((paragraph, index) => (
+                        paragraph.trim() && (
+                          <p key={index} className="text-foreground leading-relaxed">
+                            {paragraph}
+                          </p>
+                        )
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
 

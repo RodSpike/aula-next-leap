@@ -397,7 +397,7 @@ export default function Dashboard() {
                                 Redo
                               </>
                             ) : (
-                              'Continue'
+                              course.completedLessons === 0 ? 'Start' : 'Continue'
                             )}
                           </Button>
                           <Button 
