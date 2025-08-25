@@ -98,6 +98,9 @@ Return ONLY a JSON object with this exact format:
     }
 
     if (action === 'next' && userAnswer && questionIndex !== undefined) {
+      // Evaluate if the user's answer was correct
+      const isCorrect = userAnswer === correctAnswer;
+      
       // Evaluate answer and generate next question using Gemini
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
@@ -109,47 +112,56 @@ Return ONLY a JSON object with this exact format:
             parts: [{
               text: `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
 
-The user just answered question ${questionIndex}. Their answer was: "${userAnswer}". The correct answer was: "${correctAnswer}". Current assessed level: "${currentLevel || 'A2'}".
+CURRENT SITUATION:
+- Question ${questionIndex} just answered
+- User's answer: "${userAnswer}" (${isCorrect ? 'CORRECT' : 'WRONG'})
+- Correct answer was: "${correctAnswer}"
+- Current assessed level: "${currentLevel || 'A2'}"
+- Questions completed: ${questionIndex}
 
 Previously asked questions to avoid repetition: ${JSON.stringify(askedQuestions || [])}
 
-ADAPTIVE DIFFICULTY RULES:
-- Start at A2 level
-- If answer is correct: increase difficulty (A2→B1→B2→C1→C2)
-- If answer is wrong: maintain or decrease difficulty slightly
-- Track confidence in level assessment
+ADAPTIVE DIFFICULTY & EARLY TERMINATION LOGIC:
+- Start at A2 level, progress based on performance
+- Track consecutive correct/incorrect answers at each level
+- EARLY TERMINATION CRITERIA (minimum 8 questions):
+  * If user gets 3+ consecutive correct answers at B1+ level → confident at that level
+  * If user gets 3+ consecutive wrong answers → drop to lower level and assess
+  * If user gets 2+ consecutive correct at C1/C2 → confident at that level
+  * Strong consistent performance = early termination
+- Maximum 20 questions total
+- MANDATORY: Question 20 = ALWAYS provide final assessment
 
-IMPORTANT RULES:
-1. NEVER create questions that require images, pictures, or visual content
-2. Only create sentence completion questions with multiple choice answers
-3. NEVER repeat similar questions - check the askedQuestions array
-4. Make each question unique in structure and content
-5. Focus on different grammar points, vocabulary, and sentence structures
-6. Maximum 20 questions total
-7. If confidence is high after minimum 8 questions, provide final assessment
+QUESTION GENERATION RULES:
+1. NEVER create questions requiring images, pictures, or visual content
+2. Only sentence completion with multiple choice answers
+3. NEVER repeat similar questions - check askedQuestions array carefully
+4. Make each question unique in grammar points and vocabulary
+5. Vary sentence structures (conditionals, tenses, prepositions, etc.)
 
-Early termination criteria:
-- If user answers 3+ consecutive questions correctly at same level = confident at that level
-- If user answers 3+ consecutive questions incorrectly = confirmed at lower level
-- Minimum 8 questions, maximum 20 questions
-- MANDATORY: If this is question 20, ALWAYS provide final assessment
+LEVEL ASSESSMENT:
+- A2: Basic grammar, simple tenses, common vocabulary
+- B1: Mixed tenses, conditionals, phrasal verbs, prepositions
+- B2: Complex grammar, advanced vocabulary, nuanced meanings
+- C1: Sophisticated structures, academic vocabulary, subtle distinctions
+- C2: Near-native proficiency, complex expressions, advanced collocations
 
-If you determine the level with confidence OR reached 20 questions (question ${questionIndex + 1}), return final assessment:
+If you can confidently determine the level (minimum 8 questions) OR reached question 20, return:
 {
   "finalAssessment": true,
-  "level": "B1", 
-  "explanation": "Based on your ${questionIndex} answers, your Cambridge English level is B1 (Intermediate). You demonstrated solid understanding of...",
+  "level": "[DETERMINED_LEVEL]", 
+  "explanation": "Based on your ${questionIndex} answers, your Cambridge English level is [LEVEL]. You demonstrated [specific strengths and areas]. [Performance analysis]",
   "questionsAnswered": ${questionIndex}
 }
 
-Otherwise, return a question that is completely different from previous ones:
+Otherwise, return a completely new question with appropriate difficulty:
 {
-  "question": "Complete the sentence: [NEW UNIQUE SENTENCE]",
+  "question": "Complete the sentence: [UNIQUE SENTENCE TESTING SPECIFIC GRAMMAR POINT]",
   "options": ["A) option1", "B) option2", "C) option3", "D) option4"],
-  "level": "[APPROPRIATE_LEVEL]",
+  "level": "[APPROPRIATE_LEVEL_BASED_ON_PERFORMANCE]",
   "questionNumber": ${questionIndex + 1},
   "correctAnswer": "[A/B/C/D]",
-  "askedQuestions": [previous questions + this new question]
+  "askedQuestions": [all previous questions including this new one]
 }`
             }]
           }],
