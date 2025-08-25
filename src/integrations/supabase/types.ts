@@ -113,6 +113,77 @@ export type Database = {
         }
         Relationships: []
       }
+      courses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          level: string
+          order_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level: string
+          order_index: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: string
+          order_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      exercises: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          explanation: string | null
+          id: string
+          lesson_id: string
+          options: Json
+          order_index: number
+          question: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          lesson_id: string
+          options: Json
+          order_index: number
+          question: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          lesson_id?: string
+          options?: Json
+          order_index?: number
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercises_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friends: {
         Row: {
           created_at: string
@@ -215,6 +286,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lessons: {
+        Row: {
+          content: string
+          course_id: string
+          created_at: string
+          id: string
+          order_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          course_id: string
+          created_at?: string
+          id?: string
+          order_index: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      level_tests: {
+        Row: {
+          created_at: string
+          from_level: string
+          id: string
+          questions: Json
+          to_level: string
+        }
+        Insert: {
+          created_at?: string
+          from_level: string
+          id?: string
+          questions: Json
+          to_level: string
+        }
+        Update: {
+          created_at?: string
+          from_level?: string
+          id?: string
+          questions?: Json
+          to_level?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -323,6 +456,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_lesson_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          lesson_id: string
+          score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id: string
+          score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -373,6 +547,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_test_attempts: {
+        Row: {
+          answers: Json
+          completed_at: string
+          id: string
+          passed: boolean
+          score: number
+          test_id: string
+          user_id: string
+        }
+        Insert: {
+          answers: Json
+          completed_at?: string
+          id?: string
+          passed: boolean
+          score: number
+          test_id: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          id?: string
+          passed?: boolean
+          score?: number
+          test_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_test_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "level_tests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
