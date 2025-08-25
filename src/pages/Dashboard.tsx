@@ -14,6 +14,13 @@ interface DashboardStats {
   hoursLastWeek: number;
   groupsCount: number;
   certificatesCount: number;
+  joinedGroups: Array<{
+    id: string;
+    name: string;
+    level: string;
+    is_default: boolean;
+    group_type: string;
+  }>;
   courses: Array<{
     id: string;
     name: string;
@@ -33,6 +40,7 @@ export default function Dashboard() {
     hoursLastWeek: 0,
     groupsCount: 0,
     certificatesCount: 0,
+    joinedGroups: [],
     courses: []
   });
   const [statsLoading, setStatsLoading] = useState(true);
@@ -95,10 +103,19 @@ export default function Dashboard() {
         .gte('session_date', lastWeekStart.toISOString().split('T')[0])
         .lt('session_date', lastWeekEnd.toISOString().split('T')[0]);
 
-      // Get groups count
-      const { count: groupsCount } = await supabase
+      // Get groups count and actual groups data
+      const { data: groupMemberships, count: groupsCount } = await supabase
         .from('group_members')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          community_groups!inner(
+            id,
+            name,
+            level,
+            is_default,
+            group_type
+          )
+        `, { count: 'exact' })
         .eq('user_id', user!.id)
         .eq('status', 'accepted');
 
@@ -117,6 +134,7 @@ export default function Dashboard() {
         hoursLastWeek: Math.round(hoursLastWeek * 10) / 10,
         groupsCount: groupsCount || 0,
         certificatesCount: certificatesCount || 0,
+        joinedGroups: groupMemberships?.map(membership => membership.community_groups) || [],
         courses: courses?.map(course => ({
           id: course.id,
           name: course.course_name,
@@ -334,51 +352,69 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Community Activity</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Community Groups
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white font-semibold">JS</span>
+              {statsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center space-x-3 p-3 bg-accent rounded-lg animate-pulse">
+                      <div className="w-8 h-8 bg-secondary rounded-full"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-secondary rounded w-3/4"></div>
+                        <div className="h-3 bg-secondary rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm">
-                    <span className="font-semibold">John Smith</span> posted a new question in{" "}
-                    <span className="text-primary">English Fundamentals</span>
+              ) : stats.joinedGroups.length > 0 ? (
+                <>
+                  {stats.joinedGroups.slice(0, 3).map((group) => (
+                    <div key={group.id} className="flex items-center space-x-3 p-3 bg-accent rounded-lg">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        group.is_default ? 'bg-primary' : 'bg-secondary'
+                      }`}>
+                        {group.is_default ? (
+                          <span className="text-xs text-white font-semibold">{group.level}</span>
+                        ) : (
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{group.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.is_default ? 'Official Group' : 'User Group'} • {group.level} Level
+                          {group.is_default && userProfile?.cambridge_level === group.level && (
+                            <Badge variant="default" className="ml-2 text-xs">Your Level</Badge>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {stats.joinedGroups.length > 3 && (
+                    <Button variant="outline" className="w-full" onClick={() => navigate('/community')}>
+                      View All Groups ({stats.joinedGroups.length})
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-2">No community groups joined yet</p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {userProfile?.cambridge_level 
+                      ? `Join your ${userProfile.cambridge_level} level group and connect with peers!`
+                      : 'Take the placement test to join your level group'
+                    }
                   </p>
-                  <p className="text-xs text-muted-foreground">2 hours ago</p>
+                  <Button onClick={() => navigate('/community')}>
+                    Explore Communities
+                  </Button>
                 </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-                  <span className="text-xs font-semibold">MF</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm">
-                    <span className="font-semibold">Maria Fernandez</span> shared a file in{" "}
-                    <span className="text-primary">Conversation Practice</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">4 hours ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
-                  <span className="text-xs font-semibold">RC</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm">
-                    <span className="font-semibold">Robert Costa</span> completed the course{" "}
-                    <span className="text-primary">Advanced Grammar</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">yesterday</p>
-                </div>
-              </div>
-
-              <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/community')}>
-                View More Activities
-              </Button>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -37,6 +37,9 @@ interface CommunityGroup {
   is_default: boolean;
   max_members: number;
   created_at: string;
+  group_type: 'open' | 'closed';
+  objective?: string;
+  invite_code?: string;
   member_count?: number;
   is_member?: boolean;
   can_post?: boolean;
@@ -51,6 +54,8 @@ interface GroupPost {
     url: string;
     type: string;
     name: string;
+    thumbnail?: string;
+    videoId?: string;
   }[];
   profiles: {
     display_name: string;
@@ -66,12 +71,17 @@ export default function Community() {
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [newGroupLevel, setNewGroupLevel] = useState("Basic");
+  const [newGroupObjective, setNewGroupObjective] = useState("");
+  const [newGroupType, setNewGroupType] = useState<'open' | 'closed'>('open');
+  const [joinCode, setJoinCode] = useState("");
   const [newPost, setNewPost] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isJoinCodeDialogOpen, setIsJoinCodeDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState<"all" | "official" | "user">("all");
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [selectedGroupForCode, setSelectedGroupForCode] = useState<CommunityGroup | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +122,37 @@ export default function Community() {
         })
       );
 
+      // Auto-join user to their level group if they have a cambridge_level but aren't already in the group
+      if (userProfile?.cambridge_level) {
+        const userLevelGroup = groupsWithCounts.find(g => 
+          g.level === userProfile.cambridge_level && g.is_default
+        );
+        
+        if (userLevelGroup) {
+          // Check if user is already a member
+          const { data: existingMembership } = await supabase
+            .from('group_members')
+            .select('id')
+            .eq('group_id', userLevelGroup.id)
+            .eq('user_id', user?.id)
+            .single();
+
+          if (!existingMembership) {
+            // Auto-join user to their level group
+            await supabase
+              .from('group_members')
+              .upsert({
+                group_id: userLevelGroup.id,
+                user_id: user?.id,
+                status: 'accepted',
+                can_post: true
+              }, {
+                onConflict: 'group_id,user_id'
+              });
+          }
+        }
+      }
+
       // Get user memberships
       const { data: memberships } = await supabase
         .from('group_members')
@@ -121,6 +162,7 @@ export default function Community() {
 
       const groupsWithMembership = groupsWithCounts.map(group => ({
         ...group,
+        group_type: (group.group_type as 'open' | 'closed') || 'open',
         is_member: memberships?.some(m => m.group_id === group.id),
         can_post: memberships?.find(m => m.group_id === group.id)?.can_post || false
       }));
@@ -191,28 +233,36 @@ export default function Community() {
   };
 
   const createGroup = async () => {
-    if (!user || !newGroupName.trim()) return;
+    if (!user || !newGroupName.trim() || !newGroupObjective.trim()) return;
 
     try {
+      const inviteCode = newGroupType === 'closed' ? 
+        Math.random().toString(36).substring(2, 15) : null;
+
       const { error } = await supabase
         .from('community_groups')
         .insert({
           name: newGroupName,
           description: newGroupDescription,
           level: newGroupLevel,
-          created_by: user.id
+          created_by: user.id,
+          group_type: newGroupType,
+          objective: newGroupObjective,
+          invite_code: inviteCode
         });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Group created successfully!",
+        description: `Group created successfully! ${inviteCode ? `Invite code: ${inviteCode}` : ''}`,
       });
 
       setNewGroupName("");
       setNewGroupDescription("");
       setNewGroupLevel("Basic");
+      setNewGroupObjective("");
+      setNewGroupType('open');
       setIsCreateGroupOpen(false);
       fetchGroups();
     } catch (error: any) {
@@ -225,17 +275,36 @@ export default function Community() {
     }
   };
 
-  const joinGroup = async (groupId: string) => {
+  const joinGroup = async (groupId: string, inviteCode?: string) => {
     if (!user) return;
 
     try {
+      // Check if group is closed and requires invite code
+      const group = groups.find(g => g.id === groupId);
+      if (group?.group_type === 'closed' && !inviteCode) {
+        setSelectedGroupForCode(group);
+        setIsJoinCodeDialogOpen(true);
+        return;
+      }
+
+      if (group?.group_type === 'closed' && inviteCode && group.invite_code !== inviteCode) {
+        toast({
+          title: "Error",
+          description: "Invalid invitation code",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('group_members')
-        .insert({
+        .upsert({
           group_id: groupId,
           user_id: user.id,
           status: 'accepted',
           can_post: true
+        }, {
+          onConflict: 'group_id,user_id'
         });
 
       if (error) throw error;
@@ -245,12 +314,48 @@ export default function Community() {
         description: "Joined group successfully!",
       });
 
+      setIsJoinCodeDialogOpen(false);
+      setJoinCode("");
+      setSelectedGroupForCode(null);
       fetchGroups();
     } catch (error: any) {
       console.error('Error joining group:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to join group",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const leaveGroup = async (groupId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Left group successfully!",
+      });
+
+      fetchGroups();
+      
+      // If user left the currently selected group, deselect it
+      if (selectedGroup?.id === groupId) {
+        setSelectedGroup(null);
+      }
+    } catch (error: any) {
+      console.error('Error leaving group:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to leave group",
         variant: "destructive",
       });
     }
@@ -288,12 +393,30 @@ export default function Community() {
         attachments = await Promise.all(uploadPromises);
       }
 
+      // Process YouTube links in content
+      let processedContent = newPost;
+      const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+      const youtubeMatches = [...newPost.matchAll(youtubeRegex)];
+      
+      for (const match of youtubeMatches) {
+        const videoId = match[1];
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        
+        attachments.push({
+          url: match[0],
+          type: 'youtube',
+          name: `YouTube Video`,
+          thumbnail: thumbnailUrl,
+          videoId: videoId
+        });
+      }
+
       const { error } = await supabase
         .from('group_posts')
         .insert({
           group_id: selectedGroup.id,
           user_id: user.id,
-          content: newPost,
+          content: processedContent,
           attachments: attachments
         });
 
@@ -471,16 +594,32 @@ export default function Community() {
                         value={newGroupDescription}
                         onChange={(e) => setNewGroupDescription(e.target.value)}
                       />
+                      <Textarea
+                        placeholder="Group objective (required)"
+                        value={newGroupObjective}
+                        onChange={(e) => setNewGroupObjective(e.target.value)}
+                      />
                       <select 
                         className="w-full p-2 border rounded-md"
                         value={newGroupLevel}
                         onChange={(e) => setNewGroupLevel(e.target.value)}
                       >
-                        <option value="Basic">Basic</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
+                        <option value="A1">A1</option>
+                        <option value="A2">A2</option>
+                        <option value="B1">B1</option>
+                        <option value="B2">B2</option>
+                        <option value="C1">C1</option>
+                        <option value="C2">C2</option>
                       </select>
-                      <Button onClick={createGroup} className="w-full">
+                      <select 
+                        className="w-full p-2 border rounded-md"
+                        value={newGroupType}
+                        onChange={(e) => setNewGroupType(e.target.value as 'open' | 'closed')}
+                      >
+                        <option value="open">Open Group (Anyone can join)</option>
+                        <option value="closed">Closed Group (Invite code required)</option>
+                      </select>
+                      <Button onClick={createGroup} className="w-full" disabled={!newGroupName.trim() || !newGroupObjective.trim()}>
                         Create Group
                       </Button>
                     </div>
@@ -573,19 +712,31 @@ export default function Community() {
                           <Users className="h-3 w-3 mr-1" />
                           {group.member_count || 0} members
                         </div>
-                        {!group.is_member && !isLocked && (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              joinGroup(group.id);
-                            }}
-                          >
-                            <UserPlus className="h-3 w-3 mr-1" />
-                            Join
-                          </Button>
-                        )}
+                         {!group.is_member && !isLocked && (
+                           <Button 
+                             size="sm" 
+                             variant="outline" 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               joinGroup(group.id);
+                             }}
+                           >
+                             <UserPlus className="h-3 w-3 mr-1" />
+                             Join
+                           </Button>
+                         )}
+                         {group.is_member && !group.is_default && (
+                           <Button 
+                             size="sm" 
+                             variant="outline" 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               leaveGroup(group.id);
+                             }}
+                           >
+                             Leave
+                           </Button>
+                         )}
                         {isLocked && (
                           <div className="text-xs text-muted-foreground">
                             Reach {group.level} level to join
@@ -597,6 +748,44 @@ export default function Community() {
                   );
                 })}
               </div>
+
+              {/* Join Code Dialog */}
+              <Dialog open={isJoinCodeDialogOpen} onOpenChange={setIsJoinCodeDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Join Private Group</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      This is a private group. Please enter the invitation code to join.
+                    </p>
+                    <Input
+                      placeholder="Enter invitation code"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => selectedGroupForCode && joinGroup(selectedGroupForCode.id, joinCode)} 
+                        disabled={!joinCode.trim()}
+                        className="flex-1"
+                      >
+                        Join Group
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsJoinCodeDialogOpen(false);
+                          setJoinCode("");
+                          setSelectedGroupForCode(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -604,28 +793,60 @@ export default function Community() {
           <div className="lg:col-span-2">
             {selectedGroup ? (
               <div className="space-y-6">
-                {/* Group Header */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {selectedGroup.name}
-                          <Badge variant="outline">{selectedGroup.level}</Badge>
-                        </CardTitle>
-                        {selectedGroup.description && (
-                          <p className="text-muted-foreground mt-2">
-                            {selectedGroup.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Users className="h-4 w-4 mr-1" />
-                        {selectedGroup.member_count || 0} members
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
+                 {/* Group Header */}
+                 <Card>
+                   <CardHeader>
+                     <div className="flex items-start justify-between">
+                       <div>
+                         <CardTitle className="flex items-center gap-2">
+                           {selectedGroup.is_default ? (
+                             <Building2 className="h-4 w-4 text-primary" />
+                           ) : (
+                             <User className="h-4 w-4 text-muted-foreground" />
+                           )}
+                           {selectedGroup.name}
+                           <Badge variant="outline">{selectedGroup.level}</Badge>
+                           {selectedGroup.group_type === 'closed' && (
+                             <Badge variant="secondary" className="text-xs">
+                               <Lock className="h-3 w-3 mr-1" />
+                               Private
+                             </Badge>
+                           )}
+                         </CardTitle>
+                         
+                         {/* Welcome Message */}
+                         <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                           <h4 className="font-semibold text-primary mb-2">
+                             {selectedGroup.is_default ? '🏫 Official Aula Click Community' : '👥 User Community'}
+                           </h4>
+                           {selectedGroup.is_default ? (
+                             <p className="text-sm text-muted-foreground">
+                               Welcome to the official {selectedGroup.level} level community! 
+                               This is your space to practice English, get help from peers, and improve together. 
+                               Connect with other learners at your level and enhance your language skills.
+                             </p>
+                           ) : (
+                             selectedGroup.objective && (
+                               <p className="text-sm text-muted-foreground">
+                                 <strong>Group Objective:</strong> {selectedGroup.objective}
+                               </p>
+                             )
+                           )}
+                         </div>
+                         
+                         {selectedGroup.description && (
+                           <p className="text-muted-foreground mt-2">
+                             {selectedGroup.description}
+                           </p>
+                         )}
+                       </div>
+                       <div className="flex items-center text-sm text-muted-foreground">
+                         <Users className="h-4 w-4 mr-1" />
+                         {selectedGroup.member_count || 0} members
+                       </div>
+                     </div>
+                   </CardHeader>
+                 </Card>
 
                 {/* Create Post */}
                 {selectedGroup.can_post && (
@@ -728,33 +949,52 @@ export default function Community() {
                           </div>
                           <p className="text-sm">{post.content}</p>
                           
-                          {/* Post Attachments */}
-                          {post.attachments && post.attachments.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              {post.attachments.map((attachment, index) => (
-                                <div key={index}>
-                                  {attachment.type.startsWith('image/') ? (
-                                    <img
-                                      src={attachment.url}
-                                      alt={attachment.name}
-                                      className="max-w-full h-auto rounded-lg border"
-                                      style={{ maxHeight: '300px' }}
-                                    />
-                                  ) : (
-                                    <a
-                                      href={attachment.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                      <span className="text-sm">{attachment.name}</span>
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                           {/* Post Attachments */}
+                           {post.attachments && post.attachments.length > 0 && (
+                             <div className="mt-3 space-y-2">
+                               {post.attachments.map((attachment, index) => (
+                                 <div key={index}>
+                                   {attachment.type === 'youtube' ? (
+                                     <div className="border rounded-lg overflow-hidden">
+                                       <div className="relative cursor-pointer" onClick={() => window.open(attachment.url, '_blank')}>
+                                         <img
+                                           src={attachment.thumbnail}
+                                           alt="YouTube Video Thumbnail"
+                                           className="w-full h-48 object-cover"
+                                         />
+                                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                           <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+                                             <div className="w-0 h-0 border-l-[20px] border-l-white border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-1"></div>
+                                           </div>
+                                         </div>
+                                       </div>
+                                       <div className="p-3">
+                                         <p className="text-sm font-medium">YouTube Video</p>
+                                         <p className="text-xs text-muted-foreground">Click to watch on YouTube</p>
+                                       </div>
+                                     </div>
+                                   ) : attachment.type.startsWith('image/') ? (
+                                     <img
+                                       src={attachment.url}
+                                       alt={attachment.name}
+                                       className="max-w-full h-auto rounded-lg border"
+                                       style={{ maxHeight: '300px' }}
+                                     />
+                                   ) : (
+                                     <a
+                                       href={attachment.url}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
+                                     >
+                                       <FileText className="h-4 w-4" />
+                                       <span className="text-sm">{attachment.name}</span>
+                                     </a>
+                                   )}
+                                 </div>
+                               ))}
+                             </div>
+                           )}
                         </CardContent>
                       </Card>
                     ))

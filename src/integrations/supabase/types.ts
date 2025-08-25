@@ -73,33 +73,42 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          group_type: string | null
           id: string
+          invite_code: string | null
           is_default: boolean | null
           level: string
           max_members: number | null
           name: string
+          objective: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
           description?: string | null
+          group_type?: string | null
           id?: string
+          invite_code?: string | null
           is_default?: boolean | null
           level: string
           max_members?: number | null
           name: string
+          objective?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
           description?: string | null
+          group_type?: string | null
           id?: string
+          invite_code?: string | null
           is_default?: boolean | null
           level?: string
           max_members?: number | null
           name?: string
+          objective?: string | null
           updated_at?: string
         }
         Relationships: []
