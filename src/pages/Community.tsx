@@ -531,7 +531,12 @@ export default function Community() {
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
-      // User's current level group first
+      // Joined groups first
+      if (a.is_member !== b.is_member) {
+        return a.is_member ? -1 : 1;
+      }
+      
+      // User's current level group first (among joined groups)
       if (userProfile?.cambridge_level) {
         if (a.level === userProfile.cambridge_level && a.is_default) return -1;
         if (b.level === userProfile.cambridge_level && b.is_default) return 1;
@@ -982,25 +987,19 @@ export default function Community() {
                              <div className="mt-3 space-y-2">
                                {post.attachments.map((attachment, index) => (
                                  <div key={index}>
-                                   {attachment.type === 'youtube' ? (
-                                     <div className="border rounded-lg overflow-hidden">
-                                       <div className="relative cursor-pointer" onClick={() => window.open(attachment.url, '_blank')}>
-                                         <img
-                                           src={attachment.thumbnail}
-                                           alt="YouTube Video Thumbnail"
-                                           className="w-full h-48 object-cover"
-                                         />
-                                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                           <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
-                                             <div className="w-0 h-0 border-l-[20px] border-l-white border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-1"></div>
-                                           </div>
-                                         </div>
-                                       </div>
-                                       <div className="p-3">
-                                         <p className="text-sm font-medium">YouTube Video</p>
-                                         <p className="text-xs text-muted-foreground">Click to watch on YouTube</p>
-                                       </div>
-                                     </div>
+                                    {attachment.type === 'youtube' ? (
+                                      <div className="border rounded-lg overflow-hidden">
+                                        <div className="aspect-video">
+                                          <iframe
+                                            src={`https://www.youtube.com/embed/${attachment.videoId}`}
+                                            title="YouTube Video"
+                                            className="w-full h-full"
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            allowFullScreen
+                                          />
+                                        </div>
+                                      </div>
                                    ) : attachment.type.startsWith('image/') ? (
                                      <img
                                        src={attachment.url}
