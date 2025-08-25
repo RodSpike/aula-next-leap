@@ -86,6 +86,11 @@ export default function Dashboard() {
           .order('order_index');
         
         if (levelCourses) {
+          // Remove any potential duplicates (safety measure)
+          const uniqueCourses = levelCourses.filter((course, index, self) => 
+            index === self.findIndex(c => c.title === course.title && c.level === course.level)
+          );
+
           // Get user progress for each course
           const { data: userProgress } = await supabase
             .from('user_lesson_progress')
@@ -99,9 +104,9 @@ export default function Dashboard() {
           const { data: courseLessons } = await supabase
             .from('lessons')
             .select('course_id, id')
-            .in('course_id', levelCourses.map(c => c.id));
+            .in('course_id', uniqueCourses.map(c => c.id));
 
-          coursesForUserLevel = levelCourses.map(course => {
+          coursesForUserLevel = uniqueCourses.map(course => {
             const lessonsForCourse = courseLessons?.filter(l => l.course_id === course.id) || [];
             const progressForCourse = userProgress?.filter(p => 
               lessonsForCourse.some(l => l.id === p.lesson_id)

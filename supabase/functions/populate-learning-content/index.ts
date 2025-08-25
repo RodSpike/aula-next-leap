@@ -19,6 +19,28 @@ serve(async (req) => {
 
     console.log('Starting to populate learning content...');
 
+    // Check if courses already exist to prevent duplicates
+    const { data: existingCourses, error: checkError } = await supabase
+      .from('courses')
+      .select('id')
+      .limit(1);
+
+    if (checkError) {
+      console.error('Error checking existing courses:', checkError);
+      throw checkError;
+    }
+
+    if (existingCourses && existingCourses.length > 0) {
+      console.log('Courses already exist, skipping population');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Content already exists - no duplication needed',
+        coursesCreated: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // First, populate courses
     const coursesData = [
       // A1 Level Courses
