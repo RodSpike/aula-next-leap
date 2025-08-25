@@ -73,7 +73,9 @@ Generate the first question for a Cambridge English placement test that will det
       
       let questionData;
       try {
-        questionData = JSON.parse(textContent);
+        // Strip markdown code blocks if present
+        const cleanedContent = textContent.replace(/```json\n?|\n?```/g, '').trim();
+        questionData = JSON.parse(cleanedContent);
       } catch (parseError) {
         console.error('JSON parse error:', parseError, 'Content:', textContent);
         throw new Error('Failed to parse AI response as JSON');
@@ -145,13 +147,15 @@ Otherwise, return a question in this format:
       
       let result;
       try {
-        result = JSON.parse(textContent);
+        // Strip markdown code blocks if present
+        const cleanedContent = textContent.replace(/```json\n?|\n?```/g, '').trim();
+        result = JSON.parse(cleanedContent);
       } catch (parseError) {
         console.error('JSON parse error:', parseError, 'Content:', textContent);
         throw new Error('Failed to parse AI response as JSON');
       }
 
-      // If this is a final assessment, save to user profile
+      // If this is a final assessment, save to user profile and auto-join community group
       if (result.finalAssessment && userId) {
         try {
           const { error: profileError } = await supabase
@@ -162,8 +166,34 @@ Otherwise, return a question in this format:
           if (profileError) {
             console.error('Profile update error:', profileError);
           }
-        } catch (profileError) {
-          console.error('Profile update failed:', profileError);
+
+          // Auto-join appropriate community group based on level
+          const { data: groups } = await supabase
+            .from('community_groups')
+            .select('id')
+            .eq('level', result.level)
+            .eq('is_default', true)
+            .limit(1);
+
+          if (groups && groups.length > 0) {
+            const { error: memberError } = await supabase
+              .from('group_members')
+              .insert({
+                group_id: groups[0].id,
+                user_id: userId,
+                status: 'accepted',
+                can_post: true
+              });
+            
+            if (memberError) {
+              console.error('Group membership error:', memberError);
+            } else {
+              result.autoJoinedGroup = true;
+              result.groupLevel = result.level;
+            }
+          }
+        } catch (error) {
+          console.error('Profile/group update failed:', error);
         }
       }
 
