@@ -12,6 +12,8 @@ interface Question {
   options: string[];
   level: string;
   questionNumber: number;
+  correctAnswer?: string;
+  askedQuestions?: string[];
 }
 
 interface FinalAssessment {
@@ -31,6 +33,8 @@ const PlacementTest = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [testStarted, setTestStarted] = useState(false);
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<string>("A2");
 
   const startTest = async () => {
     if (!user) {
@@ -62,6 +66,9 @@ const PlacementTest = () => {
 
       setCurrentQuestion(data);
       setTestStarted(true);
+      if (data.askedQuestions) {
+        setAskedQuestions(data.askedQuestions);
+      }
     } catch (error: any) {
       console.error('Error starting test:', error);
       toast({
@@ -84,7 +91,10 @@ const PlacementTest = () => {
           action: 'next',
           userId: user.id,
           userAnswer: selectedAnswer,
-          questionIndex: currentQuestion.questionNumber
+          questionIndex: currentQuestion.questionNumber,
+          correctAnswer: currentQuestion.correctAnswer,
+          askedQuestions: askedQuestions,
+          currentLevel: currentLevel
         }
       });
 
@@ -114,6 +124,12 @@ const PlacementTest = () => {
         }
       } else {
         setCurrentQuestion(data);
+        if (data.askedQuestions) {
+          setAskedQuestions(data.askedQuestions);
+        }
+        if (data.level) {
+          setCurrentLevel(data.level);
+        }
       }
       
       setSelectedAnswer("");
@@ -146,10 +162,11 @@ const PlacementTest = () => {
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">What to expect:</h3>
               <ul className="space-y-2 text-muted-foreground">
-                <li>• 10 questions testing grammar, vocabulary, and comprehension</li>
+                <li>• Up to 20 questions testing grammar, vocabulary, and comprehension</li>
                 <li>• Adaptive difficulty based on your performance</li>
-                <li>• Instant results with your Cambridge level (A1-C2)</li>
-                <li>• Takes approximately 10-15 minutes</li>
+                <li>• Test may end early if your level is clearly determined</li>
+                <li>• Instant results with your Cambridge level (A2-C2)</li>
+                <li>• Takes approximately 10-20 minutes</li>
               </ul>
             </div>
             <Button 
@@ -230,12 +247,12 @@ const PlacementTest = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Question {currentQuestion?.questionNumber}</CardTitle>
-            <span className="text-sm text-muted-foreground">
-              Level: {currentQuestion?.level}
-            </span>
-          </div>
+            <div className="flex justify-between items-center">
+              <CardTitle>Question {currentQuestion?.questionNumber} of 20</CardTitle>
+              <span className="text-sm text-muted-foreground">
+                Level: {currentQuestion?.level}
+              </span>
+            </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">

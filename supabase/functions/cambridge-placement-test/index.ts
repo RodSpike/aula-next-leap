@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, userId, userAnswer, questionIndex } = await req.json();
+    const { action, userId, userAnswer, questionIndex, askedQuestions, correctAnswer, currentLevel } = await req.json();
     
     if (!geminiApiKey) {
       throw new Error('Gemini API key not configured');
@@ -37,12 +37,23 @@ serve(async (req) => {
             parts: [{
               text: `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
 
-Generate the first question for a Cambridge English placement test that will determine the user's level (A1, A2, B1, B2, C1, C2). Start with a basic A1 level question. Return ONLY a JSON object with this exact format:
+Generate the first question for a Cambridge English placement test that will determine the user's level (A1, A2, B1, B2, C1, C2). 
+
+IMPORTANT RULES:
+1. Start with A2 level (not A1) - basic but not absolute beginner
+2. NEVER create questions that require images, pictures, or visual content
+3. Only create sentence completion questions with multiple choice answers
+4. Focus on grammar, vocabulary, and sentence structure
+5. Make questions unique and varied - avoid repetitive patterns
+
+Return ONLY a JSON object with this exact format:
 {
-  "question": "Your question here",
-  "options": ["A) option1", "B) option2", "C) option3", "D) option4"],
-  "level": "A1",
-  "questionNumber": 1
+  "question": "Complete the sentence: I _____ to work every day.",
+  "options": ["A) go", "B) goes", "C) going", "D) went"],
+  "level": "A2",
+  "questionNumber": 1,
+  "correctAnswer": "A",
+  "askedQuestions": ["I _____ to work every day."]
 }`
             }]
           }],
@@ -98,33 +109,54 @@ Generate the first question for a Cambridge English placement test that will det
             parts: [{
               text: `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
 
-The user just answered question ${questionIndex}. Their answer was: "${userAnswer}".
+The user just answered question ${questionIndex}. Their answer was: "${userAnswer}". The correct answer was: "${correctAnswer}". Current assessed level: "${currentLevel || 'A2'}".
 
-Based on their performance so far, generate the next appropriate question. If they're doing well, increase difficulty. If struggling, maintain or decrease difficulty.
+Previously asked questions to avoid repetition: ${JSON.stringify(askedQuestions || [])}
 
-After 10 questions total, instead of a question, provide a final assessment.
+ADAPTIVE DIFFICULTY RULES:
+- Start at A2 level
+- If answer is correct: increase difficulty (A2→B1→B2→C1→C2)
+- If answer is wrong: maintain or decrease difficulty slightly
+- Track confidence in level assessment
 
-If this is question 10 or more, return a final assessment in this format:
+IMPORTANT RULES:
+1. NEVER create questions that require images, pictures, or visual content
+2. Only create sentence completion questions with multiple choice answers
+3. NEVER repeat similar questions - check the askedQuestions array
+4. Make each question unique in structure and content
+5. Focus on different grammar points, vocabulary, and sentence structures
+6. Maximum 20 questions total
+7. If confidence is high after minimum 8 questions, provide final assessment
+
+Early termination criteria:
+- If user answers 3+ consecutive questions correctly at same level = confident at that level
+- If user answers 3+ consecutive questions incorrectly = confirmed at lower level
+- Minimum 8 questions, maximum 20 questions
+
+If you determine the level with confidence OR reached 20 questions, return final assessment:
 {
   "finalAssessment": true,
   "level": "B1", 
-  "explanation": "Based on your answers, your Cambridge English level is B1 (Intermediate)..."
+  "explanation": "Based on your ${questionIndex} answers, your Cambridge English level is B1 (Intermediate). You demonstrated solid understanding of...",
+  "questionsAnswered": ${questionIndex}
 }
 
-Otherwise, return a question in this format:
+Otherwise, return a question that is completely different from previous ones:
 {
-  "question": "Your question here",
+  "question": "Complete the sentence: [NEW UNIQUE SENTENCE]",
   "options": ["A) option1", "B) option2", "C) option3", "D) option4"],
-  "level": "B1",
-  "questionNumber": ${questionIndex + 1}
+  "level": "[APPROPRIATE_LEVEL]",
+  "questionNumber": ${questionIndex + 1},
+  "correctAnswer": "[A/B/C/D]",
+  "askedQuestions": [previous questions + this new question]
 }`
             }]
           }],
           generationConfig: {
-            temperature: 0.3,
+            temperature: 0.4,
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 400,
+            maxOutputTokens: 500,
           }
         }),
       });
