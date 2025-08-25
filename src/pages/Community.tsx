@@ -70,7 +70,7 @@ export default function Community() {
   const [posts, setPosts] = useState<GroupPost[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
-  const [newGroupLevel, setNewGroupLevel] = useState("Basic");
+  const [newGroupLevel, setNewGroupLevel] = useState("A1");
   const [newGroupObjective, setNewGroupObjective] = useState("");
   const [newGroupType, setNewGroupType] = useState<'open' | 'closed'>('open');
   const [joinCode, setJoinCode] = useState("");
@@ -85,16 +85,24 @@ export default function Community() {
 
   useEffect(() => {
     if (user) {
-      fetchGroups();
-      fetchUserProfile();
+      // First fetch user profile, then groups to ensure auto-join works correctly
+      fetchUserProfile().then(() => {
+        fetchGroups();
+      });
     }
   }, [user]);
 
   useEffect(() => {
     if (selectedGroup) {
       fetchPosts(selectedGroup.id);
+      
+      // Update selected group with latest membership info
+      const updatedGroup = groups.find(g => g.id === selectedGroup.id);
+      if (updatedGroup) {
+        setSelectedGroup(updatedGroup);
+      }
     }
-  }, [selectedGroup]);
+  }, [selectedGroup?.id, groups]);
 
   const fetchGroups = async () => {
     try {
@@ -130,16 +138,16 @@ export default function Community() {
         
         if (userLevelGroup) {
           // Check if user is already a member
-          const { data: existingMembership } = await supabase
+          const { data: existingMembership, error: membershipError } = await supabase
             .from('group_members')
             .select('id')
             .eq('group_id', userLevelGroup.id)
             .eq('user_id', user?.id)
-            .single();
+            .maybeSingle();
 
-          if (!existingMembership) {
+          if (!membershipError && !existingMembership) {
             // Auto-join user to their level group
-            await supabase
+            const { error: joinError } = await supabase
               .from('group_members')
               .upsert({
                 group_id: userLevelGroup.id,
@@ -149,23 +157,41 @@ export default function Community() {
               }, {
                 onConflict: 'group_id,user_id'
               });
+            
+            if (joinError) {
+              console.error('Error auto-joining group:', joinError);
+            } else {
+              console.log('Auto-joined user to level group:', userLevelGroup.name);
+            }
           }
         }
       }
 
-      // Get user memberships
-      const { data: memberships } = await supabase
+      // Get user memberships (refresh after potential auto-join)
+      const { data: memberships, error: membershipsFetchError } = await supabase
         .from('group_members')
         .select('group_id, can_post, status')
         .eq('user_id', user?.id)
         .eq('status', 'accepted');
 
+      if (membershipsFetchError) {
+        console.error('Error fetching memberships:', membershipsFetchError);
+      }
+
       const groupsWithMembership = groupsWithCounts.map(group => ({
         ...group,
         group_type: (group.group_type as 'open' | 'closed') || 'open',
-        is_member: memberships?.some(m => m.group_id === group.id),
+        is_member: memberships?.some(m => m.group_id === group.id) || false,
         can_post: memberships?.find(m => m.group_id === group.id)?.can_post || false
       }));
+
+      console.log('Groups with membership info:', groupsWithMembership.map(g => ({
+        name: g.name,
+        is_member: g.is_member,
+        can_post: g.can_post,
+        is_default: g.is_default,
+        level: g.level
+      })));
 
       setGroups(groupsWithMembership);
     } catch (error) {
@@ -190,8 +216,10 @@ export default function Community() {
       
       if (error) throw error;
       setUserProfile(data);
+      return data; // Return data for chaining
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      return null;
     }
   };
 
@@ -260,7 +288,7 @@ export default function Community() {
 
       setNewGroupName("");
       setNewGroupDescription("");
-      setNewGroupLevel("Basic");
+      setNewGroupLevel("A1");
       setNewGroupObjective("");
       setNewGroupType('open');
       setIsCreateGroupOpen(false);
