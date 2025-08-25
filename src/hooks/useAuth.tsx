@@ -43,9 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               
               if (!profile?.birthdate) {
                 navigate("/onboarding");
+              } else {
+                navigate("/dashboard");
               }
             } catch (e) {
-              // no-op
+              // If profile doesn't exist, go to onboarding
+              navigate("/onboarding");
             }
           }, 0);
         }
@@ -113,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
           if (!profile?.birthdate) {
             navigate("/onboarding");
+          } else {
+            navigate("/dashboard");
           }
         }
       }, 1000);

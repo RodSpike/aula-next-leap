@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      certificates: {
+        Row: {
+          certificate_type: string | null
+          course_name: string
+          created_at: string
+          id: string
+          issued_date: string
+          user_id: string
+        }
+        Insert: {
+          certificate_type?: string | null
+          course_name: string
+          created_at?: string
+          id?: string
+          issued_date?: string
+          user_id: string
+        }
+        Update: {
+          certificate_type?: string | null
+          course_name?: string
+          created_at?: string
+          id?: string
+          issued_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -213,6 +240,77 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          hours_studied: number
+          id: string
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          hours_studied?: number
+          id?: string
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          hours_studied?: number
+          id?: string
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "user_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_courses: {
+        Row: {
+          completed_lessons: number | null
+          course_description: string | null
+          course_name: string
+          created_at: string
+          id: string
+          status: string | null
+          total_lessons: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_lessons?: number | null
+          course_description?: string | null
+          course_name: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          total_lessons?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_lessons?: number | null
+          course_description?: string | null
+          course_name?: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          total_lessons?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
