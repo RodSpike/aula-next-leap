@@ -149,7 +149,7 @@ const PlacementTest = () => {
 
             if (!existingMembership) {
               // Join the user to the community group
-              await supabase
+              const { error: joinError } = await supabase
                 .from('group_members')
                 .insert({
                   group_id: communityGroup.id,
@@ -157,6 +157,15 @@ const PlacementTest = () => {
                   status: 'accepted',
                   can_post: true
                 });
+
+              if (!joinError) {
+                // Update final result to show auto-join success
+                setFinalResult(prev => ({
+                  ...prev!,
+                  autoJoinedGroup: true,
+                  groupLevel: currentLevel || 'B1'
+                }));
+              }
             }
           }
         } catch (profileError) {
@@ -194,7 +203,7 @@ const PlacementTest = () => {
 
             if (!existingMembership) {
               // Join the user to the community group
-              await supabase
+              const { error: joinError } = await supabase
                 .from('group_members')
                 .insert({
                   group_id: communityGroup.id,
@@ -202,6 +211,15 @@ const PlacementTest = () => {
                   status: 'accepted',
                   can_post: true
                 });
+
+              if (!joinError) {
+                // Update final result to show auto-join success
+                setFinalResult(prev => ({
+                  ...prev,
+                  autoJoinedGroup: true,
+                  groupLevel: data.level
+                }));
+              }
             }
           }
         } catch (profileError) {
@@ -260,7 +278,7 @@ const PlacementTest = () => {
 
             if (!existingMembership) {
               // Join the user to the community group
-              await supabase
+              const { error: joinError } = await supabase
                 .from('group_members')
                 .insert({
                   group_id: communityGroup.id,
@@ -268,6 +286,10 @@ const PlacementTest = () => {
                   status: 'accepted',
                   can_post: true
                 });
+
+              if (!joinError) {
+                console.log('Successfully joined community group');
+              }
             }
           }
         } catch (profileError) {

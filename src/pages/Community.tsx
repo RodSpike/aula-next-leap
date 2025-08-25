@@ -20,7 +20,11 @@ import {
   Upload,
   Image as ImageIcon,
   FileText,
-  X
+  X,
+  Lock,
+  Building2,
+  User,
+  Filter
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -66,10 +70,13 @@ export default function Community() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [groupFilter, setGroupFilter] = useState<"all" | "official" | "user">("all");
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
       fetchGroups();
+      fetchUserProfile();
     }
   }, [user]);
 
@@ -126,6 +133,23 @@ export default function Community() {
         description: "Failed to load community groups",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('cambridge_level')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
     }
   };
 
@@ -332,10 +356,51 @@ export default function Community() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const filteredGroups = groups.filter(group =>
-    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getLevelHierarchy = (level: string): number => {
+    const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    return levels.indexOf(level);
+  };
+
+  const canAccessGroup = (groupLevel: string): boolean => {
+    if (!userProfile?.cambridge_level) return false;
+    const userLevelIndex = getLevelHierarchy(userProfile.cambridge_level);
+    const groupLevelIndex = getLevelHierarchy(groupLevel);
+    return userLevelIndex >= groupLevelIndex;
+  };
+
+  const filteredGroups = groups
+    .filter(group => {
+      const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesFilter = groupFilter === "all" || 
+        (groupFilter === "official" && group.is_default) ||
+        (groupFilter === "user" && !group.is_default);
+      
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      // User's current level group first
+      if (userProfile?.cambridge_level) {
+        if (a.level === userProfile.cambridge_level && a.is_default) return -1;
+        if (b.level === userProfile.cambridge_level && b.is_default) return 1;
+      }
+      
+      // Then by level hierarchy
+      const aLevelIndex = getLevelHierarchy(a.level);
+      const bLevelIndex = getLevelHierarchy(b.level);
+      
+      if (aLevelIndex !== bLevelIndex) {
+        return aLevelIndex - bLevelIndex;
+      }
+      
+      // Official groups before user groups
+      if (a.is_default !== b.is_default) {
+        return a.is_default ? -1 : 1;
+      }
+      
+      return a.name.localeCompare(b.name);
+    });
 
   if (!user) {
     return (
@@ -434,23 +499,70 @@ export default function Community() {
                 />
               </div>
 
+              {/* Filter */}
+              <div className="flex gap-2">
+                <Button
+                  variant={groupFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGroupFilter("all")}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={groupFilter === "official" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGroupFilter("official")}
+                >
+                  <Building2 className="h-3 w-3 mr-1" />
+                  Official
+                </Button>
+                <Button
+                  variant={groupFilter === "user" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGroupFilter("user")}
+                >
+                  <User className="h-3 w-3 mr-1" />
+                  User
+                </Button>
+              </div>
+
               {/* Groups List */}
               <div className="space-y-3">
-                {filteredGroups.map((group) => (
-                  <Card 
-                    key={group.id} 
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedGroup?.id === group.id ? 'ring-2 ring-primary' : ''
-                    }`}
-                    onClick={() => setSelectedGroup(group)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-sm">{group.name}</h3>
-                        <Badge variant="outline" className="text-xs">
-                          {group.level}
-                        </Badge>
-                      </div>
+                {filteredGroups.map((group) => {
+                  const isUserCurrentLevel = userProfile?.cambridge_level === group.level && group.is_default;
+                  const canAccess = canAccessGroup(group.level);
+                  const isLocked = !canAccess && group.is_default;
+                  
+                  return (
+                    <Card 
+                      key={group.id} 
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        selectedGroup?.id === group.id ? 'ring-2 ring-primary' : ''
+                      } ${isUserCurrentLevel ? 'bg-primary/5 border-primary/20' : ''} ${
+                        isLocked ? 'opacity-75' : ''
+                      }`}
+                      onClick={() => !isLocked && setSelectedGroup(group)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {group.is_default ? (
+                              <Building2 className="h-3 w-3 text-primary" />
+                            ) : (
+                              <User className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            <h3 className={`font-semibold text-sm ${isUserCurrentLevel ? 'text-primary' : ''}`}>
+                              {group.name}
+                              {isUserCurrentLevel && ' (Your Level)'}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                            <Badge variant={isUserCurrentLevel ? "default" : "outline"} className="text-xs">
+                              {group.level}
+                            </Badge>
+                          </div>
+                        </div>
                       {group.description && (
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
                           {group.description}
@@ -461,7 +573,7 @@ export default function Community() {
                           <Users className="h-3 w-3 mr-1" />
                           {group.member_count || 0} members
                         </div>
-                        {!group.is_member && (
+                        {!group.is_member && !isLocked && (
                           <Button 
                             size="sm" 
                             variant="outline" 
@@ -474,10 +586,16 @@ export default function Community() {
                             Join
                           </Button>
                         )}
+                        {isLocked && (
+                          <div className="text-xs text-muted-foreground">
+                            Reach {group.level} level to join
+                          </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           </div>
