@@ -186,7 +186,22 @@ export default function Course() {
   const handleSubmitExercises = async () => {
     if (!currentLesson || !user) return;
 
+    // Check if all exercises have been answered
+    const unansweredQuestions = selectedAnswers.filter((answer, index) => 
+      index < exercises.length && (!answer || answer.trim() === '')
+    );
+    
+    if (unansweredQuestions.length > 0) {
+      toast({
+        title: "Incomplete",
+        description: "Please answer all questions before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const score = selectedAnswers.reduce((acc, answer, index) => {
+      if (index >= exercises.length) return acc;
       return acc + (answer === exercises[index]?.correct_answer ? 1 : 0);
     }, 0);
 
@@ -203,9 +218,15 @@ export default function Course() {
           completed: passed,
           score: percentage,
           completed_at: passed ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,lesson_id'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       setShowResults(true);
       setLessonCompleted(passed);
@@ -224,12 +245,12 @@ export default function Course() {
       }
 
       // Refresh progress
-      fetchCourseData();
+      await fetchCourseData();
     } catch (error) {
       console.error('Error submitting exercises:', error);
       toast({
         title: "Error",
-        description: "Failed to submit exercises.",
+        description: "Failed to submit exercises. Please try again.",
         variant: "destructive",
       });
     }
@@ -457,7 +478,7 @@ export default function Course() {
                                   onClick={handleNextExercise}
                                   disabled={!selectedAnswers[currentExerciseIndex]}
                                 >
-                                  {currentExerciseIndex === exercises.length - 1 ? 'Submit' : 'Next'}
+                                  {currentExerciseIndex === exercises.length - 1 ? 'Submit Answers' : 'Next'}
                                   <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
                               </div>
