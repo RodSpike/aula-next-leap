@@ -1,1 +1,4 @@
 project_id = "frbmvljizolvxcxdkefa"
+
+[functions.populate-learning-content]
+verify_jwt = false
