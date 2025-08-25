@@ -4,7 +4,7 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Users, Star, Play, TrendingUp, TrendingDown } from "lucide-react";
+import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -189,7 +189,7 @@ export default function Dashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
@@ -244,6 +244,21 @@ export default function Dashboard() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Joined
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cambridge Level</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {statsLoading ? '...' : (userProfile?.cambridge_level || 'Not assessed')}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {userProfile?.cambridge_level ? 'Current level' : 'Take placement test'}
               </p>
             </CardContent>
           </Card>

@@ -121,27 +121,91 @@ const PlacementTest = () => {
         });
         setCurrentQuestion(null);
         
-        // Update user profile with the result
+        // Update user profile and join appropriate community group for forced completion
         try {
-          await supabase
+          const { error: profileError } = await supabase
             .from('profiles')
             .update({ cambridge_level: currentLevel || 'B1' })
             .eq('user_id', user.id);
+
+          if (profileError) throw profileError;
+
+          // Auto-join user to appropriate community group
+          const { data: communityGroup } = await supabase
+            .from('community_groups')
+            .select('id')
+            .eq('level', currentLevel || 'B1')
+            .eq('is_default', true)
+            .single();
+
+          if (communityGroup) {
+            // Check if user is already a member
+            const { data: existingMembership } = await supabase
+              .from('group_members')
+              .select('id')
+              .eq('group_id', communityGroup.id)
+              .eq('user_id', user.id)
+              .single();
+
+            if (!existingMembership) {
+              // Join the user to the community group
+              await supabase
+                .from('group_members')
+                .insert({
+                  group_id: communityGroup.id,
+                  user_id: user.id,
+                  status: 'accepted',
+                  can_post: true
+                });
+            }
+          }
         } catch (profileError) {
-          console.error('Error updating profile:', profileError);
+          console.error('Error updating profile or joining community:', profileError);
         }
       } else if (data.finalAssessment) {
         setFinalResult(data);
         setCurrentQuestion(null);
         
-        // Update user profile with the result
+        // Update user profile and join appropriate community group
         try {
-          await supabase
+          const { error: profileError } = await supabase
             .from('profiles')
             .update({ cambridge_level: data.level })
             .eq('user_id', user.id);
+
+          if (profileError) throw profileError;
+
+          // Auto-join user to appropriate community group
+          const { data: communityGroup } = await supabase
+            .from('community_groups')
+            .select('id')
+            .eq('level', data.level)
+            .eq('is_default', true)
+            .single();
+
+          if (communityGroup) {
+            // Check if user is already a member
+            const { data: existingMembership } = await supabase
+              .from('group_members')
+              .select('id')
+              .eq('group_id', communityGroup.id)
+              .eq('user_id', user.id)
+              .single();
+
+            if (!existingMembership) {
+              // Join the user to the community group
+              await supabase
+                .from('group_members')
+                .insert({
+                  group_id: communityGroup.id,
+                  user_id: user.id,
+                  status: 'accepted',
+                  can_post: true
+                });
+            }
+          }
         } catch (profileError) {
-          console.error('Error updating profile:', profileError);
+          console.error('Error updating profile or joining community:', profileError);
         }
       } else {
         setCurrentQuestion(data);
@@ -168,14 +232,46 @@ const PlacementTest = () => {
         });
         setCurrentQuestion(null);
         
-        // Update user profile with the result
+        // Update user profile and join appropriate community group
         try {
-          await supabase
+          const { error: profileError } = await supabase
             .from('profiles')
             .update({ cambridge_level: currentLevel || 'B1' })
             .eq('user_id', user.id);
+
+          if (profileError) throw profileError;
+
+          // Auto-join user to appropriate community group
+          const { data: communityGroup } = await supabase
+            .from('community_groups')
+            .select('id')
+            .eq('level', currentLevel || 'B1')
+            .eq('is_default', true)
+            .single();
+
+          if (communityGroup) {
+            // Check if user is already a member
+            const { data: existingMembership } = await supabase
+              .from('group_members')
+              .select('id')
+              .eq('group_id', communityGroup.id)
+              .eq('user_id', user.id)
+              .single();
+
+            if (!existingMembership) {
+              // Join the user to the community group
+              await supabase
+                .from('group_members')
+                .insert({
+                  group_id: communityGroup.id,
+                  user_id: user.id,
+                  status: 'accepted',
+                  can_post: true
+                });
+            }
+          }
         } catch (profileError) {
-          console.error('Error updating profile:', profileError);
+          console.error('Error updating profile or joining community:', profileError);
         }
       } else {
         toast({

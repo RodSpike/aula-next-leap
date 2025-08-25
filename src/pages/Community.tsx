@@ -81,15 +81,29 @@ export default function Community() {
 
   const fetchGroups = async () => {
     try {
+      // First get all community groups
       const { data, error } = await supabase
         .from('community_groups')
-        .select(`
-          *,
-          group_members!inner(count)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Get member counts for each group separately
+      const groupsWithCounts = await Promise.all(
+        (data || []).map(async (group) => {
+          const { count } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact' })
+            .eq('group_id', group.id)
+            .eq('status', 'accepted');
+          
+          return {
+            ...group,
+            member_count: count || 0
+          };
+        })
+      );
 
       // Get user memberships
       const { data: memberships } = await supabase
@@ -98,9 +112,8 @@ export default function Community() {
         .eq('user_id', user?.id)
         .eq('status', 'accepted');
 
-      const groupsWithMembership = data.map(group => ({
+      const groupsWithMembership = groupsWithCounts.map(group => ({
         ...group,
-        member_count: group.group_members?.length || 0,
         is_member: memberships?.some(m => m.group_id === group.id),
         can_post: memberships?.find(m => m.group_id === group.id)?.can_post || false
       }));
