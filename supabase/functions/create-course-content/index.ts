@@ -17,6 +17,13 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get all courses to create interactive content
+    const { data: courses } = await supabase
+      .from('courses')
+      .select('id, title, level, description')
+      .order('level', { ascending: true })
+      .order('order_index', { ascending: true });
+
     // Create first community group post linking to courses
     const { data: englishGroup } = await supabase
       .from('community_groups')
@@ -25,41 +32,53 @@ serve(async (req) => {
       .eq('is_default', true)
       .single();
 
-    if (englishGroup) {
-      // Create a welcome post with link to structured courses
+    if (englishGroup && courses) {
+      // Group courses by level
+      const coursesByLevel = courses.reduce((acc, course) => {
+        if (!acc[course.level]) acc[course.level] = [];
+        acc[course.level].push(course);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Create course content for each level
+      let courseContent = '';
+      const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+      
+      for (const level of levels) {
+        if (coursesByLevel[level]) {
+          courseContent += `\n## 📖 ${level} Level Courses\n`;
+          for (const course of coursesByLevel[level]) {
+            courseContent += `• **[${course.title}](/course/${course.id})** - ${course.description}\n`;
+          }
+        }
+      }
+
+      // Create a welcome post with interactive course content
       const { error: postError } = await supabase
         .from('group_posts')
         .insert({
           group_id: englishGroup.id,
           user_id: '00000000-0000-0000-0000-000000000000', // System user
-          content: `🎓 **Welcome to Aula Click!**
+          content: `🎓 **Welcome to Your English Learning Journey!**
 
-Start your structured English learning journey with our comprehensive Cambridge-aligned courses:
+Start your structured Cambridge-aligned courses below. Find your level and begin learning immediately:
 
-📚 **Available Courses:**
-• A1 Elementary English - Perfect for absolute beginners
-• A2 Pre-Intermediate English - Build on your basics
-• B1 Intermediate English - Gain confidence for work and travel  
-• B2 Upper-Intermediate English - Master advanced grammar
-• C1 Advanced English - Achieve fluency
-• C2 Proficiency English - Master native-level skills
+${courseContent}
 
-✨ **Progressive Learning System:**
-- Interactive lessons with rich content
-- Practice exercises after each lesson
-- Must score 70% to advance to next lesson
-- Level advancement tests to unlock new levels
-- Earn certificates for completing levels
+✨ **How It Works:**
+- Click any course title to start learning
+- Complete lessons with interactive content
+- Take exercises after each lesson
+- Score 70% or higher to advance
+- Pass level tests to unlock certificates
 
-🚀 **Get Started:**
-1. Take your Cambridge Placement Test to find your level
-2. Browse our course catalog and start learning
-3. Join your level group to connect with peers
-4. Practice regularly and track your progress
+🎯 **Your Progress Tracking:**
+- Track your learning from the Dashboard
+- See your completed lessons and scores  
+- View earned certificates
+- Join level-specific discussions
 
-Ready to begin? Click the courses link in the navigation to explore our full catalog!
-
-Good luck on your learning journey! 🌟`,
+Ready to begin? Click any course title above to start your journey! 🚀`,
           attachments: []
         });
 
