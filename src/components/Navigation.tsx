@@ -55,7 +55,9 @@ export const Navigation = () => {
   };
   
   const navigation = [
-    { name: "Início", href: "/", icon: BookOpen },
+    user 
+      ? { name: "My Dashboard", href: "/dashboard", icon: User }
+      : { name: "Início", href: "/", icon: BookOpen },
     { name: "Cursos", href: "/courses", icon: BookOpen },
     { name: "Comunidade", href: "/community", icon: Users },
     { name: "Amigos", href: "/friends", icon: UserPlus },
