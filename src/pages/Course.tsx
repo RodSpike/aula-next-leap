@@ -476,7 +476,7 @@ export default function Course() {
                                 </Button>
                                 <Button
                                   onClick={handleNextExercise}
-                                  disabled={!selectedAnswers[currentExerciseIndex]}
+                                  disabled={!selectedAnswers[currentExerciseIndex] || selectedAnswers[currentExerciseIndex].trim() === ''}
                                 >
                                   {currentExerciseIndex === exercises.length - 1 ? 'Submit Answers' : 'Next'}
                                   <ArrowRight className="h-4 w-4 ml-2" />
