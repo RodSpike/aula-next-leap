@@ -4,6 +4,7 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SeedDataButton } from "@/components/SeedDataButton";
 import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,12 +74,18 @@ export default function Dashboard() {
       setUserProfile(profile);
       setHasPlacementTest(!!profile?.cambridge_level);
       
-      // Get active courses
-      const { data: courses } = await supabase
+      // Get active courses from user_courses
+      const { data: userCourses } = await supabase
         .from('user_courses')
         .select('*')
         .eq('user_id', user!.id)
         .eq('status', 'active');
+
+      // Also check if we have actual courses in the courses table for fallback
+      const { data: availableCourses } = await supabase
+        .from('courses')
+        .select('*')
+        .limit(3);
 
       // Get study hours for this week (last 7 days)
       const thisWeekStart = new Date();
@@ -128,27 +135,45 @@ export default function Dashboard() {
       const hoursThisWeek = thisWeekSessions?.reduce((sum, session) => sum + Number(session.hours_studied), 0) || 0;
       const hoursLastWeek = lastWeekSessions?.reduce((sum, session) => sum + Number(session.hours_studied), 0) || 0;
 
+      // Use user courses if available, otherwise show available courses as suggestions
+      const coursesToShow = userCourses && userCourses.length > 0 
+        ? userCourses.map(course => ({
+            id: course.id,
+            name: course.course_name,
+            description: course.course_description || '',
+            totalLessons: course.total_lessons,
+            completedLessons: course.completed_lessons,
+            status: course.status
+          }))
+        : availableCourses?.map(course => ({
+            id: course.id,
+            name: course.title,
+            description: course.description || '',
+            totalLessons: 10, // Default assumption
+            completedLessons: 0,
+            status: 'available'
+          })) || [];
+
       setStats({
-        activeCourses: courses?.length || 0,
+        activeCourses: userCourses?.length || 0,
         hoursThisWeek: Math.round(hoursThisWeek * 10) / 10,
         hoursLastWeek: Math.round(hoursLastWeek * 10) / 10,
         groupsCount: groupsCount || 0,
         certificatesCount: certificatesCount || 0,
         joinedGroups: groupMemberships?.map(membership => membership.community_groups) || [],
-        courses: courses?.map(course => ({
-          id: course.id,
-          name: course.course_name,
-          description: course.course_description || '',
-          totalLessons: course.total_lessons,
-          completedLessons: course.completed_lessons,
-          status: course.status
-        })) || []
+        courses: coursesToShow
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
       setStatsLoading(false);
     }
+  };
+
+  const getNextLevel = (currentLevel: string): string | null => {
+    const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const currentIndex = levels.indexOf(currentLevel);
+    return currentIndex >= 0 && currentIndex < levels.length - 1 ? levels[currentIndex + 1] : null;
   };
 
   if (loading) {
@@ -170,16 +195,19 @@ export default function Dashboard() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back{userProfile?.display_name ? `, ${userProfile.display_name}` : ''}!
-          </h1>
-          <p className="text-muted-foreground">
-            Continue your learning journey
-          </p>
-          <Badge variant="secondary" className="mt-2">
-            ✨ 3 days free trial remaining
-          </Badge>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Welcome back{userProfile?.display_name ? `, ${userProfile.display_name}` : ''}!
+            </h1>
+            <p className="text-muted-foreground">
+              Continue your learning journey
+            </p>
+            <Badge variant="secondary" className="mt-2">
+              ✨ 3 days free trial remaining
+            </Badge>
+          </div>
+          <SeedDataButton />
         </div>
 
         {/* Placement Test Call to Action */}
@@ -298,125 +326,160 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Continue Learning</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {statsLoading ? (
-                <div className="flex items-center space-x-4 p-4 bg-accent rounded-lg animate-pulse">
-                  <div className="w-12 h-12 bg-secondary rounded-lg"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-secondary rounded w-3/4"></div>
-                    <div className="h-3 bg-secondary rounded w-1/2"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BookOpen className="h-5 w-5" />
+                  <span>Continue Learning</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats.courses.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.courses.slice(0, 3).map((course) => (
+                      <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="font-medium">{course.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {course.completedLessons}/{course.totalLessons} lessons completed
+                          </p>
+                          <div className="w-full bg-secondary rounded-full h-2 mt-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full transition-all" 
+                              style={{ 
+                                width: `${course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0}%` 
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                        <Button size="sm" onClick={() => navigate(`/course/${course.id}`)}>Continue</Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">Start your learning journey</p>
+                    <Button onClick={() => navigate('/courses')}>Browse Courses</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <span>Community Groups</span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>
+                    View All
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats.joinedGroups.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.joinedGroups.slice(0, 3).map((group) => (
+                      <div key={group.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="font-medium">{group.name}</p>
+                          <p className="text-sm text-muted-foreground">{group.level} Level</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => navigate('/community')}>Visit</Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-3">Join your first group</p>
+                    <Button size="sm" onClick={() => navigate('/community')}>Explore Groups</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right sidebar for latest posts */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Latest Community Posts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-3 border rounded-lg">
+                    <p className="font-medium text-sm">English Learning Group</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Welcome! Start your structured learning journey with our comprehensive courses.
+                    </p>
+                    <Button size="sm" variant="ghost" className="mt-2 p-0 h-auto" onClick={() => navigate('/community')}>
+                      Read more →
+                    </Button>
+                  </div>
+                  <div className="text-center text-sm text-muted-foreground">
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>
+                      View all posts
+                    </Button>
                   </div>
                 </div>
-              ) : stats.courses.length > 0 ? (
-                stats.courses.slice(0, 2).map((course) => {
-                  const progress = course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0;
-                  return (
-                    <div key={course.id} className="flex items-center space-x-4 p-4 bg-accent rounded-lg">
-                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                        <Play className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{course.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Lesson {course.completedLessons} of {course.totalLessons}
-                        </p>
-                        <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all" 
-                            style={{ width: `${progress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      <Button size="sm">
-                        {progress > 0 ? 'Continue' : 'Start'}
-                      </Button>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No active courses yet</p>
-                  <Button className="mt-4" onClick={() => navigate('/courses')}>
-                    Browse Courses
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Community Groups
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {statsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center space-x-3 p-3 bg-accent rounded-lg animate-pulse">
-                      <div className="w-8 h-8 bg-secondary rounded-full"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-secondary rounded w-3/4"></div>
-                        <div className="h-3 bg-secondary rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : stats.joinedGroups.length > 0 ? (
-                <>
-                  {stats.joinedGroups.slice(0, 3).map((group) => (
-                    <div key={group.id} className="flex items-center space-x-3 p-3 bg-accent rounded-lg">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        group.is_default ? 'bg-primary' : 'bg-secondary'
-                      }`}>
-                        {group.is_default ? (
-                          <span className="text-xs text-white font-semibold">{group.level}</span>
-                        ) : (
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{group.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {group.is_default ? 'Official Group' : 'User Group'} • {group.level} Level
-                          {group.is_default && userProfile?.cambridge_level === group.level && (
-                            <Badge variant="default" className="ml-2 text-xs">Your Level</Badge>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {stats.joinedGroups.length > 3 && (
-                    <Button variant="outline" className="w-full" onClick={() => navigate('/community')}>
-                      View All Groups ({stats.joinedGroups.length})
+            {/* Certificates Section */}
+            {stats.certificatesCount > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Award className="h-5 w-5" />
+                    <span>Your Certificates</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-4">
+                    <div className="text-3xl mb-2">🏆</div>
+                    <p className="font-medium">
+                      {stats.certificatesCount} Certificate{stats.certificatesCount !== 1 ? 's' : ''} Earned
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/certificates')}>
+                      View Details
                     </Button>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-2">No community groups joined yet</p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    {userProfile?.cambridge_level 
-                      ? `Join your ${userProfile.cambridge_level} level group and connect with peers!`
-                      : 'Take the placement test to join your level group'
-                    }
-                  </p>
-                  <Button onClick={() => navigate('/community')}>
-                    Explore Communities
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Level Advancement */}
+            {userProfile?.cambridge_level && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Ready to Advance?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Current level: <strong>{userProfile.cambridge_level}</strong>
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Complete your level courses and take the advancement test!
+                    </p>
+                    <Button size="sm" onClick={() => {
+                      const nextLevel = getNextLevel(userProfile.cambridge_level);
+                      if (nextLevel) {
+                        navigate(`/level-test/${userProfile.cambridge_level}/${nextLevel}`);
+                      }
+                    }}>
+                      Take Level Test
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

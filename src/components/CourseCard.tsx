@@ -100,7 +100,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
 
       <CardFooter className="p-6 pt-0">
         <Button variant="outline" className="w-full group-hover:variant-primary" asChild>
-          <Link to={`/courses/${course.id}`}>
+          <Link to={`/course/${course.id}`}>
             View Course
           </Link>
         </Button>
