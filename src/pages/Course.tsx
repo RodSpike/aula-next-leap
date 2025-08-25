@@ -352,15 +352,49 @@ export default function Course() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none space-y-4">
-                      {currentLesson.content.split('\n').map((paragraph, index) => (
-                        paragraph.trim() && (
-                          <p key={index} className="text-foreground leading-relaxed">
-                            {paragraph}
-                          </p>
-                        )
-                      ))}
+                  <CardContent className="max-w-none">
+                    <div className="prose prose-sm max-w-none space-y-4 text-foreground">
+                      {currentLesson.content.split('\n').map((line, index) => {
+                        if (line.trim() === '') return null;
+                        
+                        // Handle headers
+                        if (line.startsWith('# ')) {
+                          return <h1 key={index} className="text-2xl font-bold text-foreground mb-4">{line.substring(2)}</h1>;
+                        }
+                        if (line.startsWith('## ')) {
+                          return <h2 key={index} className="text-xl font-semibold text-foreground mb-3 mt-6">{line.substring(3)}</h2>;
+                        }
+                        if (line.startsWith('### ')) {
+                          return <h3 key={index} className="text-lg font-medium text-foreground mb-2 mt-4">{line.substring(4)}</h3>;
+                        }
+                        
+                        // Handle bold text
+                        if (line.startsWith('**') && line.endsWith('**')) {
+                          return <p key={index} className="font-semibold text-foreground mb-2">{line.replace(/\*\*/g, '')}</p>;
+                        }
+                        
+                        // Handle list items
+                        if (line.startsWith('- ')) {
+                          return <li key={index} className="text-foreground ml-4 mb-1">{line.substring(2)}</li>;
+                        }
+                        
+                        // Handle checkbox items
+                        if (line.startsWith('☐ ')) {
+                          return (
+                            <div key={index} className="flex items-center gap-2 mb-2">
+                              <input type="checkbox" className="w-4 h-4" />
+                              <span className="text-foreground">{line.substring(2)}</span>
+                            </div>
+                          );
+                        }
+                        
+                        // Regular paragraphs
+                        if (line.trim()) {
+                          return <p key={index} className="text-foreground leading-relaxed mb-3 break-words">{line}</p>;
+                        }
+                        
+                        return null;
+                      }).filter(Boolean)}
                     </div>
                   </CardContent>
                 </Card>
