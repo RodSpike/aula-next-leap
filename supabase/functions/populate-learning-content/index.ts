@@ -165,13 +165,12 @@ serve(async (req) => {
         }
       }
 
-      // Create a welcome post with interactive course content
-      const { error: postError } = await supabase
-        .from('group_posts')
-        .insert({
-          group_id: englishGroup.id,
-          user_id: '00000000-0000-0000-0000-000000000000', // System user
-          content: `🎓 **Welcome to Your English Learning Journey!**
+      // Create a function to get user's personal progress (placeholder - will be updated by frontend)
+      const createProgressAwarePost = async (userId: string = '00000000-0000-0000-0000-000000000000') => {
+        return `🎓 **Welcome to Your English Learning Journey!**
+
+📊 **Your Personal Progress:**
+[This section will show your individual progress when you visit]
 
 Start your structured Cambridge-aligned courses below. Find your level and begin learning immediately:
 
@@ -190,7 +189,21 @@ ${courseContent}
 - View earned certificates
 - Join level-specific discussions
 
-Ready to begin? Click any course title above to start your journey! 🚀`,
+🤖 **AI Tutor Available:**
+- Click "AI Tutor" button on any course for instant help
+- Get personalized explanations and extra practice
+- Ask questions about specific topics anytime
+
+Ready to begin? Click any course title above to start your journey! 🚀`;
+      };
+
+      // Create a welcome post with interactive course content
+      const { error: postError } = await supabase
+        .from('group_posts')
+        .insert({
+          group_id: englishGroup.id,
+          user_id: '00000000-0000-0000-0000-000000000000', // System user
+          content: await createProgressAwarePost(),
           attachments: []
         });
 

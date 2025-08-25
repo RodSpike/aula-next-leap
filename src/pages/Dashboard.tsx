@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SeedDataButton } from "@/components/SeedDataButton";
-import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown } from "lucide-react";
+import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown, RotateCcw, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,6 +29,8 @@ interface DashboardStats {
     totalLessons: number;
     completedLessons: number;
     status: string;
+    avgScore?: number;
+    level?: string;
   }>;
 }
 
@@ -74,18 +76,53 @@ export default function Dashboard() {
       setUserProfile(profile);
       setHasPlacementTest(!!profile?.cambridge_level);
       
-      // Get active courses from user_courses
-      const { data: userCourses } = await supabase
-        .from('user_courses')
-        .select('*')
-        .eq('user_id', user!.id)
-        .eq('status', 'active');
+      // Get courses for user's current level only
+      let coursesForUserLevel = [];
+      if (profile?.cambridge_level) {
+        const { data: levelCourses } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('level', profile.cambridge_level)
+          .order('order_index');
+        
+        if (levelCourses) {
+          // Get user progress for each course
+          const { data: userProgress } = await supabase
+            .from('user_lesson_progress')
+            .select(`
+              *,
+              lessons!inner(course_id)
+            `)
+            .eq('user_id', user!.id);
 
-      // Also check if we have actual courses in the courses table for fallback
-      const { data: availableCourses } = await supabase
-        .from('courses')
-        .select('*')
-        .limit(3);
+          // Get lessons count for each course
+          const { data: courseLessons } = await supabase
+            .from('lessons')
+            .select('course_id, id')
+            .in('course_id', levelCourses.map(c => c.id));
+
+          coursesForUserLevel = levelCourses.map(course => {
+            const lessonsForCourse = courseLessons?.filter(l => l.course_id === course.id) || [];
+            const progressForCourse = userProgress?.filter(p => 
+              lessonsForCourse.some(l => l.id === p.lesson_id)
+            ) || [];
+            const completedLessons = progressForCourse.filter(p => p.completed).length;
+            const totalScore = progressForCourse.reduce((sum, p) => sum + (p.score || 0), 0);
+            const avgScore = progressForCourse.length > 0 ? totalScore / progressForCourse.length : 0;
+
+            return {
+              id: course.id,
+              name: course.title,
+              description: course.description || '',
+              totalLessons: lessonsForCourse.length,
+              completedLessons,
+              status: completedLessons === lessonsForCourse.length ? 'completed' : 'active',
+              avgScore: Math.round(avgScore),
+              level: course.level
+            };
+          });
+        }
+      }
 
       // Get study hours for this week (last 7 days)
       const thisWeekStart = new Date();
@@ -135,33 +172,14 @@ export default function Dashboard() {
       const hoursThisWeek = thisWeekSessions?.reduce((sum, session) => sum + Number(session.hours_studied), 0) || 0;
       const hoursLastWeek = lastWeekSessions?.reduce((sum, session) => sum + Number(session.hours_studied), 0) || 0;
 
-      // Use user courses if available, otherwise show available courses as suggestions
-      const coursesToShow = userCourses && userCourses.length > 0 
-        ? userCourses.map(course => ({
-            id: course.id,
-            name: course.course_name,
-            description: course.course_description || '',
-            totalLessons: course.total_lessons,
-            completedLessons: course.completed_lessons,
-            status: course.status
-          }))
-        : availableCourses?.map(course => ({
-            id: course.id,
-            name: course.title,
-            description: course.description || '',
-            totalLessons: 10, // Default assumption
-            completedLessons: 0,
-            status: 'available'
-          })) || [];
-
       setStats({
-        activeCourses: userCourses?.length || 0,
+        activeCourses: coursesForUserLevel.filter(c => c.status === 'active').length,
         hoursThisWeek: Math.round(hoursThisWeek * 10) / 10,
         hoursLastWeek: Math.round(hoursLastWeek * 10) / 10,
         groupsCount: groupsCount || 0,
         certificatesCount: certificatesCount || 0,
         joinedGroups: groupMemberships?.map(membership => membership.community_groups) || [],
-        courses: coursesToShow
+        courses: coursesForUserLevel
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -338,31 +356,69 @@ export default function Dashboard() {
               <CardContent>
                 {stats.courses.length > 0 ? (
                   <div className="space-y-3">
-                    {stats.courses.slice(0, 3).map((course) => (
-                      <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div>
-                          <p className="font-medium">{course.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {course.completedLessons}/{course.totalLessons} lessons completed
-                          </p>
-                          <div className="w-full bg-secondary rounded-full h-2 mt-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full transition-all" 
-                              style={{ 
-                                width: `${course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0}%` 
-                              }}
-                            ></div>
+                    {stats.courses.map((course) => (
+                      <div key={course.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">{course.name}</p>
+                              {course.status === 'completed' && (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-200">✓ Done</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {course.completedLessons}/{course.totalLessons} lessons completed
+                              {course.avgScore > 0 && ` • Avg: ${course.avgScore}%`}
+                            </p>
+                            <div className="w-full bg-secondary rounded-full h-2 mb-2">
+                              <div 
+                                className="bg-primary h-2 rounded-full transition-all" 
+                                style={{ 
+                                  width: `${course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0}%` 
+                                }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
-                        <Button size="sm" onClick={() => navigate(`/course/${course.id}`)}>Continue</Button>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => navigate(`/course/${course.id}`)}
+                            variant={course.status === 'completed' ? 'outline' : 'default'}
+                          >
+                            {course.status === 'completed' ? (
+                              <>
+                                <RotateCcw className="h-4 w-4 mr-1" />
+                                Redo
+                              </>
+                            ) : (
+                              'Continue'
+                            )}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => navigate(`/ai-chat?topic=${encodeURIComponent(course.name)}&level=${course.level}`)}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-1" />
+                            AI Tutor
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">Start your learning journey</p>
-                    <Button onClick={() => navigate('/courses')}>Browse Courses</Button>
+                    <p className="text-muted-foreground mb-4">
+                      {!hasPlacementTest 
+                        ? "Take your placement test to see your personalized courses"
+                        : "No courses available for your level"
+                      }
+                    </p>
+                    <Button onClick={() => navigate(hasPlacementTest ? '/courses' : '/placement-test')}>
+                      {hasPlacementTest ? 'Browse All Courses' : 'Take Placement Test'}
+                    </Button>
                   </div>
                 )}
               </CardContent>

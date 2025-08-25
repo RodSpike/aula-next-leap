@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { PersonalProgress } from "@/components/PersonalProgress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -879,9 +880,14 @@ export default function Community() {
                        </div>
                      </div>
                    </CardHeader>
-                 </Card>
+                  </Card>
 
-                {/* Create Post */}
+                  {/* Personal Progress for English Learning Group */}
+                  {selectedGroup.is_default && selectedGroup.name === 'English Learning' && (
+                    <PersonalProgress level={selectedGroup.level} className="mb-6" />
+                  )}
+
+                 {/* Create Post */}
                 {selectedGroup.can_post && (
                   <Card>
                     <CardContent className="p-4">
