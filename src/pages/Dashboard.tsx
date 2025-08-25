@@ -4,7 +4,6 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SeedDataButton } from "@/components/SeedDataButton";
 import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown, RotateCcw, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -218,7 +217,7 @@ export default function Dashboard() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Welcome back{userProfile?.display_name ? `, ${userProfile.display_name}` : ''}!
@@ -230,7 +229,6 @@ export default function Dashboard() {
               ✨ 3 days free trial remaining
             </Badge>
           </div>
-          <SeedDataButton />
         </div>
 
         {/* Placement Test Call to Action */}
