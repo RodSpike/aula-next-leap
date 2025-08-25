@@ -36,6 +36,8 @@ export default function Dashboard() {
     courses: []
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [hasPlacementTest, setHasPlacementTest] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,6 +54,16 @@ export default function Dashboard() {
   const fetchDashboardStats = async () => {
     try {
       setStatsLoading(true);
+      
+      // Get user profile to check placement test status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user!.id)
+        .single();
+      
+      setUserProfile(profile);
+      setHasPlacementTest(!!profile?.cambridge_level);
       
       // Get active courses
       const { data: courses } = await supabase
@@ -142,7 +154,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back!
+            Welcome back{userProfile?.display_name ? `, ${userProfile.display_name}` : ''}!
           </h1>
           <p className="text-muted-foreground">
             Continue your learning journey
@@ -151,6 +163,30 @@ export default function Dashboard() {
             ✨ 3 days free trial remaining
           </Badge>
         </div>
+
+        {/* Placement Test Call to Action */}
+        {!hasPlacementTest && !statsLoading && (
+          <Card className="mb-8 border-primary bg-gradient-primary/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                  <BookOpen className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    Take Your Cambridge Placement Test
+                  </h3>
+                  <p className="text-muted-foreground mb-3">
+                    Discover your English level and join the perfect learning group for your skill level.
+                  </p>
+                  <Button onClick={() => navigate('/placement-test')} className="bg-primary hover:bg-primary/90">
+                    Start Placement Test
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
