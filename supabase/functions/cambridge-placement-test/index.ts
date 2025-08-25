@@ -61,7 +61,7 @@ Return ONLY a JSON object with this exact format:
             temperature: 0.3,
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 300,
+            maxOutputTokens: 800,
           }
         }),
       });
@@ -132,8 +132,9 @@ Early termination criteria:
 - If user answers 3+ consecutive questions correctly at same level = confident at that level
 - If user answers 3+ consecutive questions incorrectly = confirmed at lower level
 - Minimum 8 questions, maximum 20 questions
+- MANDATORY: If this is question 20, ALWAYS provide final assessment
 
-If you determine the level with confidence OR reached 20 questions, return final assessment:
+If you determine the level with confidence OR reached 20 questions (question ${questionIndex + 1}), return final assessment:
 {
   "finalAssessment": true,
   "level": "B1", 
@@ -156,7 +157,7 @@ Otherwise, return a question that is completely different from previous ones:
             temperature: 0.4,
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 500,
+            maxOutputTokens: 800,
           }
         }),
       });

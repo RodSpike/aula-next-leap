@@ -22,6 +22,7 @@ interface FinalAssessment {
   explanation: string;
   autoJoinedGroup?: boolean;
   groupLevel?: string;
+  questionsAnswered?: number;
 }
 
 const PlacementTest = () => {
@@ -109,7 +110,27 @@ const PlacementTest = () => {
         throw new Error('Invalid response from placement test service');
       }
 
-      if (data.finalAssessment) {
+      // Force final assessment if we've reached question 20
+      if (currentQuestion.questionNumber >= 20 && !data.finalAssessment) {
+        console.log('Forcing final assessment at question 20');
+        setFinalResult({
+          finalAssessment: true,
+          level: currentLevel || 'B1',
+          explanation: `Based on your ${currentQuestion.questionNumber} answers, your Cambridge English level is ${currentLevel || 'B1'}. You completed the full placement test.`,
+          questionsAnswered: currentQuestion.questionNumber
+        });
+        setCurrentQuestion(null);
+        
+        // Update user profile with the result
+        try {
+          await supabase
+            .from('profiles')
+            .update({ cambridge_level: currentLevel || 'B1' })
+            .eq('user_id', user.id);
+        } catch (profileError) {
+          console.error('Error updating profile:', profileError);
+        }
+      } else if (data.finalAssessment) {
         setFinalResult(data);
         setCurrentQuestion(null);
         
@@ -135,11 +156,34 @@ const PlacementTest = () => {
       setSelectedAnswer("");
     } catch (error: any) {
       console.error('Error submitting answer:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit answer. Please try again.",
-        variant: "destructive",
-      });
+      
+      // If we get an error and we're at question 20, force final assessment
+      if (currentQuestion && currentQuestion.questionNumber >= 20) {
+        console.log('Error at question 20, forcing final assessment');
+        setFinalResult({
+          finalAssessment: true,
+          level: currentLevel || 'B1',
+          explanation: `Based on your ${currentQuestion.questionNumber} answers, your Cambridge English level is ${currentLevel || 'B1'}. The test encountered a technical issue but your level has been determined.`,
+          questionsAnswered: currentQuestion.questionNumber
+        });
+        setCurrentQuestion(null);
+        
+        // Update user profile with the result
+        try {
+          await supabase
+            .from('profiles')
+            .update({ cambridge_level: currentLevel || 'B1' })
+            .eq('user_id', user.id);
+        } catch (profileError) {
+          console.error('Error updating profile:', profileError);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit answer. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
