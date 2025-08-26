@@ -19,34 +19,40 @@ export type Database = {
           action_type: string
           admin_email: string
           admin_user_id: string
+          can_undo: boolean | null
           created_at: string
           description: string | null
           id: string
           target_data: Json | null
           target_id: string | null
           target_type: string
+          undo_data: Json | null
         }
         Insert: {
           action_type: string
           admin_email: string
           admin_user_id: string
+          can_undo?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           target_data?: Json | null
           target_id?: string | null
           target_type: string
+          undo_data?: Json | null
         }
         Update: {
           action_type?: string
           admin_email?: string
           admin_user_id?: string
+          can_undo?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           target_data?: Json | null
           target_id?: string | null
           target_type?: string
+          undo_data?: Json | null
         }
         Relationships: []
       }
@@ -537,18 +543,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          promoted_by: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          promoted_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          promoted_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -635,8 +644,28 @@ export type Database = {
         Args: { admin_description?: string; target_user_id: string }
         Returns: boolean
       }
+      admin_demote_user: {
+        Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
       admin_promote_user: {
         Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
+      admin_undo_post_deletion: {
+        Args: { audit_log_id: string }
+        Returns: boolean
+      }
+      admin_undo_user_deletion: {
+        Args: { audit_log_id: string }
+        Returns: boolean
+      }
+      admin_undo_user_demotion: {
+        Args: { audit_log_id: string }
+        Returns: boolean
+      }
+      admin_undo_user_promotion: {
+        Args: { audit_log_id: string }
         Returns: boolean
       }
       create_admin_post: {
