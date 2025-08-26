@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/hooks/useAuth"; 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit } from "lucide-react";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -58,6 +58,7 @@ interface AuditLogData {
   description: string;
   created_at: string;
   target_data: any;
+  can_undo: boolean;
 }
 
 export default function AdminPanel() {
@@ -89,6 +90,7 @@ export default function AdminPanel() {
   // Audit Log States
   const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -281,6 +283,31 @@ export default function AdminPanel() {
     }
   };
 
+  const handleDemoteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('admin_demote_user', {
+        target_user_id: userId,
+        admin_description: 'User demoted from admin via Admin Panel'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User has been demoted from admin.",
+      });
+
+      // Refresh users list
+      fetchAllUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to demote user",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDeletePost = async (postId: string) => {
     try {
       const { error } = await supabase.rpc('admin_delete_post', {
@@ -331,6 +358,50 @@ export default function AdminPanel() {
     }
   };
 
+  const handleUndoAction = async (logId: string, actionType: string) => {
+    try {
+      let rpcFunction = '';
+      switch (actionType) {
+        case 'delete_user':
+          rpcFunction = 'admin_undo_user_deletion';
+          break;
+        case 'delete_post':
+          rpcFunction = 'admin_undo_post_deletion';
+          break;
+        case 'promote_user':
+          rpcFunction = 'admin_undo_user_promotion';
+          break;
+        case 'demote_user':
+          rpcFunction = 'admin_undo_user_demotion';
+          break;
+        default:
+          throw new Error('Cannot undo this action type');
+      }
+
+      const { error } = await supabase.rpc(rpcFunction as any, {
+        audit_log_id: logId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Action has been undone successfully.",
+      });
+
+      // Refresh audit logs and other data
+      fetchAuditLogs();
+      if (actionType === 'delete_post') fetchAllPosts();
+      if (actionType.includes('user')) fetchAllUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to undo action",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredUsers(users);
@@ -359,6 +430,14 @@ export default function AdminPanel() {
         return;
       }
       
+      // Get current user email for admin controls
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_id', user!.id)
+        .single();
+        
+      setCurrentUserEmail(profile?.email || "");
       setIsAdmin(true);
     } catch (error) {
       navigate("/dashboard");
@@ -388,6 +467,14 @@ export default function AdminPanel() {
       // Get aggregated stats for each user
       const usersWithStats = await Promise.all(
         profilesData.map(async (profile) => {
+          // Check if user is admin
+          const { data: adminRole } = await supabase
+            .from('user_roles')
+            .select('role, promoted_by')
+            .eq('user_id', profile.user_id)
+            .eq('role', 'admin')
+            .single();
+
           // Get active courses count
           const { count: activeCourses } = await supabase
             .from('user_courses')
@@ -425,7 +512,9 @@ export default function AdminPanel() {
             active_courses: activeCourses || 0,
             study_hours: Math.round(studyHours * 10) / 10,
             groups_joined: groupsJoined || 0,
-            certificates: certificates || 0
+            certificates: certificates || 0,
+            is_admin: !!adminRole,
+            promoted_by: adminRole?.promoted_by
           };
         })
       );
@@ -583,13 +672,18 @@ export default function AdminPanel() {
                       {filteredUsers.map((userData) => (
                         <TableRow key={userData.user_id}>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">
-                                {userData.display_name || userData.username || 'Unnamed User'}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Joined: {new Date(userData.created_at).toLocaleDateString()}
-                              </p>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-medium flex items-center gap-2">
+                                  {userData.display_name || userData.username || 'Unnamed User'}
+                                  {userData.is_admin && (
+                                    <Shield className="h-4 w-4 text-yellow-500" />
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Joined: {new Date(userData.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>{userData.email}</TableCell>
@@ -609,78 +703,128 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => setSelectedUser(userData)}
-                                  >
-                                    <UserPlus className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Promote User to Admin</DialogTitle>
-                                    <DialogDescription>
-                                      Are you sure you want to promote {userData.display_name || userData.email} to admin?
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <DialogFooter>
+                              {userData.is_admin ? (
+                                // Admin user - show demote button only for master admin
+                                currentUserEmail === 'rodspike2k8@gmail.com' && userData.email !== 'rodspike2k8@gmail.com' ? (
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedUser(userData)}
+                                      >
+                                        <UserMinus className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Demote Admin to User</DialogTitle>
+                                        <DialogDescription>
+                                          Are you sure you want to demote {userData.display_name || userData.email} from admin to regular user?
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <DialogFooter>
+                                        <Button 
+                                          variant="outline" 
+                                          onClick={() => setSelectedUser(null)}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button 
+                                          onClick={() => {
+                                            handleDemoteUser(userData.user_id);
+                                            setSelectedUser(null);
+                                          }}
+                                        >
+                                          Demote
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+                                ) : (
+                                  <Badge variant="secondary" className="flex items-center gap-1">
+                                    <Shield className="h-3 w-3" />
+                                    Admin
+                                  </Badge>
+                                )
+                              ) : (
+                                // Regular user - show promote button
+                                <Dialog>
+                                  <DialogTrigger asChild>
                                     <Button 
                                       variant="outline" 
-                                      onClick={() => setSelectedUser(null)}
+                                      size="sm"
+                                      onClick={() => setSelectedUser(userData)}
                                     >
-                                      Cancel
+                                      <UserPlus className="h-4 w-4" />
                                     </Button>
-                                    <Button 
-                                      onClick={() => {
-                                        handlePromoteUser(userData.user_id);
-                                        setSelectedUser(null);
-                                      }}
-                                    >
-                                      Promote
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Promote User to Admin</DialogTitle>
+                                      <DialogDescription>
+                                        Are you sure you want to promote {userData.display_name || userData.email} to admin?
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <Button 
+                                        variant="outline" 
+                                        onClick={() => setSelectedUser(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        onClick={() => {
+                                          handlePromoteUser(userData.user_id);
+                                          setSelectedUser(null);
+                                        }}
+                                      >
+                                        Promote
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
                               
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={() => setSelectedUser(userData)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Delete User Account</DialogTitle>
-                                    <DialogDescription>
-                                      Are you sure you want to permanently delete {userData.display_name || userData.email}? This action cannot be undone.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <DialogFooter>
+                              {/* Delete button for master admin or non-admin deletion */}
+                              {(currentUserEmail === 'rodspike2k8@gmail.com' || !userData.is_admin) && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
                                     <Button 
-                                      variant="outline" 
-                                      onClick={() => setSelectedUser(null)}
+                                      variant="destructive" 
+                                      size="sm"
+                                      onClick={() => setSelectedUser(userData)}
                                     >
-                                      Cancel
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                    <Button 
-                                      variant="destructive"
-                                      onClick={() => {
-                                        handleDeleteUser(userData.user_id);
-                                        setSelectedUser(null);
-                                      }}
-                                    >
-                                      Delete Account
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Delete User Account</DialogTitle>
+                                      <DialogDescription>
+                                        Are you sure you want to permanently delete {userData.display_name || userData.email}? This action can be undone from the audit log.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <Button 
+                                        variant="outline" 
+                                        onClick={() => setSelectedUser(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        variant="destructive"
+                                        onClick={() => {
+                                          handleDeleteUser(userData.user_id);
+                                          setSelectedUser(null);
+                                        }}
+                                      >
+                                        Delete Account
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -913,6 +1057,7 @@ export default function AdminPanel() {
                         <TableHead>Target</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Date</TableHead>
+                        <TableHead>Undo</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -922,9 +1067,10 @@ export default function AdminPanel() {
                             <Badge variant={
                               log.action_type.includes('delete') ? 'destructive' : 
                               log.action_type.includes('promote') ? 'default' : 
+                              log.action_type.includes('undo') ? 'outline' :
                               'secondary'
                             }>
-                              {log.action_type.replace('_', ' ')}
+                              {log.action_type.replace(/_/g, ' ')}
                             </Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
@@ -942,6 +1088,43 @@ export default function AdminPanel() {
                           </TableCell>
                           <TableCell>
                             {new Date(log.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {log.can_undo && ['delete_user', 'delete_post', 'promote_user', 'demote_user'].includes(log.action_type) ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Undo Action</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to undo this {log.action_type.replace('_', ' ')} action? This will attempt to restore the previous state.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button variant="outline">
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      onClick={() => handleUndoAction(log.id, log.action_type)}
+                                    >
+                                      Undo Action
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                {log.action_type.includes('undo') ? 'Undone' : 'N/A'}
+                              </span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
