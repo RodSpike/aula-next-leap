@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action_type: string
+          admin_email: string
+          admin_user_id: string
+          created_at: string
+          description: string | null
+          id: string
+          target_data: Json | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action_type: string
+          admin_email: string
+          admin_user_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          target_data?: Json | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action_type?: string
+          admin_email?: string
+          admin_user_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          target_data?: Json | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           certificate_type: string | null
@@ -591,6 +627,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_post: {
+        Args: { admin_description?: string; post_id: string }
+        Returns: boolean
+      }
+      admin_delete_user: {
+        Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
+      admin_promote_user: {
+        Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
+      create_admin_post: {
+        Args: {
+          attachments_param?: Json
+          content_param: string
+          group_id_param: string
+        }
+        Returns: string
+      }
       get_profile_public_fields: {
         Args: Record<PropertyKey, never>
         Returns: string[]
