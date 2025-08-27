@@ -256,11 +256,48 @@ export default function Course() {
     }
   };
 
-  const handleRetryExercises = () => {
-    setSelectedAnswers(new Array(exercises.length).fill(''));
-    setCurrentExerciseIndex(0);
-    setShowResults(false);
-    setLessonCompleted(false);
+  const handleMarkLessonComplete = async () => {
+    if (!currentLesson || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_lesson_progress')
+        .upsert({
+          user_id: user.id,
+          lesson_id: currentLesson.id,
+          completed: true,
+          score: 100, // Full score for completion without exercises
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,lesson_id'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "🎉 Lesson Completed!",
+        description: "Excellent work! You can now proceed to the next lesson.",
+      });
+
+      // Refresh progress and move to next lesson if available
+      await fetchCourseData();
+      
+      // Auto-select next unlocked lesson
+      const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
+      const nextLesson = lessons[currentIndex + 1];
+      if (nextLesson && isLessonUnlocked(nextLesson)) {
+        setCurrentLesson(nextLesson);
+        fetchExercises(nextLesson.id);
+      }
+    } catch (error) {
+      console.error('Error marking lesson as complete:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark lesson as complete. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const isLessonCompleted = (lessonId: string) => {
@@ -376,42 +413,75 @@ export default function Course() {
                   <CardContent className="max-w-none">
                     <div className="prose prose-sm max-w-none space-y-4 text-foreground">
                       {currentLesson.content.split('\n').map((line, index) => {
-                        if (line.trim() === '') return null;
+                        if (line.trim() === '') return <div key={index} className="h-2" />;
                         
                         // Handle headers
                         if (line.startsWith('# ')) {
-                          return <h1 key={index} className="text-2xl font-bold text-foreground mb-4">{line.substring(2)}</h1>;
+                          return (
+                            <h1 key={index} className="text-3xl font-bold text-foreground mb-6 mt-8 border-b border-border pb-2">
+                              {line.substring(2)}
+                            </h1>
+                          );
                         }
                         if (line.startsWith('## ')) {
-                          return <h2 key={index} className="text-xl font-semibold text-foreground mb-3 mt-6">{line.substring(3)}</h2>;
+                          return (
+                            <h2 key={index} className="text-xl font-semibold text-foreground mb-4 mt-8 text-primary">
+                              {line.substring(3)}
+                            </h2>
+                          );
                         }
                         if (line.startsWith('### ')) {
-                          return <h3 key={index} className="text-lg font-medium text-foreground mb-2 mt-4">{line.substring(4)}</h3>;
+                          return (
+                            <h3 key={index} className="text-lg font-medium text-foreground mb-3 mt-6">
+                              {line.substring(4)}
+                            </h3>
+                          );
                         }
                         
-                        // Handle bold text
+                        // Handle bold text sections
                         if (line.startsWith('**') && line.endsWith('**')) {
-                          return <p key={index} className="font-semibold text-foreground mb-2">{line.replace(/\*\*/g, '')}</p>;
+                          return (
+                            <div key={index} className="bg-muted/50 p-4 rounded-lg mb-4 border-l-4 border-primary">
+                              <p className="font-semibold text-foreground text-lg">{line.replace(/\*\*/g, '')}</p>
+                            </div>
+                          );
                         }
                         
                         // Handle list items
                         if (line.startsWith('- ')) {
-                          return <li key={index} className="text-foreground ml-4 mb-1">{line.substring(2)}</li>;
+                          return (
+                            <li key={index} className="text-foreground ml-6 mb-2 list-disc marker:text-primary">
+                              {line.substring(2)}
+                            </li>
+                          );
+                        }
+                        
+                        // Handle numbered items
+                        if (line.match(/^\d+\.\s/)) {
+                          return (
+                            <li key={index} className="text-foreground ml-6 mb-2 list-decimal marker:text-primary">
+                              {line.replace(/^\d+\.\s/, '')}
+                            </li>
+                          );
                         }
                         
                         // Handle checkbox items
                         if (line.startsWith('☐ ')) {
                           return (
-                            <div key={index} className="flex items-center gap-2 mb-2">
-                              <input type="checkbox" className="w-4 h-4" />
+                            <div key={index} className="flex items-center gap-3 mb-3 p-2 rounded hover:bg-muted/30">
+                              <input type="checkbox" className="w-4 h-4 accent-primary" />
                               <span className="text-foreground">{line.substring(2)}</span>
                             </div>
                           );
                         }
                         
-                        // Regular paragraphs
+                        // Regular paragraphs with better formatting
                         if (line.trim()) {
-                          return <p key={index} className="text-foreground leading-relaxed mb-3 break-words">{line}</p>;
+                          return (
+                            <p key={index} className="text-foreground leading-relaxed mb-4 text-base">
+                              {line}
+                            </p>
+                          );
                         }
                         
                         return null;
@@ -528,71 +598,93 @@ export default function Course() {
                              ))}
                            </div>
 
-                           <div className="flex justify-center">
-                             {!lessonCompleted && (
-                               <Button onClick={handleRetryExercises} variant="outline">
-                                 Try Again
-                               </Button>
-                             )}
-                           </div>
+                            <div className="flex justify-center">
+                              {!lessonCompleted && (
+                                <Button onClick={() => {
+                                  setSelectedAnswers(new Array(exercises.length).fill(''));
+                                  setCurrentExerciseIndex(0);
+                                  setShowResults(false);
+                                  setLessonCompleted(false);
+                                }} variant="outline">
+                                  Try Again
+                                </Button>
+                              )}
+                            </div>
                          </div>
                        )}
                      </CardContent>
-                   </Card>
+                    </Card>
                  ) : (
-                   <Card>
-                     <CardHeader>
-                       <CardTitle className="flex items-center space-x-2">
-                         <BookOpen className="h-5 w-5" />
-                         <span>Study Materials</span>
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="text-center space-y-4 py-8">
-                         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                           <Clock className="h-8 w-8 text-muted-foreground" />
+                   // If no exercises, show completion button and study tips
+                   <div className="space-y-6">
+                     <Card>
+                       <CardHeader>
+                         <CardTitle className="flex items-center space-x-2">
+                           <BookOpen className="h-5 w-5 text-primary" />
+                           <span>Study Tips</span>
+                         </CardTitle>
+                       </CardHeader>
+                       <CardContent className="space-y-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                             <h4 className="font-medium text-foreground mb-2">📝 Practice</h4>
+                             <p className="text-sm text-muted-foreground">
+                               Review the vocabulary and try using new words in sentences.
+                             </p>
+                           </div>
+                           <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                             <h4 className="font-medium text-foreground mb-2">🗣️ Speak</h4>
+                             <p className="text-sm text-muted-foreground">
+                               Practice pronunciation by reading the lesson aloud.
+                             </p>
+                           </div>
+                           <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                             <h4 className="font-medium text-foreground mb-2">✍️ Write</h4>
+                             <p className="text-sm text-muted-foreground">
+                               Write example sentences using the grammar patterns.
+                             </p>
+                           </div>
+                           <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                             <h4 className="font-medium text-foreground mb-2">🔄 Review</h4>
+                             <p className="text-sm text-muted-foreground">
+                               Come back to this lesson later to reinforce learning.
+                             </p>
+                           </div>
                          </div>
-                         <div>
-                           <h3 className="text-lg font-semibold mb-2">Review the lesson content</h3>
-                           <p className="text-muted-foreground">
-                             No exercises available for this lesson yet. Review the lesson content above to reinforce your learning.
-                           </p>
-                         </div>
+                       </CardContent>
+                     </Card>
+
+                     <Card>
+                       <CardHeader>
+                         <CardTitle className="flex items-center space-x-2">
+                           <CheckCircle className="h-5 w-5" />
+                           <span>Lesson Complete</span>
+                         </CardTitle>
+                         <p className="text-sm text-muted-foreground">
+                           Great! You've finished reading this lesson. Mark it as complete to continue.
+                         </p>
+                       </CardHeader>
+                       <CardContent>
                          <Button 
-                           variant="outline" 
-                           onClick={async () => {
-                             if (!currentLesson || !user) return;
-                             // Mark lesson as completed without exercises
-                             try {
-                               await supabase
-                                 .from('user_lesson_progress')
-                                 .upsert({
-                                   user_id: user.id,
-                                   lesson_id: currentLesson.id,
-                                   completed: true,
-                                   score: 100,
-                                   completed_at: new Date().toISOString(),
-                                   updated_at: new Date().toISOString(),
-                                 }, {
-                                   onConflict: 'user_id,lesson_id'
-                                 });
-                               
-                               toast({
-                                 title: "Progress saved!",
-                                 description: "Lesson marked as completed.",
-                               });
-                               
-                               await fetchCourseData();
-                             } catch (error) {
-                               console.error('Error saving progress:', error);
-                             }
-                           }}
+                           onClick={handleMarkLessonComplete}
+                           className="w-full"
+                           disabled={isLessonCompleted(currentLesson.id)}
                          >
-                           Mark as Complete
+                           {isLessonCompleted(currentLesson.id) ? (
+                             <>
+                               <CheckCircle className="h-4 w-4 mr-2" />
+                               Lesson Completed
+                             </>
+                           ) : (
+                             <>
+                               <ArrowRight className="h-4 w-4 mr-2" />
+                               Mark as Complete
+                             </>
+                           )}
                          </Button>
-                       </div>
-                     </CardContent>
-                   </Card>
+                       </CardContent>
+                     </Card>
+                   </div>
                  )}
               </div>
             )}
