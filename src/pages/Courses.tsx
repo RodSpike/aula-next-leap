@@ -1,106 +1,98 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Search, Filter, BookOpen, MessageSquare, Users, Clock } from "lucide-react";
 
-// English courses data
-const courses = [
-  {
-    id: "1",
-    title: "Complete English Grammar Mastery",
-    description: "Master English grammar from basic to advanced level with practical exercises and real-world examples.",
-    instructor: "Sarah Johnson",
-    duration: "40h",
-    students: 1250,
-    rating: 4.8,
-    price: "$49",
-    image: "/placeholder.svg",
-    level: "Intermediate" as const,
-    category: "Grammar",
-  },
-  {
-    id: "2",
-    title: "Business English Communication",
-    description: "Professional English for workplace communication, presentations, and business writing.",
-    instructor: "Michael Brown",
-    duration: "25h",
-    students: 890,
-    rating: 4.9,
-    price: "$39",
-    image: "/placeholder.svg",
-    level: "Advanced" as const,
-    category: "Business",
-  },
-  {
-    id: "3",
-    title: "English Conversation Practice",
-    description: "Improve your speaking skills with interactive conversations and pronunciation practice.",
-    instructor: "Emma Davis",
-    duration: "30h",
-    students: 2100,
-    rating: 4.7,
-    price: "$45",
-    image: "/placeholder.svg",
-    level: "Intermediate" as const,
-    category: "Speaking",
-  },
-  {
-    id: "4",
-    title: "English for Beginners",
-    description: "Start your English learning journey with basic vocabulary, grammar, and everyday conversations.",
-    instructor: "James Wilson",
-    duration: "35h",
-    students: 1680,
-    rating: 4.8,
-    price: "$35",
-    image: "/placeholder.svg",
-    level: "Beginner" as const,
-    category: "Basic",
-  },
-  {
-    id: "5",
-    title: "IELTS Preparation Course",
-    description: "Comprehensive preparation for IELTS exam with practice tests and expert strategies.",
-    instructor: "Lisa Chen",
-    duration: "20h",
-    students: 750,
-    rating: 4.9,
-    price: "$65",
-    image: "/placeholder.svg",
-    level: "Advanced" as const,
-    category: "Test Prep",
-  },
-  {
-    id: "6",
-    title: "English Writing Skills",
-    description: "Improve your English writing for essays, emails, and creative expression.",
-    instructor: "Robert Taylor",
-    duration: "28h",
-    students: 980,
-    rating: 4.6,
-    price: "$42",
-    image: "/placeholder.svg",
-    level: "Intermediate" as const,
-    category: "Writing",
-  },
-];
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  level: "Beginner" | "Intermediate" | "Advanced";
+  order_index: number;
+  instructor: string;
+  duration: string;
+  students: number;
+  rating: number;
+  price: string;
+  image: string;
+  category: string;
+}
 
 const categories = [
   { name: "All", icon: BookOpen },
-  { name: "Basic", icon: Users },
-  { name: "Grammar", icon: BookOpen },
-  { name: "Business", icon: MessageSquare },
-  { name: "Speaking", icon: MessageSquare },
-  { name: "Writing", icon: Filter },
-  { name: "Test Prep", icon: Clock },
+  { name: "A1", icon: Users },
+  { name: "A2", icon: Users },
+  { name: "B1", icon: BookOpen },
+  { name: "B2", icon: BookOpen },
+  { name: "C1", icon: MessageSquare },
+  { name: "C2", icon: Filter },
 ];
 
 export default function Courses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .order('order_index');
+
+      if (error) throw error;
+
+      // Transform database courses to match the expected format
+      const transformedCourses: Course[] = data.map((course) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description || 'Learn English at this level',
+        level: getLevelDisplayName(course.level),
+        order_index: course.order_index,
+        instructor: "Expert Instructor",
+        duration: "20h",
+        students: Math.floor(Math.random() * 1000) + 500,
+        rating: 4.5 + Math.random() * 0.5,
+        price: "Free",
+        image: "/placeholder.svg",
+        category: course.level,
+      }));
+
+      setCourses(transformedCourses);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load courses.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getLevelDisplayName = (level: string): "Beginner" | "Intermediate" | "Advanced" => {
+    const levelNames = {
+      'A1': 'Beginner' as const,
+      'A2': 'Beginner' as const, 
+      'B1': 'Intermediate' as const,
+      'B2': 'Intermediate' as const,
+      'C1': 'Advanced' as const,
+      'C2': 'Advanced' as const
+    };
+    return levelNames[level as keyof typeof levelNames] || 'Beginner';
+  };
   
   const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -108,6 +100,20 @@ export default function Courses() {
     const matchesCategory = selectedCategory === "All" || course.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading courses...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

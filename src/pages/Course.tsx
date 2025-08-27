@@ -420,126 +420,180 @@ export default function Course() {
                   </CardContent>
                 </Card>
 
-                {/* Exercises Section */}
-                {exercises.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Clock className="h-5 w-5" />
-                        <span>Practice Exercises</span>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Complete the exercises with at least 70% to unlock the next lesson.
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      {!showResults ? (
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
-                              Question {currentExerciseIndex + 1} of {exercises.length}
-                            </span>
-                            <Progress 
-                              value={((currentExerciseIndex + 1) / exercises.length) * 100} 
-                              className="w-32"
-                            />
-                          </div>
+                 {/* Exercises Section */}
+                 {exercises.length > 0 ? (
+                   <Card>
+                     <CardHeader>
+                       <CardTitle className="flex items-center space-x-2">
+                         <Clock className="h-5 w-5" />
+                         <span>Practice Exercises</span>
+                       </CardTitle>
+                       <p className="text-sm text-muted-foreground">
+                         Complete the exercises with at least 70% to unlock the next lesson.
+                       </p>
+                     </CardHeader>
+                     <CardContent>
+                       {!showResults ? (
+                         <div className="space-y-6">
+                           <div className="flex items-center justify-between">
+                             <span className="text-sm text-muted-foreground">
+                               Question {currentExerciseIndex + 1} of {exercises.length}
+                             </span>
+                             <Progress 
+                               value={((currentExerciseIndex + 1) / exercises.length) * 100} 
+                               className="w-32"
+                             />
+                           </div>
 
-                          {exercises[currentExerciseIndex] && (
-                            <div className="space-y-4">
-                              <h3 className="text-lg font-medium">
-                                {exercises[currentExerciseIndex].question}
-                              </h3>
+                           {exercises[currentExerciseIndex] && (
+                             <div className="space-y-4">
+                               <h3 className="text-lg font-medium">
+                                 {exercises[currentExerciseIndex].question}
+                               </h3>
 
-                              <RadioGroup
-                                value={selectedAnswers[currentExerciseIndex]}
-                                onValueChange={handleAnswerSelect}
-                              >
-                                {exercises[currentExerciseIndex].options.map((option, index) => (
-                                  <div key={index} className="flex items-center space-x-2">
-                                    <RadioGroupItem value={option} id={`option-${index}`} />
-                                    <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                                      {option}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </RadioGroup>
+                               <RadioGroup
+                                 value={selectedAnswers[currentExerciseIndex]}
+                                 onValueChange={handleAnswerSelect}
+                               >
+                                 {exercises[currentExerciseIndex].options.map((option, index) => (
+                                   <div key={index} className="flex items-center space-x-2">
+                                     <RadioGroupItem value={option} id={`option-${index}`} />
+                                     <Label htmlFor={`option-${index}`} className="cursor-pointer">
+                                       {option}
+                                     </Label>
+                                   </div>
+                                 ))}
+                               </RadioGroup>
 
-                              <div className="flex justify-between">
-                                <Button
-                                  variant="outline"
-                                  onClick={handlePreviousExercise}
-                                  disabled={currentExerciseIndex === 0}
-                                >
-                                  <ArrowLeft className="h-4 w-4 mr-2" />
-                                  Previous
-                                </Button>
-                                <Button
-                                  onClick={handleNextExercise}
-                                  disabled={!selectedAnswers[currentExerciseIndex] || selectedAnswers[currentExerciseIndex].trim() === ''}
-                                >
-                                  {currentExerciseIndex === exercises.length - 1 ? 'Submit Answers' : 'Next'}
-                                  <ArrowRight className="h-4 w-4 ml-2" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-6">
-                          <div className="text-center">
-                            <div className={`text-6xl mb-4 ${lessonCompleted ? 'text-green-600' : 'text-red-600'}`}>
-                              {lessonCompleted ? '🎉' : '📚'}
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">
-                              {lessonCompleted ? 'Congratulations!' : 'Keep Learning!'}
-                            </h3>
-                            <p className="text-muted-foreground mb-4">
-                              You scored {((selectedAnswers.reduce((acc, answer, index) => 
-                                acc + (answer === exercises[index]?.correct_answer ? 1 : 0), 0
-                              ) / exercises.length) * 100).toFixed(1)}%
-                            </p>
-                          </div>
+                               <div className="flex justify-between">
+                                 <Button
+                                   variant="outline"
+                                   onClick={handlePreviousExercise}
+                                   disabled={currentExerciseIndex === 0}
+                                 >
+                                   <ArrowLeft className="h-4 w-4 mr-2" />
+                                   Previous
+                                 </Button>
+                                 <Button
+                                   onClick={handleNextExercise}
+                                   disabled={!selectedAnswers[currentExerciseIndex] || selectedAnswers[currentExerciseIndex].trim() === ''}
+                                 >
+                                   {currentExerciseIndex === exercises.length - 1 ? 'Submit Answers' : 'Next'}
+                                   <ArrowRight className="h-4 w-4 ml-2" />
+                                 </Button>
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       ) : (
+                         <div className="space-y-6">
+                           <div className="text-center">
+                             <div className={`text-6xl mb-4 ${lessonCompleted ? 'text-green-600' : 'text-red-600'}`}>
+                               {lessonCompleted ? '🎉' : '📚'}
+                             </div>
+                             <h3 className="text-xl font-bold mb-2">
+                               {lessonCompleted ? 'Congratulations!' : 'Keep Learning!'}
+                             </h3>
+                             <p className="text-muted-foreground mb-4">
+                               You scored {((selectedAnswers.reduce((acc, answer, index) => 
+                                 acc + (answer === exercises[index]?.correct_answer ? 1 : 0), 0
+                               ) / exercises.length) * 100).toFixed(1)}%
+                             </p>
+                           </div>
 
-                          <div className="space-y-4">
-                            <h4 className="font-medium">Review:</h4>
-                            {exercises.map((exercise, index) => (
-                              <div key={index} className="border rounded-lg p-4">
-                                <p className="font-medium mb-2">{exercise.question}</p>
-                                <div className="space-y-1">
-                                  <p className={`text-sm ${
-                                    selectedAnswers[index] === exercise.correct_answer 
-                                      ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                    Your answer: {selectedAnswers[index]}
-                                  </p>
-                                  {selectedAnswers[index] !== exercise.correct_answer && (
-                                    <p className="text-sm text-green-600">
-                                      Correct answer: {exercise.correct_answer}
-                                    </p>
-                                  )}
-                                  {exercise.explanation && (
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                      {exercise.explanation}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                           <div className="space-y-4">
+                             <h4 className="font-medium">Review:</h4>
+                             {exercises.map((exercise, index) => (
+                               <div key={index} className="border rounded-lg p-4">
+                                 <p className="font-medium mb-2">{exercise.question}</p>
+                                 <div className="space-y-1">
+                                   <p className={`text-sm ${
+                                     selectedAnswers[index] === exercise.correct_answer 
+                                       ? 'text-green-600' : 'text-red-600'
+                                   }`}>
+                                     Your answer: {selectedAnswers[index]}
+                                   </p>
+                                   {selectedAnswers[index] !== exercise.correct_answer && (
+                                     <p className="text-sm text-green-600">
+                                       Correct answer: {exercise.correct_answer}
+                                     </p>
+                                   )}
+                                   {exercise.explanation && (
+                                     <p className="text-sm text-muted-foreground mt-2">
+                                       {exercise.explanation}
+                                     </p>
+                                   )}
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
 
-                          <div className="flex justify-center">
-                            {!lessonCompleted && (
-                              <Button onClick={handleRetryExercises} variant="outline">
-                                Try Again
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                           <div className="flex justify-center">
+                             {!lessonCompleted && (
+                               <Button onClick={handleRetryExercises} variant="outline">
+                                 Try Again
+                               </Button>
+                             )}
+                           </div>
+                         </div>
+                       )}
+                     </CardContent>
+                   </Card>
+                 ) : (
+                   <Card>
+                     <CardHeader>
+                       <CardTitle className="flex items-center space-x-2">
+                         <BookOpen className="h-5 w-5" />
+                         <span>Study Materials</span>
+                       </CardTitle>
+                     </CardHeader>
+                     <CardContent>
+                       <div className="text-center space-y-4 py-8">
+                         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                           <Clock className="h-8 w-8 text-muted-foreground" />
+                         </div>
+                         <div>
+                           <h3 className="text-lg font-semibold mb-2">Review the lesson content</h3>
+                           <p className="text-muted-foreground">
+                             No exercises available for this lesson yet. Review the lesson content above to reinforce your learning.
+                           </p>
+                         </div>
+                         <Button 
+                           variant="outline" 
+                           onClick={async () => {
+                             if (!currentLesson || !user) return;
+                             // Mark lesson as completed without exercises
+                             try {
+                               await supabase
+                                 .from('user_lesson_progress')
+                                 .upsert({
+                                   user_id: user.id,
+                                   lesson_id: currentLesson.id,
+                                   completed: true,
+                                   score: 100,
+                                   completed_at: new Date().toISOString(),
+                                   updated_at: new Date().toISOString(),
+                                 }, {
+                                   onConflict: 'user_id,lesson_id'
+                                 });
+                               
+                               toast({
+                                 title: "Progress saved!",
+                                 description: "Lesson marked as completed.",
+                               });
+                               
+                               await fetchCourseData();
+                             } catch (error) {
+                               console.error('Error saving progress:', error);
+                             }
+                           }}
+                         >
+                           Mark as Complete
+                         </Button>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 )}
               </div>
             )}
           </div>
