@@ -58,11 +58,12 @@ interface Exercise {
   title: string;
   instructions: string;
   question: string;
-  options: string[];
+  options: any[];
   correct_answer: string;
   explanation?: string;
   points: number;
   order_index: number;
+  created_at: string;
 }
 
 export default function Course() {
@@ -142,35 +143,46 @@ export default function Course() {
 
   const fetchLessonData = async (lessonId: string) => {
     try {
-      // For now, create mock lesson content since the lesson_content table may not exist
-      const mockLessonContent: LessonContentItem[] = [
-        {
-          id: '1',
-          lesson_id: lessonId,
-          section_type: 'grammar',
-          title: 'Present Simple Tense',
-          explanation: 'The present simple tense is used to express habits, general truths, and repeated actions.',
-          examples: [
-            { example: 'I eat breakfast every morning.', translation: 'Eu como café da manhã toda manhã.' },
-            { example: 'She works in a hospital.', translation: 'Ela trabalha em um hospital.' }
-          ],
-          order_index: 1
-        },
-        {
-          id: '2',
-          lesson_id: lessonId,
-          section_type: 'vocabulary',
-          title: 'Common Greetings',
-          explanation: 'Learn essential greetings and polite expressions used in everyday English conversations.',
-          examples: [
-            { word: 'Hello', meaning: 'Olá', usage: 'Hello, how are you?' },
-            { word: 'Good morning', meaning: 'Bom dia', usage: 'Good morning, Mr. Smith!' }
-          ],
-          order_index: 2
-        }
-      ];
+      // Fetch lesson content
+      const { data: contentData, error: contentError } = await supabase
+        .from('lesson_content')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('order_index');
 
-      setLessonContent(mockLessonContent);
+      if (contentError) {
+        console.error('Error fetching lesson content:', contentError);
+        // Create mock lesson content as fallback
+        const mockLessonContent: LessonContentItem[] = [
+          {
+            id: '1',
+            lesson_id: lessonId,
+            section_type: 'grammar',
+            title: 'Present Simple Tense',
+            explanation: 'The present simple tense is used to express habits, general truths, and repeated actions.',
+            examples: [
+              { example: 'I eat breakfast every morning.', translation: 'Eu como café da manhã toda manhã.' },
+              { example: 'She works in a hospital.', translation: 'Ela trabalha em um hospital.' }
+            ],
+            order_index: 1
+          },
+          {
+            id: '2',
+            lesson_id: lessonId,
+            section_type: 'vocabulary',
+            title: 'Common Greetings',
+            explanation: 'Learn essential greetings and polite expressions used in everyday English conversations.',
+            examples: [
+              { word: 'Hello', meaning: 'Olá', usage: 'Hello, how are you?' },
+              { word: 'Good morning', meaning: 'Bom dia', usage: 'Good morning, Mr. Smith!' }
+            ],
+            order_index: 2
+          }
+        ];
+        setLessonContent(mockLessonContent);
+      } else {
+        setLessonContent(contentData || []);
+      }
 
       // Fetch exercises
       const { data: exercisesData, error: exercisesError } = await supabase
@@ -183,7 +195,16 @@ export default function Course() {
         console.error('Error fetching exercises:', exercisesError);
         setExercises([]);
       } else {
-        setExercises(exercisesData || []);
+        // Transform the data to match our Exercise interface
+        const transformedExercises: Exercise[] = (exercisesData || []).map(exercise => ({
+          ...exercise,
+          exercise_type: exercise.exercise_type || 'multiple_choice',
+          title: exercise.title || 'Exercise',
+          instructions: exercise.instructions || 'Complete the exercise',
+          points: exercise.points || 10,
+          options: Array.isArray(exercise.options) ? exercise.options : []
+        }));
+        setExercises(transformedExercises);
       }
 
     } catch (error) {
@@ -258,7 +279,6 @@ export default function Course() {
         toast({
           title: "Continue praticando",
           description: `Você obteve ${percentage}%. Tente novamente para melhorar!`,
-          variant: "secondary",
         });
       }
 
@@ -389,7 +409,7 @@ export default function Course() {
                                 15 min
                               </span>
                               {progress && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {progress.score}%
                                 </Badge>
                               )}
