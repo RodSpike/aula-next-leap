@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -5,53 +6,62 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { BookOpen, CheckCircle, Clock, Trophy, ArrowRight, ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { LessonContent } from "@/components/LessonContent";
+import { ExerciseActivity } from "@/components/ExerciseActivity";
+import { 
+  ArrowLeft, 
+  BookOpen, 
+  CheckCircle, 
+  Clock, 
+  Award,
+  Play,
+  Users,
+  Target
+} from "lucide-react";
 
 interface Course {
   id: string;
   title: string;
   description: string;
   level: string;
-  order_index: number;
+  total_lessons: number;
 }
 
 interface Lesson {
   id: string;
-  course_id: string;
   title: string;
+  description: string;
   content: string;
+  order_index: number;
+  estimated_duration: number;
+}
+
+interface LessonContentItem {
+  id: string;
+  lesson_id: string;
+  section_type: 'grammar' | 'vocabulary' | 'reading' | 'listening' | 'speaking' | 'writing';
+  title: string;
+  explanation: string;
+  examples: any[];
   order_index: number;
 }
 
 interface Exercise {
   id: string;
   lesson_id: string;
+  exercise_type: 'multiple_choice' | 'fill_blank' | 'drag_drop' | 'matching' | 'true_false' | 'reading_comprehension';
+  title: string;
+  instructions: string;
   question: string;
   options: string[];
   correct_answer: string;
-  explanation: string;
+  explanation?: string;
+  points: number;
   order_index: number;
-}
-
-interface ExerciseFromDB {
-  id: string;
-  lesson_id: string;
-  question: string;
-  options: any;
-  correct_answer: string;
-  explanation: string;
-  order_index: number;
-}
-
-interface UserProgress {
-  lesson_id: string;
-  completed: boolean;
-  score: number;
 }
 
 export default function Course() {
@@ -59,26 +69,25 @@ export default function Course() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-
+  
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [lessonContent, setLessonContent] = useState<LessonContentItem[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [lessonCompleted, setLessonCompleted] = useState(false);
+  const [userProgress, setUserProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (courseId && user) {
+    if (courseId) {
       fetchCourseData();
     }
   }, [courseId, user]);
 
   const fetchCourseData = async () => {
     try {
+      setLoading(true);
+
       // Fetch course details
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
@@ -97,29 +106,32 @@ export default function Course() {
         .order('order_index');
 
       if (lessonsError) throw lessonsError;
-      setLessons(lessonsData);
+      setLessons(lessonsData || []);
 
-      // Fetch user progress
+      // Set first lesson as current if available
+      if (lessonsData && lessonsData.length > 0) {
+        setCurrentLesson(lessonsData[0]);
+        await fetchLessonData(lessonsData[0].id);
+      }
+
+      // Fetch user progress if logged in
       if (user) {
         const { data: progressData, error: progressError } = await supabase
           .from('user_lesson_progress')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .in('lesson_id', lessonsData?.map(l => l.id) || []);
 
-        if (progressError) throw progressError;
-        setUserProgress(progressData || []);
-
-        // Set current lesson (first incomplete lesson or first lesson)
-        const incompleteLesson = lessonsData.find(lesson => 
-          !progressData?.some(p => p.lesson_id === lesson.id && p.completed)
-        );
-        setCurrentLesson(incompleteLesson || lessonsData[0]);
+        if (!progressError) {
+          setUserProgress(progressData || []);
+        }
       }
+
     } catch (error) {
       console.error('Error fetching course data:', error);
       toast({
-        title: "Error",
-        description: "Failed to load course data.",
+        title: "Erro",
+        description: "Falha ao carregar dados do curso.",
         variant: "destructive",
       });
     } finally {
@@ -127,137 +139,48 @@ export default function Course() {
     }
   };
 
-  const fetchExercises = async (lessonId: string) => {
+  const fetchLessonData = async (lessonId: string) => {
     try {
-      const { data: exercisesData, error } = await supabase
+      // Fetch lesson content
+      const { data: contentData, error: contentError } = await supabase
+        .from('lesson_content')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('order_index');
+
+      if (contentError) {
+        console.error('Error fetching lesson content:', contentError);
+        setLessonContent([]);
+      } else {
+        setLessonContent(contentData || []);
+      }
+
+      // Fetch exercises
+      const { data: exercisesData, error: exercisesError } = await supabase
         .from('exercises')
         .select('*')
         .eq('lesson_id', lessonId)
         .order('order_index');
 
-      if (error) throw error;
-      
-      // Transform the data to match our Exercise interface
-      const transformedExercises: Exercise[] = (exercisesData || []).map((exercise: ExerciseFromDB) => ({
-        ...exercise,
-        options: Array.isArray(exercise.options) ? exercise.options : JSON.parse(exercise.options as string)
-      }));
-      
-      setExercises(transformedExercises);
-      setSelectedAnswers(new Array(transformedExercises.length).fill(''));
-      setCurrentExerciseIndex(0);
-      setShowResults(false);
-    } catch (error) {
-      console.error('Error fetching exercises:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load exercises.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLessonSelect = (lesson: Lesson) => {
-    setCurrentLesson(lesson);
-    setLessonCompleted(false);
-    fetchExercises(lesson.id);
-  };
-
-  const handleAnswerSelect = (answer: string) => {
-    const newAnswers = [...selectedAnswers];
-    newAnswers[currentExerciseIndex] = answer;
-    setSelectedAnswers(newAnswers);
-  };
-
-  const handleNextExercise = () => {
-    if (currentExerciseIndex < exercises.length - 1) {
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-    } else {
-      handleSubmitExercises();
-    }
-  };
-
-  const handlePreviousExercise = () => {
-    if (currentExerciseIndex > 0) {
-      setCurrentExerciseIndex(currentExerciseIndex - 1);
-    }
-  };
-
-  const handleSubmitExercises = async () => {
-    if (!currentLesson || !user) return;
-
-    // Check if all exercises have been answered
-    const unansweredQuestions = selectedAnswers.filter((answer, index) => 
-      index < exercises.length && (!answer || answer.trim() === '')
-    );
-    
-    if (unansweredQuestions.length > 0) {
-      toast({
-        title: "Incomplete",
-        description: "Please answer all questions before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const score = selectedAnswers.reduce((acc, answer, index) => {
-      if (index >= exercises.length) return acc;
-      return acc + (answer === exercises[index]?.correct_answer ? 1 : 0);
-    }, 0);
-
-    const percentage = (score / exercises.length) * 100;
-    const passed = percentage >= 70;
-
-    try {
-      // Update user progress
-      const { error } = await supabase
-        .from('user_lesson_progress')
-        .upsert({
-          user_id: user.id,
-          lesson_id: currentLesson.id,
-          completed: passed,
-          score: percentage,
-          completed_at: passed ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,lesson_id'
-        });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      setShowResults(true);
-      setLessonCompleted(passed);
-
-      if (passed) {
-        toast({
-          title: "Congratulations!",
-          description: `You passed with ${percentage.toFixed(1)}%! You can now move to the next lesson.`,
-        });
+      if (exercisesError) {
+        console.error('Error fetching exercises:', exercisesError);
+        setExercises([]);
       } else {
-        toast({
-          title: "Keep trying!",
-          description: `You scored ${percentage.toFixed(1)}%. You need at least 70% to advance.`,
-          variant: "destructive",
-        });
+        setExercises(exercisesData || []);
       }
 
-      // Refresh progress
-      await fetchCourseData();
     } catch (error) {
-      console.error('Error submitting exercises:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit exercises. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error fetching lesson data:', error);
     }
   };
 
-  const handleMarkLessonComplete = async () => {
-    if (!currentLesson || !user) return;
+  const selectLesson = async (lesson: Lesson) => {
+    setCurrentLesson(lesson);
+    await fetchLessonData(lesson.id);
+  };
+
+  const markLessonComplete = async () => {
+    if (!user || !currentLesson) return;
 
     try {
       const { error } = await supabase
@@ -266,53 +189,73 @@ export default function Course() {
           user_id: user.id,
           lesson_id: currentLesson.id,
           completed: true,
-          score: 100, // Full score for completion without exercises
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,lesson_id'
+          score: 100,
+          completed_at: new Date().toISOString()
         });
 
       if (error) throw error;
 
       toast({
-        title: "🎉 Lesson Completed!",
-        description: "Excellent work! You can now proceed to the next lesson.",
+        title: "Parabéns!",
+        description: "Lição completada com sucesso!",
       });
 
-      // Refresh progress and move to next lesson if available
-      await fetchCourseData();
-      
-      // Auto-select next unlocked lesson
-      const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
-      const nextLesson = lessons[currentIndex + 1];
-      if (nextLesson && isLessonUnlocked(nextLesson)) {
-        setCurrentLesson(nextLesson);
-        fetchExercises(nextLesson.id);
-      }
+      // Refresh progress
+      fetchCourseData();
     } catch (error) {
-      console.error('Error marking lesson as complete:', error);
+      console.error('Error marking lesson complete:', error);
       toast({
-        title: "Error",
-        description: "Failed to mark lesson as complete. Please try again.",
+        title: "Erro",
+        description: "Falha ao marcar lição como completa.",
         variant: "destructive",
       });
     }
   };
 
-  const isLessonCompleted = (lessonId: string) => {
-    return userProgress.some(p => p.lesson_id === lessonId && p.completed);
+  const handleExerciseComplete = async (score: number, totalPoints: number) => {
+    if (!user || !currentLesson) return;
+
+    const percentage = Math.round((score / totalPoints) * 100);
+
+    try {
+      const { error } = await supabase
+        .from('user_lesson_progress')
+        .upsert({
+          user_id: user.id,
+          lesson_id: currentLesson.id,
+          completed: percentage >= 70,
+          score: percentage,
+          completed_at: percentage >= 70 ? new Date().toISOString() : null
+        });
+
+      if (error) throw error;
+
+      if (percentage >= 70) {
+        toast({
+          title: "Parabéns!",
+          description: `Lição completada com ${percentage}% de aproveitamento!`,
+        });
+      } else {
+        toast({
+          title: "Continue praticando",
+          description: `Você obteve ${percentage}%. Tente novamente para melhorar!`,
+          variant: "secondary",
+        });
+      }
+
+      // Refresh progress
+      fetchCourseData();
+    } catch (error) {
+      console.error('Error updating lesson progress:', error);
+    }
   };
 
-  const isLessonUnlocked = (lesson: Lesson) => {
-    const previousLessons = lessons.filter(l => l.order_index < lesson.order_index);
-    return previousLessons.every(l => isLessonCompleted(l.id));
+  const getLessonProgress = (lessonId: string) => {
+    return userProgress.find(p => p.lesson_id === lessonId);
   };
 
-  const getOverallProgress = () => {
-    const completedLessons = lessons.filter(l => isLessonCompleted(l.id)).length;
-    return lessons.length > 0 ? (completedLessons / lessons.length) * 100 : 0;
-  };
+  const completedLessons = userProgress.filter(p => p.completed).length;
+  const overallProgress = lessons.length > 0 ? (completedLessons / lessons.length) * 100 : 0;
 
   if (loading) {
     return (
@@ -320,8 +263,8 @@ export default function Course() {
         <Navigation />
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading course...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando curso...</p>
           </div>
         </div>
       </div>
@@ -332,11 +275,15 @@ export default function Course() {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Course not found</h1>
-            <Button onClick={() => navigate('/courses')}>Back to Courses</Button>
-          </div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Card>
+            <CardContent className="text-center p-8">
+              <h3 className="text-lg font-semibold mb-2">Curso não encontrado</h3>
+              <Button onClick={() => navigate('/courses')}>
+                Voltar aos cursos
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -346,347 +293,206 @@ export default function Course() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar - Lessons List */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/courses')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar aos cursos
+          </Button>
+          
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 rounded-lg border border-primary/20">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">{course.title}</h1>
+                <p className="text-muted-foreground mb-4">{course.description}</p>
+                <Badge className="bg-primary/10 text-primary border-primary/20">
+                  {course.level}
+                </Badge>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{Math.round(overallProgress)}%</div>
+                <div className="text-sm text-muted-foreground">Progresso</div>
+              </div>
+            </div>
+            
+            <Progress value={overallProgress} className="h-2" />
+            <div className="flex justify-between text-sm text-muted-foreground mt-2">
+              <span>{completedLessons} de {lessons.length} lições completas</span>
+              <span>{lessons.length} lições totais</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Lesson List */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5" />
-                  <span>{course.title}</span>
+                  Lições ({lessons.length})
                 </CardTitle>
-                <div className="space-y-2">
-                  <Progress value={getOverallProgress()} className="w-full" />
-                  <p className="text-sm text-muted-foreground">
-                    {lessons.filter(l => isLessonCompleted(l.id)).length} of {lessons.length} lessons completed
-                  </p>
-                </div>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {lessons.map((lesson) => (
-                  <Button
-                    key={lesson.id}
-                    variant={currentLesson?.id === lesson.id ? "default" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => handleLessonSelect(lesson)}
-                    disabled={!isLessonUnlocked(lesson)}
-                  >
-                    <div className="flex items-center space-x-2">
-                      {isLessonCompleted(lesson.id) ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : isLessonUnlocked(lesson) ? (
-                        <div className="h-4 w-4 rounded-full border-2 border-primary" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full bg-muted" />
-                      )}
-                      <span className="text-sm truncate">{lesson.title}</span>
-                    </div>
-                  </Button>
-                ))}
+              <CardContent className="p-0">
+                <div className="space-y-1">
+                  {lessons.map((lesson) => {
+                    const progress = getLessonProgress(lesson.id);
+                    const isCompleted = progress?.completed;
+                    const isActive = currentLesson?.id === lesson.id;
+                    
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => selectLesson(lesson)}
+                        className={`w-full text-left p-4 border-b hover:bg-muted/50 transition-colors ${
+                          isActive ? 'bg-primary/10 border-r-4 border-r-primary' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{lesson.title}</span>
+                              {isCompleted && (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {lesson.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {lesson.estimated_duration} min
+                              </span>
+                              {progress && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {progress.score}%
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Content */}
+          {/* Lesson Content */}
           <div className="lg:col-span-3">
-            {currentLesson && (
+            {currentLesson ? (
               <div className="space-y-6">
-                {/* Lesson Header */}
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{currentLesson.title}</CardTitle>
-                        <Badge variant="outline" className="mt-2">
-                          {course.level}
-                        </Badge>
-                      </div>
-                      {isLessonCompleted(currentLesson.id) && (
-                        <div className="flex items-center space-x-2 text-green-600">
-                          <Trophy className="h-5 w-5" />
-                          <span className="text-sm font-medium">Completed</span>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Play className="h-6 w-6 text-primary" />
+                        <div>
+                          <h2 className="text-xl">{currentLesson.title}</h2>
+                          <p className="text-sm text-muted-foreground font-normal">
+                            {currentLesson.description}
+                          </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {currentLesson.estimated_duration} min
+                        </span>
+                      </div>
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="max-w-none">
-                    <div className="prose prose-sm max-w-none space-y-4 text-foreground">
-                      {currentLesson.content.split('\n').map((line, index) => {
-                        if (line.trim() === '') return <div key={index} className="h-2" />;
-                        
-                        // Handle headers
-                        if (line.startsWith('# ')) {
-                          return (
-                            <h1 key={index} className="text-3xl font-bold text-foreground mb-6 mt-8 border-b border-border pb-2">
-                              {line.substring(2)}
-                            </h1>
-                          );
-                        }
-                        if (line.startsWith('## ')) {
-                          return (
-                            <h2 key={index} className="text-xl font-semibold text-foreground mb-4 mt-8 text-primary">
-                              {line.substring(3)}
-                            </h2>
-                          );
-                        }
-                        if (line.startsWith('### ')) {
-                          return (
-                            <h3 key={index} className="text-lg font-medium text-foreground mb-3 mt-6">
-                              {line.substring(4)}
-                            </h3>
-                          );
-                        }
-                        
-                        // Handle bold text sections
-                        if (line.startsWith('**') && line.endsWith('**')) {
-                          return (
-                            <div key={index} className="bg-muted/50 p-4 rounded-lg mb-4 border-l-4 border-primary">
-                              <p className="font-semibold text-foreground text-lg">{line.replace(/\*\*/g, '')}</p>
-                            </div>
-                          );
-                        }
-                        
-                        // Handle list items
-                        if (line.startsWith('- ')) {
-                          return (
-                            <li key={index} className="text-foreground ml-6 mb-2 list-disc marker:text-primary">
-                              {line.substring(2)}
-                            </li>
-                          );
-                        }
-                        
-                        // Handle numbered items
-                        if (line.match(/^\d+\.\s/)) {
-                          return (
-                            <li key={index} className="text-foreground ml-6 mb-2 list-decimal marker:text-primary">
-                              {line.replace(/^\d+\.\s/, '')}
-                            </li>
-                          );
-                        }
-                        
-                        // Handle checkbox items
-                        if (line.startsWith('☐ ')) {
-                          return (
-                            <div key={index} className="flex items-center gap-3 mb-3 p-2 rounded hover:bg-muted/30">
-                              <input type="checkbox" className="w-4 h-4 accent-primary" />
-                              <span className="text-foreground">{line.substring(2)}</span>
-                            </div>
-                          );
-                        }
-                        
-                        // Regular paragraphs with better formatting
-                        if (line.trim()) {
-                          return (
-                            <p key={index} className="text-foreground leading-relaxed mb-4 text-base">
-                              {line}
-                            </p>
-                          );
-                        }
-                        
-                        return null;
-                      }).filter(Boolean)}
-                    </div>
-                  </CardContent>
                 </Card>
 
-                 {/* Exercises Section */}
-                 {exercises.length > 0 ? (
-                   <Card>
-                     <CardHeader>
-                       <CardTitle className="flex items-center space-x-2">
-                         <Clock className="h-5 w-5" />
-                         <span>Practice Exercises</span>
-                       </CardTitle>
-                       <p className="text-sm text-muted-foreground">
-                         Complete the exercises with at least 70% to unlock the next lesson.
-                       </p>
-                     </CardHeader>
-                     <CardContent>
-                       {!showResults ? (
-                         <div className="space-y-6">
-                           <div className="flex items-center justify-between">
-                             <span className="text-sm text-muted-foreground">
-                               Question {currentExerciseIndex + 1} of {exercises.length}
-                             </span>
-                             <Progress 
-                               value={((currentExerciseIndex + 1) / exercises.length) * 100} 
-                               className="w-32"
-                             />
-                           </div>
+                <Tabs defaultValue="content" className="space-y-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="content" className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Conteúdo
+                    </TabsTrigger>
+                    <TabsTrigger value="exercises" className="flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Exercícios ({exercises.length})
+                    </TabsTrigger>
+                  </TabsList>
 
-                           {exercises[currentExerciseIndex] && (
-                             <div className="space-y-4">
-                               <h3 className="text-lg font-medium">
-                                 {exercises[currentExerciseIndex].question}
-                               </h3>
+                  <TabsContent value="content" className="space-y-6">
+                    <LessonContent content={lessonContent} />
+                    
+                    {lessonContent.length === 0 && (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">Conteúdo em desenvolvimento</h3>
+                          <p className="text-muted-foreground mb-4">
+                            O conteúdo detalhado para esta lição está sendo preparado.
+                          </p>
+                          <div className="bg-muted/50 p-4 rounded-lg text-left space-y-3">
+                            <h4 className="font-medium">Enquanto isso, aqui estão algumas dicas de estudo:</h4>
+                            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                              <li>Pratique vocabulário relacionado ao tema da lição</li>
+                              <li>Revise estruturas gramaticais básicas</li>
+                              <li>Leia textos simples em inglês</li>
+                              <li>Pratique pronúncia com aplicativos de áudio</li>
+                            </ul>
+                          </div>
+                          {user && (
+                            <Button onClick={markLessonComplete} className="mt-4">
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Marcar como Completa
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
 
-                               <RadioGroup
-                                 value={selectedAnswers[currentExerciseIndex]}
-                                 onValueChange={handleAnswerSelect}
-                               >
-                                 {exercises[currentExerciseIndex].options.map((option, index) => (
-                                   <div key={index} className="flex items-center space-x-2">
-                                     <RadioGroupItem value={option} id={`option-${index}`} />
-                                     <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                                       {option}
-                                     </Label>
-                                   </div>
-                                 ))}
-                               </RadioGroup>
-
-                               <div className="flex justify-between">
-                                 <Button
-                                   variant="outline"
-                                   onClick={handlePreviousExercise}
-                                   disabled={currentExerciseIndex === 0}
-                                 >
-                                   <ArrowLeft className="h-4 w-4 mr-2" />
-                                   Previous
-                                 </Button>
-                                 <Button
-                                   onClick={handleNextExercise}
-                                   disabled={!selectedAnswers[currentExerciseIndex] || selectedAnswers[currentExerciseIndex].trim() === ''}
-                                 >
-                                   {currentExerciseIndex === exercises.length - 1 ? 'Submit Answers' : 'Next'}
-                                   <ArrowRight className="h-4 w-4 ml-2" />
-                                 </Button>
-                               </div>
-                             </div>
-                           )}
-                         </div>
-                       ) : (
-                         <div className="space-y-6">
-                           <div className="text-center">
-                             <div className={`text-6xl mb-4 ${lessonCompleted ? 'text-green-600' : 'text-red-600'}`}>
-                               {lessonCompleted ? '🎉' : '📚'}
-                             </div>
-                             <h3 className="text-xl font-bold mb-2">
-                               {lessonCompleted ? 'Congratulations!' : 'Keep Learning!'}
-                             </h3>
-                             <p className="text-muted-foreground mb-4">
-                               You scored {((selectedAnswers.reduce((acc, answer, index) => 
-                                 acc + (answer === exercises[index]?.correct_answer ? 1 : 0), 0
-                               ) / exercises.length) * 100).toFixed(1)}%
-                             </p>
-                           </div>
-
-                           <div className="space-y-4">
-                             <h4 className="font-medium">Review:</h4>
-                             {exercises.map((exercise, index) => (
-                               <div key={index} className="border rounded-lg p-4">
-                                 <p className="font-medium mb-2">{exercise.question}</p>
-                                 <div className="space-y-1">
-                                   <p className={`text-sm ${
-                                     selectedAnswers[index] === exercise.correct_answer 
-                                       ? 'text-green-600' : 'text-red-600'
-                                   }`}>
-                                     Your answer: {selectedAnswers[index]}
-                                   </p>
-                                   {selectedAnswers[index] !== exercise.correct_answer && (
-                                     <p className="text-sm text-green-600">
-                                       Correct answer: {exercise.correct_answer}
-                                     </p>
-                                   )}
-                                   {exercise.explanation && (
-                                     <p className="text-sm text-muted-foreground mt-2">
-                                       {exercise.explanation}
-                                     </p>
-                                   )}
-                                 </div>
-                               </div>
-                             ))}
-                           </div>
-
-                            <div className="flex justify-center">
-                              {!lessonCompleted && (
-                                <Button onClick={() => {
-                                  setSelectedAnswers(new Array(exercises.length).fill(''));
-                                  setCurrentExerciseIndex(0);
-                                  setShowResults(false);
-                                  setLessonCompleted(false);
-                                }} variant="outline">
-                                  Try Again
-                                </Button>
-                              )}
-                            </div>
-                         </div>
-                       )}
-                     </CardContent>
-                    </Card>
-                 ) : (
-                   // If no exercises, show completion button and study tips
-                   <div className="space-y-6">
-                     <Card>
-                       <CardHeader>
-                         <CardTitle className="flex items-center space-x-2">
-                           <BookOpen className="h-5 w-5 text-primary" />
-                           <span>Study Tips</span>
-                         </CardTitle>
-                       </CardHeader>
-                       <CardContent className="space-y-4">
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                             <h4 className="font-medium text-foreground mb-2">📝 Practice</h4>
-                             <p className="text-sm text-muted-foreground">
-                               Review the vocabulary and try using new words in sentences.
-                             </p>
-                           </div>
-                           <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                             <h4 className="font-medium text-foreground mb-2">🗣️ Speak</h4>
-                             <p className="text-sm text-muted-foreground">
-                               Practice pronunciation by reading the lesson aloud.
-                             </p>
-                           </div>
-                           <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                             <h4 className="font-medium text-foreground mb-2">✍️ Write</h4>
-                             <p className="text-sm text-muted-foreground">
-                               Write example sentences using the grammar patterns.
-                             </p>
-                           </div>
-                           <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                             <h4 className="font-medium text-foreground mb-2">🔄 Review</h4>
-                             <p className="text-sm text-muted-foreground">
-                               Come back to this lesson later to reinforce learning.
-                             </p>
-                           </div>
-                         </div>
-                       </CardContent>
-                     </Card>
-
-                     <Card>
-                       <CardHeader>
-                         <CardTitle className="flex items-center space-x-2">
-                           <CheckCircle className="h-5 w-5" />
-                           <span>Lesson Complete</span>
-                         </CardTitle>
-                         <p className="text-sm text-muted-foreground">
-                           Great! You've finished reading this lesson. Mark it as complete to continue.
-                         </p>
-                       </CardHeader>
-                       <CardContent>
-                         <Button 
-                           onClick={handleMarkLessonComplete}
-                           className="w-full"
-                           disabled={isLessonCompleted(currentLesson.id)}
-                         >
-                           {isLessonCompleted(currentLesson.id) ? (
-                             <>
-                               <CheckCircle className="h-4 w-4 mr-2" />
-                               Lesson Completed
-                             </>
-                           ) : (
-                             <>
-                               <ArrowRight className="h-4 w-4 mr-2" />
-                               Mark as Complete
-                             </>
-                           )}
-                         </Button>
-                       </CardContent>
-                     </Card>
-                   </div>
-                 )}
+                  <TabsContent value="exercises" className="space-y-6">
+                    {exercises.length > 0 ? (
+                      <ExerciseActivity 
+                        exercises={exercises} 
+                        onComplete={handleExerciseComplete}
+                      />
+                    ) : (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">Exercícios em desenvolvimento</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Os exercícios para esta lição estão sendo preparados.
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Revise o conteúdo da lição enquanto preparamos atividades interativas para você praticar.
+                          </p>
+                          {user && (
+                            <Button onClick={markLessonComplete} className="mt-4" variant="outline">
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Marcar como Completa
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Selecione uma lição</h3>
+                  <p className="text-muted-foreground">
+                    Escolha uma lição na lista ao lado para começar a estudar.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>

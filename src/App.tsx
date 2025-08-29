@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { InitializeCourses } from "@/components/InitializeCourses";
+import { FloatingChatBubble } from "@/components/FloatingChatBubble";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -31,6 +33,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <FloatingChatBubble />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/courses" element={<Courses />} />
