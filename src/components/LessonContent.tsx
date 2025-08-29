@@ -2,22 +2,15 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Volume2, Eye, MessageSquare, PenTool, Headphones } from "lucide-react";
+import { BookOpen, MessageSquare, FileText, Headphones, Mic, PenTool } from "lucide-react";
 
 interface LessonContentItem {
   id: string;
+  lesson_id: string;
   section_type: 'grammar' | 'vocabulary' | 'reading' | 'listening' | 'speaking' | 'writing';
   title: string;
   explanation: string;
-  examples: Array<{
-    example?: string;
-    translation?: string;
-    word?: string;
-    meaning?: string;
-    usage?: string;
-    text?: string;
-    questions?: string[];
-  }>;
+  examples: any[];
   order_index: number;
 }
 
@@ -25,113 +18,121 @@ interface LessonContentProps {
   content: LessonContentItem[];
 }
 
-const getSectionIcon = (type: string) => {
-  switch (type) {
-    case 'grammar': return <BookOpen className="h-5 w-5" />;
-    case 'vocabulary': return <MessageSquare className="h-5 w-5" />;
-    case 'reading': return <Eye className="h-5 w-5" />;
-    case 'listening': return <Headphones className="h-5 w-5" />;
-    case 'speaking': return <Volume2 className="h-5 w-5" />;
-    case 'writing': return <PenTool className="h-5 w-5" />;
-    default: return <BookOpen className="h-5 w-5" />;
-  }
-};
-
-const getSectionColor = (type: string) => {
-  switch (type) {
-    case 'grammar': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'vocabulary': return 'bg-green-100 text-green-800 border-green-200';
-    case 'reading': return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'listening': return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'speaking': return 'bg-red-100 text-red-800 border-red-200';
-    case 'writing': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
 export function LessonContent({ content }: LessonContentProps) {
-  if (!content || content.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">No lesson content available yet.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getSectionIcon = (type: string) => {
+    switch (type) {
+      case 'grammar':
+        return <BookOpen className="h-5 w-5" />;
+      case 'vocabulary':
+        return <MessageSquare className="h-5 w-5" />;
+      case 'reading':
+        return <FileText className="h-5 w-5" />;
+      case 'listening':
+        return <Headphones className="h-5 w-5" />;
+      case 'speaking':
+        return <Mic className="h-5 w-5" />;
+      case 'writing':
+        return <PenTool className="h-5 w-5" />;
+      default:
+        return <BookOpen className="h-5 w-5" />;
+    }
+  };
 
-  const sortedContent = [...content].sort((a, b) => a.order_index - b.order_index);
+  const getSectionColor = (type: string) => {
+    const colors = {
+      grammar: 'bg-blue-50 text-blue-700 border-blue-200',
+      vocabulary: 'bg-green-50 text-green-700 border-green-200',
+      reading: 'bg-purple-50 text-purple-700 border-purple-200',
+      listening: 'bg-orange-50 text-orange-700 border-orange-200',
+      speaking: 'bg-pink-50 text-pink-700 border-pink-200',
+      writing: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    };
+    return colors[type as keyof typeof colors] || colors.grammar;
+  };
+
+  if (!content || content.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
-      {sortedContent.map((item) => (
-        <Card key={item.id} className="border-l-4 border-l-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                {getSectionIcon(item.section_type)}
-                <span className="capitalize">{item.section_type}</span>
+      {content.map((section) => (
+        <Card key={section.id} className="overflow-hidden">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${getSectionColor(section.section_type)}`}>
+                {getSectionIcon(section.section_type)}
               </div>
-              <Badge className={getSectionColor(item.section_type)}>
-                {item.title}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <p className="text-sm leading-relaxed">{item.explanation}</p>
+              <div>
+                <CardTitle className="text-lg">{section.title}</CardTitle>
+                <Badge variant="outline" className="capitalize mt-1">
+                  {section.section_type}
+                </Badge>
+              </div>
             </div>
-            
-            {item.examples && item.examples.length > 0 && (
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div className="prose prose-sm max-w-none">
+              <p className="text-muted-foreground leading-relaxed">
+                {section.explanation}
+              </p>
+            </div>
+
+            {section.examples && section.examples.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                  Examples & Practice
+                  Exemplos
                 </h4>
-                
-                {item.section_type === 'vocabulary' && (
-                  <div className="grid gap-3">
-                    {item.examples.map((example, index) => (
-                      <div key={index} className="p-3 bg-background border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-primary">{example.word}</span>
-                          <span className="text-sm text-muted-foreground">{example.meaning}</span>
+                <div className="space-y-2">
+                  {section.examples.map((example, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-muted/50 p-3 rounded-lg border-l-4 border-primary/30"
+                    >
+                      {section.section_type === 'vocabulary' ? (
+                        <div className="space-y-1">
+                          <div className="font-medium">{example.word}</div>
+                          <div className="text-sm text-muted-foreground">{example.meaning}</div>
+                          {example.usage && (
+                            <div className="text-sm italic text-primary">
+                              "{example.usage}"
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm italic">"{example.usage}"</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="font-medium">{example.example}</div>
+                          {example.translation && (
+                            <div className="text-sm text-muted-foreground">
+                              {example.translation}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {section.section_type === 'reading' && section.examples[0]?.text && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                  Texto para Leitura
+                </h4>
+                <div className="bg-background border rounded-lg p-4">
+                  <p className="leading-relaxed">{section.examples[0].text}</p>
+                </div>
                 
-                {item.section_type === 'grammar' && (
+                {section.examples[0].questions && (
                   <div className="space-y-2">
-                    {item.examples.map((example, index) => (
-                      <div key={index} className="p-3 bg-background border rounded-lg">
-                        <p className="font-medium">{example.example}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{example.translation}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {item.section_type === 'reading' && (
-                  <div className="space-y-4">
-                    {item.examples.map((example, index) => (
-                      <div key={index} className="space-y-3">
-                        <div className="p-4 bg-background border rounded-lg">
-                          <p className="text-sm leading-relaxed">{example.text}</p>
-                        </div>
-                        {example.questions && example.questions.length > 0 && (
-                          <div className="space-y-2">
-                            <h5 className="font-medium text-sm">Comprehension Questions:</h5>
-                            <ul className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                              {example.questions.map((question, qIndex) => (
-                                <li key={qIndex}>{question}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    <h5 className="font-medium text-sm">Questões de Compreensão:</h5>
+                    <ul className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                      {section.examples[0].questions.map((question: string, qIndex: number) => (
+                        <li key={qIndex}>{question}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>

@@ -2,15 +2,16 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, HelpCircle, Award } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, XCircle, Trophy, Target, BookOpen } from "lucide-react";
 
 interface Exercise {
   id: string;
+  lesson_id: string;
   exercise_type: 'multiple_choice' | 'fill_blank' | 'drag_drop' | 'matching' | 'true_false' | 'reading_comprehension';
   title: string;
   instructions: string;
@@ -28,90 +29,236 @@ interface ExerciseActivityProps {
 }
 
 export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProps) {
-  const { toast } = useToast();
-  const [currentExercise, setCurrentExercise] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: number]: string }>({});
-  const [showResult, setShowResult] = useState<{ [key: number]: boolean }>({});
-  const [score, setScore] = useState(0);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
+  const [showResults, setShowResults] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  if (!exercises || exercises.length === 0) {
+  const currentExercise = exercises[currentExerciseIndex];
+  const isLastExercise = currentExerciseIndex === exercises.length - 1;
+  const totalPoints = exercises.reduce((sum, ex) => sum + ex.points, 0);
+
+  const handleAnswerChange = (exerciseId: string, answer: string) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [exerciseId]: answer
+    }));
+  };
+
+  const checkAnswer = (exercise: Exercise): boolean => {
+    const userAnswer = userAnswers[exercise.id]?.toLowerCase().trim();
+    const correctAnswer = exercise.correct_answer.toLowerCase().trim();
+    return userAnswer === correctAnswer;
+  };
+
+  const calculateScore = (): number => {
+    return exercises.reduce((score, exercise) => {
+      if (checkAnswer(exercise)) {
+        return score + exercise.points;
+      }
+      return score;
+    }, 0);
+  };
+
+  const nextExercise = () => {
+    if (isLastExercise) {
+      setShowResults(true);
+      setCompleted(true);
+      const finalScore = calculateScore();
+      onComplete(finalScore, totalPoints);
+    } else {
+      setCurrentExerciseIndex(prev => prev + 1);
+    }
+  };
+
+  const restartExercises = () => {
+    setCurrentExerciseIndex(0);
+    setUserAnswers({});
+    setShowResults(false);
+    setCompleted(false);
+  };
+
+  const renderExerciseContent = (exercise: Exercise) => {
+    const userAnswer = userAnswers[exercise.id] || '';
+    
+    switch (exercise.exercise_type) {
+      case 'multiple_choice':
+      case 'reading_comprehension':
+        return (
+          <div className="space-y-4">
+            <RadioGroup 
+              value={userAnswer} 
+              onValueChange={(value) => handleAnswerChange(exercise.id, value)}
+            >
+              {exercise.options.map((option, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`option-${index}`} />
+                  <Label 
+                    htmlFor={`option-${index}`} 
+                    className="flex-1 cursor-pointer p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        );
+      
+      case 'fill_blank':
+        return (
+          <div className="space-y-4">
+            <Input
+              placeholder="Digite sua resposta..."
+              value={userAnswer}
+              onChange={(e) => handleAnswerChange(exercise.id, e.target.value)}
+              className="text-lg"
+            />
+          </div>
+        );
+      
+      case 'true_false':
+        return (
+          <div className="space-y-4">
+            <RadioGroup 
+              value={userAnswer} 
+              onValueChange={(value) => handleAnswerChange(exercise.id, value)}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="true" id="true" />
+                <Label 
+                  htmlFor="true" 
+                  className="flex-1 cursor-pointer p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  Verdadeiro
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="false" id="false" />
+                <Label 
+                  htmlFor="false" 
+                  className="flex-1 cursor-pointer p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  Falso
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="space-y-4">
+            <Input
+              placeholder="Digite sua resposta..."
+              value={userAnswer}
+              onChange={(e) => handleAnswerChange(exercise.id, e.target.value)}
+              className="text-lg"
+            />
+          </div>
+        );
+    }
+  };
+
+  if (exercises.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">No exercises available for this lesson.</p>
+        <CardContent className="p-8 text-center">
+          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Nenhum exercício disponível</h3>
+          <p className="text-muted-foreground">
+            Os exercícios para esta lição ainda estão sendo preparados.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const sortedExercises = [...exercises].sort((a, b) => a.order_index - b.order_index);
-  const exercise = sortedExercises[currentExercise];
-  const totalPoints = sortedExercises.reduce((sum, ex) => sum + ex.points, 0);
-
-  const handleAnswer = (answer: string) => {
-    setAnswers(prev => ({ ...prev, [currentExercise]: answer }));
-  };
-
-  const checkAnswer = () => {
-    const userAnswer = answers[currentExercise];
-    const isCorrect = userAnswer === exercise.correct_answer;
-    
-    setShowResult(prev => ({ ...prev, [currentExercise]: true }));
-    
-    if (isCorrect && !showResult[currentExercise]) {
-      setScore(prev => prev + exercise.points);
-      toast({
-        title: "Correto!",
-        description: `+${exercise.points} pontos`,
-      });
-    } else if (!isCorrect) {
-      toast({
-        title: "Incorreto",
-        description: "Tente novamente ou veja a explicação.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const nextExercise = () => {
-    if (currentExercise < sortedExercises.length - 1) {
-      setCurrentExercise(prev => prev + 1);
-    } else {
-      setCompleted(true);
-      onComplete(score, totalPoints);
-    }
-  };
-
-  const getExerciseTypeColor = (type: string) => {
-    switch (type) {
-      case 'multiple_choice': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'fill_blank': return 'bg-green-100 text-green-800 border-green-200';
-      case 'reading_comprehension': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'true_false': return 'bg-orange-100 text-orange-800 border-orange-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  if (completed) {
+  if (showResults) {
+    const score = calculateScore();
     const percentage = Math.round((score / totalPoints) * 100);
-    
+    const passed = percentage >= 70;
+
     return (
-      <Card className="border-2 border-primary/20">
-        <CardContent className="p-8 text-center">
-          <Award className="h-16 w-16 text-primary mx-auto mb-4" />
-          <h3 className="text-2xl font-bold mb-2">Parabéns!</h3>
-          <p className="text-lg mb-4">
-            Você completou todos os exercícios!
-          </p>
-          <div className="bg-muted/50 p-4 rounded-lg mb-4">
-            <p className="text-2xl font-bold text-primary">
-              {score} / {totalPoints} pontos ({percentage}%)
-            </p>
+      <Card>
+        <CardHeader className="text-center">
+          <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+            passed ? 'bg-green-100' : 'bg-orange-100'
+          }`}>
+            {passed ? (
+              <Trophy className="h-8 w-8 text-green-600" />
+            ) : (
+              <Target className="h-8 w-8 text-orange-600" />
+            )}
           </div>
-          <Badge variant={percentage >= 70 ? "default" : "secondary"} className="text-lg px-4 py-2">
-            {percentage >= 70 ? "Aprovado" : "Precisa melhorar"}
-          </Badge>
+          <CardTitle className="text-2xl">
+            {passed ? 'Parabéns!' : 'Continue praticando!'}
+          </CardTitle>
+          <p className="text-muted-foreground">
+            Você obteve {score} de {totalPoints} pontos ({percentage}%)
+          </p>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          <Progress value={percentage} className="h-3" />
+          
+          <div className="space-y-3">
+            <h4 className="font-medium">Resultados detalhados:</h4>
+            {exercises.map((exercise, index) => {
+              const isCorrect = checkAnswer(exercise);
+              return (
+                <div 
+                  key={exercise.id}
+                  className={`p-3 rounded-lg border ${
+                    isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isCorrect ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className="font-medium text-sm">
+                          Questão {index + 1}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {exercise.question}
+                      </p>
+                      <div className="text-xs space-y-1">
+                        <div>Sua resposta: <span className="font-medium">{userAnswers[exercise.id] || 'Não respondida'}</span></div>
+                        <div>Resposta correta: <span className="font-medium text-green-600">{exercise.correct_answer}</span></div>
+                      </div>
+                      {exercise.explanation && (
+                        <p className="text-xs text-muted-foreground mt-2 italic">
+                          {exercise.explanation}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant={isCorrect ? 'default' : 'destructive'} className="text-xs">
+                      {isCorrect ? `+${exercise.points}` : '0'} pts
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3">
+            <Button onClick={restartExercises} variant="outline" className="flex-1">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Tentar novamente
+            </Button>
+            {passed && (
+              <Button className="flex-1">
+                <Trophy className="h-4 w-4 mr-2" />
+                Continuar
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -119,99 +266,61 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
 
   return (
     <div className="space-y-6">
-      {/* Progress */}
-      <div className="flex items-center justify-between">
-        <Badge className={getExerciseTypeColor(exercise.exercise_type)}>
-          {exercise.exercise_type.replace('_', ' ')}
-        </Badge>
-        <span className="text-sm text-muted-foreground">
-          {currentExercise + 1} de {sortedExercises.length}
-        </span>
-      </div>
+      {/* Progress Header */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              <span className="font-medium">
+                Exercício {currentExerciseIndex + 1} de {exercises.length}
+              </span>
+            </div>
+            <Badge variant="outline">
+              {currentExercise.points} pontos
+            </Badge>
+          </div>
+          <Progress 
+            value={(currentExerciseIndex / exercises.length) * 100} 
+            className="h-2" 
+          />
+        </CardContent>
+      </Card>
 
+      {/* Current Exercise */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5" />
-            {exercise.title}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{exercise.instructions}</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <p className="font-medium">{exercise.question}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="capitalize">
+              {currentExercise.exercise_type.replace('_', ' ')}
+            </Badge>
           </div>
-
-          {exercise.exercise_type === 'multiple_choice' && (
-            <RadioGroup
-              value={answers[currentExercise] || ''}
-              onValueChange={handleAnswer}
+          <CardTitle className="text-xl">{currentExercise.title}</CardTitle>
+          <p className="text-muted-foreground">{currentExercise.instructions}</p>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          <div className="bg-muted/30 p-4 rounded-lg">
+            <h4 className="font-medium mb-3">{currentExercise.question}</h4>
+          </div>
+          
+          {renderExerciseContent(currentExercise)}
+          
+          <div className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentExerciseIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentExerciseIndex === 0}
             >
-              {exercise.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                    {option}
-                  </Label>
-                  {showResult[currentExercise] && (
-                    <div>
-                      {option === exercise.correct_answer && (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      )}
-                      {option === answers[currentExercise] && option !== exercise.correct_answer && (
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </RadioGroup>
-          )}
-
-          {exercise.exercise_type === 'fill_blank' && (
-            <div className="space-y-3">
-              <Input
-                placeholder="Digite sua resposta..."
-                value={answers[currentExercise] || ''}
-                onChange={(e) => handleAnswer(e.target.value)}
-                disabled={showResult[currentExercise]}
-              />
-              {showResult[currentExercise] && (
-                <div className="flex items-center gap-2">
-                  {answers[currentExercise] === exercise.correct_answer ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  )}
-                  <span className="text-sm">
-                    Resposta correta: <strong>{exercise.correct_answer}</strong>
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {showResult[currentExercise] && exercise.explanation && (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-1">Explicação:</p>
-              <p className="text-sm text-blue-800">{exercise.explanation}</p>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            {!showResult[currentExercise] ? (
-              <Button 
-                onClick={checkAnswer} 
-                disabled={!answers[currentExercise]}
-                className="flex-1"
-              >
-                Verificar Resposta
-              </Button>
-            ) : (
-              <Button onClick={nextExercise} className="flex-1">
-                {currentExercise < sortedExercises.length - 1 ? 'Próximo Exercício' : 'Finalizar'}
-              </Button>
-            )}
+              Anterior
+            </Button>
+            
+            <Button
+              onClick={nextExercise}
+              disabled={!userAnswers[currentExercise.id]}
+            >
+              {isLastExercise ? 'Finalizar' : 'Próximo'}
+            </Button>
           </div>
         </CardContent>
       </Card>

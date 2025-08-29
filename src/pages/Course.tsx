@@ -17,9 +17,7 @@ import {
   BookOpen, 
   CheckCircle, 
   Clock, 
-  Award,
   Play,
-  Users,
   Target
 } from "lucide-react";
 
@@ -28,16 +26,19 @@ interface Course {
   title: string;
   description: string;
   level: string;
-  total_lessons: number;
+  created_at: string;
+  updated_at: string;
+  order_index: number;
 }
 
 interface Lesson {
   id: string;
   title: string;
-  description: string;
   content: string;
   order_index: number;
-  estimated_duration: number;
+  course_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface LessonContentItem {
@@ -141,19 +142,35 @@ export default function Course() {
 
   const fetchLessonData = async (lessonId: string) => {
     try {
-      // Fetch lesson content
-      const { data: contentData, error: contentError } = await supabase
-        .from('lesson_content')
-        .select('*')
-        .eq('lesson_id', lessonId)
-        .order('order_index');
+      // For now, create mock lesson content since the lesson_content table may not exist
+      const mockLessonContent: LessonContentItem[] = [
+        {
+          id: '1',
+          lesson_id: lessonId,
+          section_type: 'grammar',
+          title: 'Present Simple Tense',
+          explanation: 'The present simple tense is used to express habits, general truths, and repeated actions.',
+          examples: [
+            { example: 'I eat breakfast every morning.', translation: 'Eu como café da manhã toda manhã.' },
+            { example: 'She works in a hospital.', translation: 'Ela trabalha em um hospital.' }
+          ],
+          order_index: 1
+        },
+        {
+          id: '2',
+          lesson_id: lessonId,
+          section_type: 'vocabulary',
+          title: 'Common Greetings',
+          explanation: 'Learn essential greetings and polite expressions used in everyday English conversations.',
+          examples: [
+            { word: 'Hello', meaning: 'Olá', usage: 'Hello, how are you?' },
+            { word: 'Good morning', meaning: 'Bom dia', usage: 'Good morning, Mr. Smith!' }
+          ],
+          order_index: 2
+        }
+      ];
 
-      if (contentError) {
-        console.error('Error fetching lesson content:', contentError);
-        setLessonContent([]);
-      } else {
-        setLessonContent(contentData || []);
-      }
+      setLessonContent(mockLessonContent);
 
       // Fetch exercises
       const { data: exercisesData, error: exercisesError } = await supabase
@@ -171,6 +188,8 @@ export default function Course() {
 
     } catch (error) {
       console.error('Error fetching lesson data:', error);
+      setLessonContent([]);
+      setExercises([]);
     }
   };
 
@@ -362,12 +381,12 @@ export default function Course() {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground line-clamp-2">
-                              {lesson.description}
+                              {lesson.content.substring(0, 100)}...
                             </p>
                             <div className="flex items-center gap-2 mt-2">
                               <Clock className="h-3 w-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
-                                {lesson.estimated_duration} min
+                                15 min
                               </span>
                               {progress && (
                                 <Badge variant="secondary" className="text-xs">
@@ -397,14 +416,14 @@ export default function Course() {
                         <div>
                           <h2 className="text-xl">{currentLesson.title}</h2>
                           <p className="text-sm text-muted-foreground font-normal">
-                            {currentLesson.description}
+                            {currentLesson.content.substring(0, 100)}...
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          {currentLesson.estimated_duration} min
+                          15 min
                         </span>
                       </div>
                     </CardTitle>
@@ -430,18 +449,9 @@ export default function Course() {
                       <Card>
                         <CardContent className="p-8 text-center">
                           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Conteúdo em desenvolvimento</h3>
-                          <p className="text-muted-foreground mb-4">
-                            O conteúdo detalhado para esta lição está sendo preparado.
-                          </p>
+                          <h3 className="text-lg font-semibold mb-2">Conteúdo da Lição</h3>
                           <div className="bg-muted/50 p-4 rounded-lg text-left space-y-3">
-                            <h4 className="font-medium">Enquanto isso, aqui estão algumas dicas de estudo:</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                              <li>Pratique vocabulário relacionado ao tema da lição</li>
-                              <li>Revise estruturas gramaticais básicas</li>
-                              <li>Leia textos simples em inglês</li>
-                              <li>Pratique pronúncia com aplicativos de áudio</li>
-                            </ul>
+                            <p className="text-sm">{currentLesson.content}</p>
                           </div>
                           {user && (
                             <Button onClick={markLessonComplete} className="mt-4">

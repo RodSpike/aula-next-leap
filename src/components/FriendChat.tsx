@@ -12,11 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
-  sender_id: string;
-  receiver_id: string;
-  message_content: string;
+  user_id: string;
+  content: string;
   created_at: string;
-  read_at?: string;
+  role: string;
 }
 
 interface Friend {
@@ -49,23 +48,24 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
     if (!user) return;
 
     try {
+      // Use chat_messages table with a custom channel for friend communication
+      const channelId = `friend_${[user.id, friend.id].sort().join('_')}`;
+      
       const { data, error } = await supabase
-        .from('friend_messages')
+        .from('chat_messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${user.id})`)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
-
-      // Mark messages as read
-      await supabase
-        .from('friend_messages')
-        .update({ read_at: new Date().toISOString() })
-        .eq('sender_id', friend.id)
-        .eq('receiver_id', user.id)
-        .is('read_at', null);
-
+      
+      // Filter messages that are part of this friend conversation
+      const friendMessages = data?.filter(msg => 
+        msg.role === `friend_${friend.id}` || 
+        (msg.role === 'user' && msg.content.includes(`@${friend.username}`))
+      ) || [];
+      
+      setMessages(friendMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -82,18 +82,21 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
     if (!user) return;
 
     const channel = supabase
-      .channel('friend_messages')
+      .channel('friend_chat')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'friend_messages',
-          filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${user.id}))`
+          table: 'chat_messages',
+          filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
-          scrollToBottom();
+          const newMsg = payload.new as Message;
+          if (newMsg.role === `friend_${friend.id}`) {
+            setMessages(prev => [...prev, newMsg]);
+            scrollToBottom();
+          }
         }
       )
       .subscribe();
@@ -109,11 +112,11 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
 
     try {
       const { error } = await supabase
-        .from('friend_messages')
+        .from('chat_messages')
         .insert({
-          sender_id: user.id,
-          receiver_id: friend.id,
-          message_content: newMessage.trim()
+          user_id: user.id,
+          content: `@${friend.username}: ${newMessage.trim()}`,
+          role: `friend_${friend.id}`
         });
 
       if (error) throw error;
@@ -184,7 +187,8 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
           ) : (
             <div className="space-y-3">
               {messages.map((message) => {
-                const isSender = message.sender_id === user?.id;
+                const isFromFriend = message.role === `friend_${friend.id}`;
+                const isSender = message.user_id === user?.id && !isFromFriend;
                 return (
                   <div
                     key={message.id}
@@ -197,7 +201,7 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
-                      <p>{message.message_content}</p>
+                      <p>{message.content.replace(`@${friend.username}: `, '')}</p>
                       <p className={`text-xs mt-1 ${
                         isSender ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
                       }`}>
