@@ -64,6 +64,8 @@ export function FloatingChatBubble() {
     setIsLoading(true);
 
     try {
+      console.log('Sending message to AI:', currentInput);
+      
       const { data, error } = await supabase.functions.invoke('english-tutor-chat', {
         body: {
           message: currentInput,
@@ -71,9 +73,16 @@ export function FloatingChatBubble() {
         }
       });
       
-      if (error) throw error;
+      console.log('AI response data:', data);
+      console.log('AI response error:', error);
+      
+      if (error) {
+        console.error('Supabase function call error:', error);
+        throw error;
+      }
       
       if (data?.error) {
+        console.error('AI function returned error:', data.error);
         let errorMessage = 'Algo deu errado com o tutor IA. Tente novamente.';
         if (data.error.includes('Gemini API key')) {
           errorMessage = 'Serviço de IA está temporariamente indisponível. Tente novamente mais tarde.';
@@ -89,6 +98,16 @@ export function FloatingChatBubble() {
         return;
       }
 
+      if (!data?.response) {
+        console.error('No response received from AI');
+        toast({
+          title: 'Erro',
+          description: 'Resposta vazia do tutor IA. Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         content: data.response,
@@ -97,6 +116,8 @@ export function FloatingChatBubble() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      console.log('AI message added successfully');
     } catch (error: any) {
       console.error('Error sending message:', error);
       const details = error?.message || error?.error || 'Unknown error';

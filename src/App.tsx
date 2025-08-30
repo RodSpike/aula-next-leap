@@ -22,6 +22,7 @@ import Course from "./pages/Course";
 import LevelTest from "./pages/LevelTest";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
+import ChatTest from "./pages/ChatTest";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/course/:courseId" element={<Course />} />
             <Route path="/level-test/:fromLevel/:toLevel" element={<LevelTest />} />
             <Route path="/certificates" element={<Certificates />} />
+            <Route path="/chat-test" element={<ChatTest />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
