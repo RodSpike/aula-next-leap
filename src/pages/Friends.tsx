@@ -1,49 +1,52 @@
 
-import React, { useState, useEffect } from 'react';
-import { Navigation } from '@/components/Navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { FriendChat } from '@/components/FriendChat';
-import QRCode from 'react-qr-code';
+import { useState, useEffect, useRef } from "react";
+import { Navigation } from "@/components/Navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { FriendChat } from "@/components/FriendChat";
 import { 
   Users, 
   UserPlus, 
-  Search, 
+  MessageCircle, 
   QrCode, 
-  MessageCircle,
+  Search,
   Check,
   X,
-  ArrowLeft
-} from 'lucide-react';
+  Copy,
+  Share2
+} from "lucide-react";
+import QRCode from 'react-qr-code';
 
 interface FriendProfile {
   user_id: string;
-  username: string;
-  display_name: string;
+  username: string | null;
+  display_name: string | null;
 }
 
 interface Friend {
   id: string;
-  user_id: string;
-  username: string;
-  display_name: string;
+  requester_id: string;
+  requested_id: string;
+  status: 'pending' | 'accepted';
+  created_at: string;
+  requester_profile?: FriendProfile;
+  requested_profile?: FriendProfile;
 }
 
 interface FriendRequest {
   id: string;
   requester_id: string;
   requested_id: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending';
   created_at: string;
-  requester_profile?: FriendProfile;
-  requested_profile?: FriendProfile;
+  requester_profile: FriendProfile;
+  requested_profile: FriendProfile;
 }
 
 export default function Friends() {
@@ -52,56 +55,54 @@ export default function Friends() {
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [myQRCode, setMyQRCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const searchTimeout = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (user) {
-      fetchFriends();
-      fetchFriendRequests();
+      loadFriends();
+      loadFriendRequests();
+      generateMyQRCode();
     }
   }, [user]);
 
-  const fetchFriends = async () => {
+  useEffect(() => {
+    if (searchQuery.trim().length > 2) {
+      clearTimeout(searchTimeout.current);
+      searchTimeout.current = setTimeout(() => {
+        searchUsers();
+      }, 300);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
+  const loadFriends = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('friends')
         .select(`
-          id,
-          requester_id,
-          requested_id,
-          status,
-          requester:profiles!friends_requester_id_fkey(user_id, username, display_name),
-          requested:profiles!friends_requested_id_fkey(user_id, username, display_name)
+          *,
+          requester_profile:profiles!friends_requester_id_fkey(user_id, username, display_name),
+          requested_profile:profiles!friends_requested_id_fkey(user_id, username, display_name)
         `)
-        .eq('status', 'accepted')
-        .or(`requester_id.eq.${user.id},requested_id.eq.${user.id}`);
+        .or(`requester_id.eq.${user.id},requested_id.eq.${user.id}`)
+        .eq('status', 'accepted');
 
       if (error) throw error;
-
-      const friendsList: Friend[] = data?.map(friendship => {
-        const isRequester = friendship.requester_id === user.id;
-        const friendProfile = isRequester ? friendship.requested : friendship.requester;
-        
-        return {
-          id: friendship.id,
-          user_id: friendProfile.user_id,
-          username: friendProfile.username,
-          display_name: friendProfile.display_name
-        };
-      }) || [];
-
-      setFriends(friendsList);
+      setFriends(data || []);
     } catch (error) {
-      console.error('Error fetching friends:', error);
+      console.error('Error loading friends:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao carregar lista de amigos.",
+        title: "Error",
+        description: "Failed to load friends",
         variant: "destructive",
       });
     } finally {
@@ -109,39 +110,31 @@ export default function Friends() {
     }
   };
 
-  const fetchFriendRequests = async () => {
+  const loadFriendRequests = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('friends')
         .select(`
-          id,
-          requester_id,
-          requested_id,
-          status,
-          created_at,
-          requester:profiles!friends_requester_id_fkey(user_id, username, display_name),
-          requested:profiles!friends_requested_id_fkey(user_id, username, display_name)
+          *,
+          requester_profile:profiles!friends_requester_id_fkey(user_id, username, display_name),
+          requested_profile:profiles!friends_requested_id_fkey(user_id, username, display_name)
         `)
-        .eq('status', 'pending')
-        .or(`requester_id.eq.${user.id},requested_id.eq.${user.id}`);
+        .eq('requested_id', user.id)
+        .eq('status', 'pending');
 
       if (error) throw error;
+      
+      const validRequests = data?.filter(request => 
+        request.requester_profile && 
+        typeof request.requester_profile === 'object' &&
+        'user_id' in request.requester_profile
+      ) || [];
 
-      const requestsList: FriendRequest[] = data?.map(request => ({
-        id: request.id,
-        requester_id: request.requester_id,
-        requested_id: request.requested_id,
-        status: request.status as 'pending',
-        created_at: request.created_at,
-        requester_profile: request.requester,
-        requested_profile: request.requested
-      })) || [];
-
-      setFriendRequests(requestsList);
+      setFriendRequests(validRequests as FriendRequest[]);
     } catch (error) {
-      console.error('Error fetching friend requests:', error);
+      console.error('Error loading friend requests:', error);
     }
   };
 
@@ -149,64 +142,48 @@ export default function Friends() {
     if (!searchQuery.trim() || !user) return;
 
     try {
-      const { data, error } = await supabase.rpc('search_profiles_public', {
-        search_term: searchQuery
-      });
+      const { data, error } = await supabase
+        .rpc('search_profiles_public', { search_term: searchQuery });
 
       if (error) throw error;
       setSearchResults(data || []);
     } catch (error) {
       console.error('Error searching users:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao buscar usuários.",
+        title: "Error",
+        description: "Failed to search users",
         variant: "destructive",
       });
     }
   };
 
-  const sendFriendRequest = async (targetUserId: string) => {
+  const sendFriendRequest = async (requestedUserId: string) => {
     if (!user) return;
 
     try {
-      // Check if request already exists
-      const { data: existingRequest, error: checkError } = await supabase
-        .from('friends')
-        .select('id')
-        .or(`and(requester_id.eq.${user.id},requested_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},requested_id.eq.${user.id})`)
-        .single();
-
-      if (existingRequest) {
-        toast({
-          title: "Aviso",
-          description: "Já existe uma solicitação de amizade entre vocês.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('friends')
         .insert({
           requester_id: user.id,
-          requested_id: targetUserId,
+          requested_id: requestedUserId,
           status: 'pending'
         });
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Solicitação de amizade enviada!",
+        title: "Friend Request Sent",
+        description: "Your friend request has been sent!",
       });
 
-      setSearchResults([]);
-      setSearchQuery('');
-      fetchFriendRequests();
+      setSearchResults(results => 
+        results.filter(result => result.user_id !== requestedUserId)
+      );
     } catch (error) {
       console.error('Error sending friend request:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao enviar solicitação de amizade.",
+        title: "Error",
+        description: "Failed to send friend request",
         variant: "destructive",
       });
     }
@@ -214,62 +191,154 @@ export default function Friends() {
 
   const respondToFriendRequest = async (requestId: string, accept: boolean) => {
     try {
-      const { error } = await supabase
-        .from('friends')
-        .update({ status: accept ? 'accepted' : 'rejected' })
-        .eq('id', requestId);
+      if (accept) {
+        const { error } = await supabase
+          .from('friends')
+          .update({ status: 'accepted' })
+          .eq('id', requestId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: accept ? "Solicitação aceita!" : "Solicitação rejeitada!",
-      });
+        toast({
+          title: "Friend Request Accepted",
+          description: "You are now friends!",
+        });
+      } else {
+        const { error } = await supabase
+          .from('friends')
+          .delete()
+          .eq('id', requestId);
 
-      fetchFriends();
-      fetchFriendRequests();
+        if (error) throw error;
+
+        toast({
+          title: "Friend Request Declined",
+          description: "The friend request has been declined.",
+        });
+      }
+
+      loadFriends();
+      loadFriendRequests();
     } catch (error) {
       console.error('Error responding to friend request:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao responder solicitação.",
+        title: "Error",
+        description: "Failed to respond to friend request",
         variant: "destructive",
       });
     }
   };
 
-  const getMyQRCode = () => {
-    if (!user) return '';
-    return JSON.stringify({
-      type: 'friend_invite',
-      user_id: user.id,
-      platform: 'aula-click'
-    });
+  const generateMyQRCode = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, display_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const qrData = {
+        type: 'friend_request',
+        user_id: user.id,
+        username: profile?.username,
+        display_name: profile?.display_name
+      };
+
+      setMyQRCode(JSON.stringify(qrData));
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    }
   };
 
-  if (selectedFriend) {
+  const copyQRCode = async () => {
+    try {
+      await navigator.clipboard.writeText(myQRCode);
+      toast({
+        title: "Copied!",
+        description: "QR code data copied to clipboard",
+      });
+    } catch (error) {
+      console.error('Error copying QR code:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy QR code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const shareQRCode = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Add me as a friend',
+          text: 'Scan this QR code to add me as a friend!',
+          url: window.location.origin + '/friends?invite=' + encodeURIComponent(myQRCode)
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      copyQRCode();
+    }
+  };
+
+  const getFriendProfile = (friend: Friend): FriendProfile | null => {
+    if (!user) return null;
+    
+    if (friend.requester_id === user.id && friend.requested_profile) {
+      return friend.requested_profile;
+    } else if (friend.requested_id === user.id && friend.requester_profile) {
+      return friend.requester_profile;
+    }
+    return null;
+  };
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <FriendChat 
-            friend={selectedFriend} 
-            onBack={() => setSelectedFriend(null)}
-          />
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Card className="w-full max-w-md">
+            <CardContent className="text-center p-8">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Friends Network</h3>
+              <p className="text-muted-foreground mb-4">
+                Connect with other learners and practice together!
+              </p>
+              <Button asChild>
+                <Link to="/login">Log In</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (selectedFriend) {
+    const friendProfile = getFriendProfile(selectedFriend);
+    if (!friendProfile) return null;
+
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando amigos...</p>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-6">
+            <Button variant="ghost" onClick={() => setSelectedFriend(null)}>
+              ← Back to Friends
+            </Button>
           </div>
+          <FriendChat
+            friend={{
+              id: friendProfile.user_id,
+              username: friendProfile.username || 'Unknown',
+              display_name: friendProfile.display_name || 'Unknown User'
+            }}
+            currentUser={user}
+          />
         </div>
       </div>
     );
@@ -279,245 +348,236 @@ export default function Friends() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Amigos</h1>
-          <p className="text-muted-foreground">
-            Conecte-se com outros estudantes e pratique juntos
-          </p>
+      {/* Header */}
+      <section className="bg-gradient-subtle py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <Users className="h-12 w-12 text-primary" />
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                Friends
+              </h1>
+            </div>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Connect with fellow English learners, practice together, and share your progress!
+            </p>
+          </div>
         </div>
+      </section>
 
-        <Tabs defaultValue="friends" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="friends" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Amigos ({friends.length})
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Solicitações ({friendRequests.filter(r => r.requested_id === user?.id).length})
-            </TabsTrigger>
-            <TabsTrigger value="search" className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Buscar
-            </TabsTrigger>
-            <TabsTrigger value="qr" className="flex items-center gap-2">
-              <QrCode className="h-4 w-4" />
-              QR Code
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="friends" className="space-y-4">
-            {friends.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhum amigo ainda</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Comece a se conectar com outros estudantes para praticar juntos.
-                  </p>
-                  <Button onClick={() => document.querySelector('[value="search"]')?.click()}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Buscar amigos
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {friends.map((friend) => (
-                  <Card key={friend.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <Avatar>
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.username}`} />
-                          <AvatarFallback>{friend.display_name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{friend.display_name}</h4>
-                          <p className="text-sm text-muted-foreground">@{friend.username}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => setSelectedFriend(friend)}
-                        className="w-full"
-                        size="sm"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Conversar
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="requests" className="space-y-4">
-            {friendRequests.filter(r => r.requested_id === user?.id).length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação pendente</h3>
-                  <p className="text-muted-foreground">
-                    Quando alguém enviar uma solicitação de amizade, ela aparecerá aqui.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {friendRequests
-                  .filter(request => request.requested_id === user?.id)
-                  .map((request) => (
-                    <Card key={request.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.requester_profile?.username}`} />
-                              <AvatarFallback>{request.requester_profile?.display_name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h4 className="font-medium">{request.requester_profile?.display_name}</h4>
-                              <p className="text-sm text-muted-foreground">@{request.requester_profile?.username}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => respondToFriendRequest(request.id, true)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => respondToFriendRequest(request.id, false)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="search" className="space-y-4">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Friend Management */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Add Friends */}
             <Card>
               <CardHeader>
-                <CardTitle>Buscar usuários</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Find Friends
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Digite o nome ou username..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
-                  />
-                  <Button onClick={searchUsers}>
-                    <Search className="h-4 w-4" />
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by username or name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowQRCode(!showQRCode)}
+                  >
+                    <QrCode className="h-4 w-4" />
                   </Button>
                 </div>
 
                 {searchResults.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Resultados da busca:</h4>
-                    {searchResults.map((profile) => (
-                      <div key={profile.user_id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`} />
-                            <AvatarFallback>{profile.display_name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">{profile.display_name}</h4>
-                            <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                          </div>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Search Results</h4>
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.user_id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {result.display_name || result.username}
+                          </p>
+                          {result.username && result.display_name && (
+                            <p className="text-sm text-muted-foreground">
+                              @{result.username}
+                            </p>
+                          )}
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => sendFriendRequest(profile.user_id)}
+                          onClick={() => sendFriendRequest(result.user_id)}
                         >
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Adicionar
+                          Add Friend
                         </Button>
                       </div>
                     ))}
                   </div>
                 )}
+
+                {showQRCode && myQRCode && (
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <h4 className="text-sm font-medium text-center">Your Friend QR Code</h4>
+                    <div className="flex justify-center">
+                      <div className="bg-white p-4 rounded-lg">
+                        <QRCode value={myQRCode} size={150} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="outline" size="sm" onClick={copyQRCode}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={shareQRCode}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="qr" className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2">
+            {/* Friend Requests */}
+            {friendRequests.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <QrCode className="h-5 w-5" />
-                    Meu QR Code
-                  </CardTitle>
+                  <CardTitle>Friend Requests</CardTitle>
                 </CardHeader>
-                <CardContent className="text-center space-y-4">
-                  <div className="bg-white p-4 rounded-lg inline-block">
-                    <QRCode
-                      size={200}
-                      value={getMyQRCode()}
-                      level="M"
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Compartilhe este QR Code para que outros usuários possam te adicionar como amigo
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Como funciona?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <span className="text-primary font-bold">1</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Compartilhe seu QR Code</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Mostre seu QR Code para outros usuários
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <span className="text-primary font-bold">2</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Eles escaneiam</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Quando escanearem, serão conectados automaticamente
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <span className="text-primary font-bold">3</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Começem a conversar</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Vocês se tornam amigos e podem conversar na plataforma
-                      </p>
-                    </div>
+                <CardContent>
+                  <div className="space-y-3">
+                    {friendRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {request.requester_profile.display_name || request.requester_profile.username}
+                          </p>
+                          {request.requester_profile.username && request.requester_profile.display_name && (
+                            <p className="text-sm text-muted-foreground">
+                              @{request.requester_profile.username}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => respondToFriendRequest(request.id, true)}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondToFriendRequest(request.id, false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+            )}
+
+            {/* Friends List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Friends ({friends.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p>Loading friends...</p>
+                  </div>
+                ) : friends.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No friends yet. Start by searching for people to connect with!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {friends.map((friend) => {
+                      const friendProfile = getFriendProfile(friend);
+                      if (!friendProfile) return null;
+
+                      return (
+                        <div
+                          key={friend.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {friendProfile.display_name || friendProfile.username}
+                            </p>
+                            {friendProfile.username && friendProfile.display_name && (
+                              <p className="text-sm text-muted-foreground">
+                                @{friendProfile.username}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedFriend(friend)}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Chat
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Friends</span>
+                  <Badge variant="secondary">{friends.length}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Pending Requests</span>
+                  <Badge variant="secondary">{friendRequests.length}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Tips</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>• Use the QR code to quickly add friends in person</p>
+                <p>• Practice English together in the chat</p>
+                <p>• Share your progress and motivate each other</p>
+                <p>• Join study groups and challenges</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

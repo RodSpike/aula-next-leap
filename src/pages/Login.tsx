@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,15 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   
-  const { signIn, signInWithGoogle, user, signOut } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Não redirecionar automaticamente: permite trocar de conta na página de login
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      navigate("/dashboard");
+    }
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +61,6 @@ export default function Login() {
           variant: "destructive",
         });
       } else {
-        // Don't navigate immediately, let auth state handle it
         toast({
           title: "Login realizado!",
           description: "Bem-vindo de volta!",
@@ -81,22 +84,23 @@ export default function Login() {
       const { error } = await signInWithGoogle();
       
       if (error) {
+        console.error('Google login error:', error);
         toast({
           title: "Erro no login",
-          description: "Erro ao fazer login com Google. Tente novamente.",
+          description: "Erro ao fazer login com Google. Verifique se você permitiu pop-ups e tente novamente.",
           variant: "destructive",
         });
       } else {
-        // Don't navigate here, let auth state handle it
         toast({
           title: "Login realizado!",
           description: "Bem-vindo!",
         });
       }
     } catch (error) {
+      console.error('Google login error:', error);
       toast({
         title: "Erro",
-        description: "Algo deu errado. Tente novamente.",
+        description: "Algo deu errado com o login do Google. Tente novamente.",
         variant: "destructive",
       });
     } finally {
