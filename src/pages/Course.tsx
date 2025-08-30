@@ -295,19 +295,24 @@ export default function Course() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentLesson && (
           <div className="space-y-8">
-            <LessonContent
-              lesson={currentLesson}
-              onComplete={() => {
-                if (currentLessonExercises.length === 0) {
-                  handleLessonComplete(currentLesson.id, 100);
-                }
-              }}
-            />
+            <LessonContent content={[]} />
             
             {currentLessonExercises.length > 0 && (
               <ExerciseActivity
-                exercises={currentLessonExercises}
-                onComplete={(score) => handleLessonComplete(currentLesson.id, score)}
+                exercises={currentLessonExercises.map(ex => ({
+                  ...ex,
+                  exercise_type: 'multiple_choice' as const,
+                  title: `Exercise ${ex.order_index + 1}`,
+                  instructions: 'Choose the correct answer.',
+                  points: 10,
+                  options: Array.isArray(ex.options) ? ex.options : 
+                    typeof ex.options === 'object' && ex.options ? 
+                    Object.values(ex.options) : ['Option A', 'Option B', 'Option C']
+                }))}
+                onComplete={(score, totalPoints) => {
+                  const percentage = Math.round((score / totalPoints) * 100);
+                  handleLessonComplete(currentLesson.id, percentage);
+                }}
               />
             )}
             

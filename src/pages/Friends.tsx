@@ -1,15 +1,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { FriendChat } from "@/components/FriendChat";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   UserPlus, 
@@ -21,6 +18,11 @@ import {
   Copy,
   Share2
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { FriendChat } from "@/components/FriendChat";
 import QRCode from 'react-qr-code';
 
 interface FriendProfile {
@@ -86,18 +88,47 @@ export default function Friends() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Get basic friend relationships
+      const { data: friendData, error } = await supabase
         .from('friends')
-        .select(`
-          *,
-          requester_profile:profiles!friends_requester_id_fkey(user_id, username, display_name),
-          requested_profile:profiles!friends_requested_id_fkey(user_id, username, display_name)
-        `)
+        .select('*')
         .or(`requester_id.eq.${user.id},requested_id.eq.${user.id}`)
         .eq('status', 'accepted');
 
       if (error) throw error;
-      setFriends(data || []);
+
+      // Get profiles for friends
+      const friendProfiles: Friend[] = [];
+      for (const friendship of friendData || []) {
+        const friendUserId = friendship.requester_id === user.id 
+          ? friendship.requested_id 
+          : friendship.requester_id;
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', friendUserId)
+          .single();
+        
+        if (profile) {
+          friendProfiles.push({
+            ...friendship,
+            status: friendship.status as 'pending' | 'accepted',
+            requester_profile: friendship.requester_id === user.id ? undefined : {
+              user_id: profile.user_id,
+              username: profile.username,
+              display_name: profile.display_name
+            },
+            requested_profile: friendship.requested_id === user.id ? undefined : {
+              user_id: profile.user_id,
+              username: profile.username,
+              display_name: profile.display_name
+            }
+          });
+        }
+      }
+
+      setFriends(friendProfiles);
     } catch (error) {
       console.error('Error loading friends:', error);
       toast({
@@ -114,25 +145,42 @@ export default function Friends() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: requestData, error } = await supabase
         .from('friends')
-        .select(`
-          *,
-          requester_profile:profiles!friends_requester_id_fkey(user_id, username, display_name),
-          requested_profile:profiles!friends_requested_id_fkey(user_id, username, display_name)
-        `)
+        .select('*')
         .eq('requested_id', user.id)
         .eq('status', 'pending');
 
       if (error) throw error;
-      
-      const validRequests = data?.filter(request => 
-        request.requester_profile && 
-        typeof request.requester_profile === 'object' &&
-        'user_id' in request.requester_profile
-      ) || [];
 
-      setFriendRequests(validRequests as FriendRequest[]);
+      // Get profiles for requesters
+      const requests: FriendRequest[] = [];
+      for (const request of requestData || []) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', request.requester_id)
+          .single();
+        
+        if (profile) {
+          requests.push({
+            ...request,
+            status: 'pending',
+            requester_profile: {
+              user_id: profile.user_id,
+              username: profile.username,
+              display_name: profile.display_name
+            },
+            requested_profile: {
+              user_id: user.id,
+              username: '',
+              display_name: ''
+            }
+          });
+        }
+      }
+
+      setFriendRequests(requests);
     } catch (error) {
       console.error('Error loading friend requests:', error);
     }
@@ -331,13 +379,13 @@ export default function Friends() {
               ← Back to Friends
             </Button>
           </div>
-          <FriendChat
+          <FriendChat 
             friend={{
               id: friendProfile.user_id,
               username: friendProfile.username || 'Unknown',
               display_name: friendProfile.display_name || 'Unknown User'
             }}
-            currentUser={user}
+            onBack={() => setSelectedFriend(null)}
           />
         </div>
       </div>
