@@ -17,12 +17,12 @@ serve(async (req) => {
 
   try {
     const { message, conversation_history, file_data } = await req.json();
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY') ?? '';
+    const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY') ?? '';
     
-    if (!geminiApiKey) {
-      console.error('Gemini API key not configured');
+    if (!deepSeekApiKey) {
+      console.error('DeepSeek API key not configured');
       return new Response(JSON.stringify({
-        error: 'Gemini API key not configured'
+        error: 'DeepSeek API key not configured'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -33,8 +33,11 @@ serve(async (req) => {
     console.log('Conversation history length:', conversation_history?.length || 0);
     console.log('File data received:', !!file_data);
 
-    // Enhanced system prompt for file analysis
-    let conversationText = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
+    // Build messages array for OpenAI-compatible format
+    const messages = [
+      {
+        role: 'system',
+        content: `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
 
 1. Ser paciente, encorajador e solidário
 2. Fornecer explicações claras sobre gramática, vocabulário e pronunciação
@@ -69,83 +72,59 @@ REGRAS DE FORMATAÇÃO:
 - Use letras maiúsculas para ênfase quando necessário
 - Use aspas para exemplos
 
-Sempre responda de forma útil e educacional, focado no ensino de inglês com formatação limpa e legível.
-
-`;
+Sempre responda de forma útil e educacional, focado no ensino de inglês com formatação limpa e legível.`
+      }
+    ];
 
     // Add conversation history (last 10 messages for context)
     if (conversation_history && Array.isArray(conversation_history)) {
       conversation_history.slice(-10).forEach((msg: any) => {
-        conversationText += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+        messages.push({
+          role: msg.role,
+          content: msg.content
+        });
       });
     }
 
     // Add file analysis if present
+    let userMessage = message || 'Please analyze the uploaded file and provide feedback on the English content.';
     if (file_data) {
-      conversationText += `\nFILE ANALYSIS REQUEST:\n`;
-      conversationText += `File name: ${file_data.name}\n`;
-      conversationText += `File type: ${file_data.type}\n`;
+      userMessage += `\n\nFILE ANALYSIS REQUEST:\nFile name: ${file_data.name}\nFile type: ${file_data.type}`;
       if (!String(file_data.type || '').startsWith('image/')) {
-        conversationText += `File content to analyze (if text-based):\n${file_data.content}\n\n`;
+        userMessage += `\nFile content to analyze:\n${file_data.content}`;
       }
     }
 
-    // Add current message
-    conversationText += `User: ${message || 'Please analyze the uploaded file and provide feedback on the English content.'}\nAssistant:`;
+    messages.push({
+      role: 'user',
+      content: userMessage
+    });
 
-console.log('Sending request to Gemini');
+console.log('Sending request to DeepSeek');
 
-    // Build request payload (supports image inline_data if provided)
-    let requestPayload: any;
-    if (file_data && typeof file_data.type === 'string' && file_data.type.startsWith('image/')) {
-      let contentStr = typeof file_data.content === 'string' ? file_data.content : '';
-      let base64Image = contentStr.includes(',') ? contentStr.split(',')[1] : contentStr;
-      requestPayload = {
-        contents: [
-          {
-            parts: [
-              { text: conversationText + '\n\nAnalise a imagem anexada e extraia/avalie qualquer texto em inglês visível. Forneça correções e explicações.' },
-              { inline_data: { mime_type: file_data.type, data: base64Image } }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-        },
-      };
-    } else {
-      requestPayload = {
-        contents: [
-          {
-            parts: [
-              {
-                text: conversationText
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-        },
-      };
-    }
+    // Build request payload for DeepSeek (OpenAI-compatible)
+    const requestPayload = {
+      model: 'deepseek-chat',
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+      stream: false
+    };
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-goog-api-key': geminiApiKey,
+        'Authorization': `Bearer ${deepSeekApiKey}`,
       },
       body: JSON.stringify(requestPayload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('DeepSeek API error:', response.status, errorText);
       return new Response(JSON.stringify({
-        error: `Gemini API error: ${response.status} - ${errorText}`
+        error: `DeepSeek API error: ${response.status} - ${errorText}`
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,14 +132,14 @@ console.log('Sending request to Gemini');
     }
 
     const data = await response.json();
-    console.log('Received response from Gemini');
+    console.log('Received response from DeepSeek');
 
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-      console.error('Invalid response structure from Gemini:', data);
-      throw new Error('Invalid response from Gemini');
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid response structure from DeepSeek:', data);
+      throw new Error('Invalid response from DeepSeek');
     }
 
-    const aiResponse = data.candidates[0].content.parts[0].text;
+    const aiResponse = data.choices[0].message.content;
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
