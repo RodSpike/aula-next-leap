@@ -133,21 +133,31 @@ console.log('Sending request to DeepSeek');
 
     const data = await response.json();
     console.log('Received response from DeepSeek');
+    console.log('Full DeepSeek response:', JSON.stringify(data, null, 2));
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Invalid response structure from DeepSeek:', data);
-      throw new Error('Invalid response from DeepSeek');
+      return new Response(JSON.stringify({ 
+        error: 'Invalid response structure from DeepSeek API' 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const aiResponse = data.choices[0].message.content;
+    console.log('AI response extracted:', aiResponse);
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in english-tutor-chat function:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     return new Response(JSON.stringify({ 
-      error: (error as Error)?.message || 'Unknown error'
+      error: `Chat function error: ${(error as Error)?.message || 'Unknown error'}`
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
