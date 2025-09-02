@@ -204,7 +204,7 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
           
           <div className="space-y-3">
             <h4 className="font-medium">Resultados detalhados:</h4>
-            {exercises.map((exercise, index) => {
+            {exercises.filter(exercise => userAnswers[exercise.id] !== undefined).map((exercise, index) => {
               const isCorrect = checkAnswer(exercise);
               return (
                 <div 
@@ -229,7 +229,7 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
                         {exercise.question}
                       </p>
                       <div className="text-xs space-y-1">
-                        <div>Sua resposta: <span className="font-medium">{userAnswers[exercise.id] || 'Não respondida'}</span></div>
+                        <div>Sua resposta: <span className="font-medium">{userAnswers[exercise.id]}</span></div>
                         <div>Resposta correta: <span className="font-medium text-green-600">{exercise.correct_answer}</span></div>
                       </div>
                       {exercise.explanation && (
@@ -253,7 +253,13 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
               Tentar novamente
             </Button>
             {passed && (
-              <Button className="flex-1">
+              <Button 
+                className="flex-1"
+                onClick={() => {
+                  const finalScore = calculateScore();
+                  onComplete(finalScore, totalPoints);
+                }}
+              >
                 <Trophy className="h-4 w-4 mr-2" />
                 Continuar
               </Button>
