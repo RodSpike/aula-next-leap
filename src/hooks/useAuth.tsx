@@ -93,37 +93,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-      }
-    });
-    
-    // Check if user needs onboarding after Google signup
-    if (!error) {
-      // Wait a moment for the session to be established
-      setTimeout(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('birthdate, cambridge_level')
-            .eq('user_id', session.user.id)
-            .single();
-            
-          if (!profile?.birthdate) {
-            navigate("/onboarding");
-          } else {
-            navigate("/dashboard");
+    try {
+      // Clean up any existing auth state first
+      localStorage.removeItem('supabase.auth.token');
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
           }
         }
-      }, 1000);
+      });
+      
+      return { error };
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      return { error };
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
