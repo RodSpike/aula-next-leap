@@ -17,12 +17,12 @@ serve(async (req) => {
 
   try {
     const { message, conversation_history, file_data } = await req.json();
-    const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY') ?? '';
+    const openAiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
     
-    if (!deepSeekApiKey) {
-      console.error('DeepSeek API key not configured');
+    if (!openAiApiKey) {
+      console.error('OpenAI API key not configured');
       return new Response(JSON.stringify({
-        error: 'DeepSeek API key not configured'
+        error: 'OpenAI API key not configured'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -100,31 +100,31 @@ Sempre responda de forma útil e educacional, focado no ensino de inglês com fo
       content: userMessage
     });
 
-console.log('Sending request to DeepSeek');
+console.log('Sending request to OpenAI');
 
-    // Build request payload for DeepSeek (OpenAI-compatible)
+    // Build request payload for OpenAI
     const requestPayload = {
-      model: 'deepseek-chat',
+      model: 'gpt-4o-mini',
       messages: messages,
       temperature: 0.7,
       max_tokens: 1000,
       stream: false
     };
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${deepSeekApiKey}`,
+        'Authorization': `Bearer ${openAiApiKey}`,
       },
       body: JSON.stringify(requestPayload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('DeepSeek API error:', response.status, errorText);
+      console.error('OpenAI API error:', response.status, errorText);
       return new Response(JSON.stringify({
-        error: `DeepSeek API error: ${response.status} - ${errorText}`
+        error: `OpenAI API error: ${response.status} - ${errorText}`
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -132,13 +132,13 @@ console.log('Sending request to DeepSeek');
     }
 
     const data = await response.json();
-    console.log('Received response from DeepSeek');
-    console.log('Full DeepSeek response:', JSON.stringify(data, null, 2));
+    console.log('Received response from OpenAI');
+    console.log('Full OpenAI response:', JSON.stringify(data, null, 2));
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response structure from DeepSeek:', data);
+      console.error('Invalid response structure from OpenAI:', data);
       return new Response(JSON.stringify({ 
-        error: 'Invalid response structure from DeepSeek API' 
+        error: 'Invalid response structure from OpenAI API' 
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
