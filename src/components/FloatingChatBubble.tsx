@@ -65,6 +65,8 @@ export function FloatingChatBubble() {
 
     try {
       console.log('Sending message to AI:', currentInput);
+      console.log('User authenticated:', !!user);
+      console.log('User ID:', user?.id);
       
       const { data, error } = await supabase.functions.invoke('english-tutor-chat', {
         body: {

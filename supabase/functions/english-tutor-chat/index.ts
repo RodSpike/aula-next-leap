@@ -16,8 +16,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Function called successfully');
     const { message, conversation_history, file_data } = await req.json();
+    console.log('Request parsed successfully');
+    
     const openAiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+    console.log('OpenAI API key exists:', !!openAiApiKey);
     
     if (!openAiApiKey) {
       console.error('OpenAI API key not configured');
