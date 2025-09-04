@@ -446,9 +446,9 @@ export default function AiChat() {
       if (error) throw error;
       if (data?.error) {
         let errorMessage = 'Algo deu errado com o tutor IA. Tente novamente.';
-        if (data.error.includes('DeepSeek API key')) {
+        if (data.error.includes('OpenAI API key')) {
           errorMessage = 'Serviço de IA está temporariamente indisponível. Tente novamente mais tarde.';
-        } else if (data.error.includes('DeepSeek API error')) {
+        } else if (data.error.includes('OpenAI API error')) {
           errorMessage = 'Serviço de IA está com problemas. Tente novamente em breve.';
         }
         
