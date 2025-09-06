@@ -14,6 +14,8 @@ import {
   Play
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SeedDataButton } from "@/components/SeedDataButton";
+import { SeedComprehensiveDataButton } from "@/components/SeedComprehensiveDataButton";
 
 const Index = () => {
 const stats = [
@@ -143,6 +145,13 @@ const features = [
             </p>
           </div>
           
+          <div className="text-center mb-8">
+            <div className="flex flex-wrap gap-4 justify-center">
+              <SeedDataButton />
+              <SeedComprehensiveDataButton />
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             {featuredCourses.map((course) => (
               <Card key={course.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2">

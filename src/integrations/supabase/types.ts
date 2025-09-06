@@ -189,31 +189,37 @@ export type Database = {
         Row: {
           correct_answer: string
           created_at: string
+          exercise_type: string | null
           explanation: string | null
           id: string
           lesson_id: string
           options: Json
           order_index: number
+          points: number | null
           question: string
         }
         Insert: {
           correct_answer: string
           created_at?: string
+          exercise_type?: string | null
           explanation?: string | null
           id?: string
           lesson_id: string
           options: Json
           order_index: number
+          points?: number | null
           question: string
         }
         Update: {
           correct_answer?: string
           created_at?: string
+          exercise_type?: string | null
           explanation?: string | null
           id?: string
           lesson_id?: string
           options?: Json
           order_index?: number
+          points?: number | null
           question?: string
         }
         Relationships: [
@@ -328,6 +334,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lesson_content: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          examples: Json | null
+          explanation: string | null
+          id: string
+          lesson_id: string
+          order_index: number
+          section_type: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          examples?: Json | null
+          explanation?: string | null
+          id?: string
+          lesson_id: string
+          order_index?: number
+          section_type: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          examples?: Json | null
+          explanation?: string | null
+          id?: string
+          lesson_id?: string
+          order_index?: number
+          section_type?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       lessons: {
         Row: {
@@ -494,6 +539,36 @@ export type Database = {
           status?: string | null
           total_lessons?: number | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_exercise_attempts: {
+        Row: {
+          answer: string
+          completed_at: string | null
+          exercise_id: string
+          id: string
+          is_correct: boolean | null
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          completed_at?: string | null
+          exercise_id: string
+          id?: string
+          is_correct?: boolean | null
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          completed_at?: string | null
+          exercise_id?: string
+          id?: string
+          is_correct?: boolean | null
+          score?: number | null
           user_id?: string
         }
         Relationships: []
