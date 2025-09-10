@@ -23,6 +23,14 @@ interface AudioState {
   messageId: string | null;
   speed: number;
   usingSynth: boolean;
+  selectedVoice: string | null;
+}
+
+interface SpeechRecognitionState {
+  isListening: boolean;
+  language: string;
+  interimTranscript: string;
+  finalTranscript: string;
 }
 
 export default function AiChat() {
@@ -43,12 +51,20 @@ export default function AiChat() {
     messageId: null,
     speed: 1.0,
     usingSynth: false,
+    selectedVoice: null,
   });
+  const [speechState, setSpeechState] = useState<SpeechRecognitionState>({
+    isListening: false,
+    language: 'pt-BR',
+    interimTranscript: '',
+    finalTranscript: '',
+  });
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const synthUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,6 +80,96 @@ export default function AiChat() {
       loadMessages();
     }
   }, [user, messagesLoaded]);
+
+  // Initialize speech synthesis voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+      
+      // Set default female English (US) voice
+      const preferredVoice = voices.find(voice => 
+        voice.lang.includes('en-US') && 
+        (voice.name.toLowerCase().includes('female') || 
+         voice.name.toLowerCase().includes('samantha') ||
+         voice.name.toLowerCase().includes('karen') ||
+         voice.name.toLowerCase().includes('susan'))
+      ) || voices.find(voice => voice.lang.includes('en-US')) || voices[0];
+      
+      if (preferredVoice && !audioState.selectedVoice) {
+        setAudioState(prev => ({ ...prev, selectedVoice: preferredVoice.name }));
+      }
+    };
+
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = speechState.language;
+      
+      recognition.onstart = () => {
+        setSpeechState(prev => ({ ...prev, isListening: true, interimTranscript: '', finalTranscript: '' }));
+      };
+      
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        setSpeechState(prev => ({ ...prev, interimTranscript, finalTranscript }));
+        
+        if (finalTranscript) {
+          setInputMessage(finalTranscript);
+          toast({
+            title: 'Sucesso',
+            description: 'Áudio convertido para texto!',
+          });
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setSpeechState(prev => ({ ...prev, isListening: false }));
+        toast({
+          title: 'Erro',
+          description: 'Falha no reconhecimento de voz. Tente novamente.',
+          variant: 'destructive',
+        });
+      };
+      
+      recognition.onend = () => {
+        setSpeechState(prev => ({ ...prev, isListening: false }));
+      };
+      
+      recognitionRef.current = recognition;
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [speechState.language]);
 
   const loadMessages = async () => {
     if (!user) return;
@@ -125,97 +231,70 @@ export default function AiChat() {
     setIsFullscreen(!isFullscreen);
   };
 
-  const startRecording = async () => {
+  const startSpeechRecognition = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: 'Erro',
+        description: 'Reconhecimento de voz não é suportado neste navegador.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      
-      const chunks: Blob[] = [];
-      setRecordingCanceled(false);
-      
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
-      
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
-        if (!recordingCanceled && chunks.length > 0) {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-          await processVoiceInput(audioBlob);
-        }
-      };
-      
-      mediaRecorder.start();
+      recognitionRef.current.lang = speechState.language;
+      recognitionRef.current.start();
       setIsRecording(true);
     } catch (error) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível acessar o microfone. Verifique as permissões.',
+        description: 'Falha ao iniciar o reconhecimento de voz. Tente novamente.',
         variant: 'destructive',
       });
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const cancelRecording = () => {
-    setRecordingCanceled(true);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
     setIsRecording(false);
   };
 
-  const processVoiceInput = async (audioBlob: Blob) => {
-    setIsLoading(true);
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-        
-        const { data, error } = await supabase.functions.invoke('voice-to-text', {
-          body: { audio: base64Audio }
-        });
-        
-        if (error) throw error;
-        
-        if (data?.text) {
-          setInputMessage(data.text);
-          toast({
-            title: 'Sucesso',
-            description: 'Áudio convertido para texto!',
-          });
-        }
-      };
-      reader.readAsDataURL(audioBlob);
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao processar o áudio. Tente novamente.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  const cancelSpeechRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
     }
+    setSpeechState(prev => ({ ...prev, isListening: false, interimTranscript: '', finalTranscript: '' }));
+    setIsRecording(false);
   };
+
+  const toggleSpeechLanguage = () => {
+    const newLang = speechState.language === 'pt-BR' ? 'en-US' : 'pt-BR';
+    setSpeechState(prev => ({ ...prev, language: newLang }));
+  };
+
+  // This function is now handled by speech recognition
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Check file type and size (max 10MB)
-      const allowedTypes = ['text/plain', 'application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+      const allowedTypes = [
+        'text/plain', 
+        'application/pdf', 
+        'image/jpeg', 
+        'image/png', 
+        'image/gif',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/msword' // .doc
+      ];
       const maxSize = 10 * 1024 * 1024; // 10MB
       
       if (!allowedTypes.includes(file.type)) {
         toast({
           title: 'Erro',
-          description: 'Tipo de arquivo não suportado. Use: texto, PDF ou imagens.',
+          description: 'Tipo de arquivo não suportado. Use: texto, PDF, imagens, DOC ou DOCX.',
           variant: 'destructive',
         });
         return;
@@ -230,8 +309,10 @@ export default function AiChat() {
         return;
       }
 
-      // If it's a PDF, extract text using OCR
-      if (file.type === 'application/pdf') {
+      // If it's a document file, extract text using OCR
+      if (file.type === 'application/pdf' || 
+          file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+          file.type === 'application/msword') {
         setIsLoading(true);
         try {
           const formData = new FormData();
@@ -245,19 +326,20 @@ export default function AiChat() {
           
           if (data?.text) {
             setUploadedFile(file);
-            setInputMessage(`Por favor, analise e corrija este texto extraído do PDF "${file.name}":\n\n${data.text}`);
+            const fileType = file.type === 'application/pdf' ? 'PDF' : 'documento';
+            setInputMessage(`Por favor, analise e corrija este texto extraído do ${fileType} "${file.name}":\n\n${data.text}`);
             toast({
               title: 'Sucesso',
-              description: 'Texto extraído do PDF com sucesso!',
+              description: `Texto extraído do ${fileType} com sucesso!`,
             });
           } else {
-            throw new Error('Não foi possível extrair texto do PDF');
+            throw new Error(`Não foi possível extrair texto do ${file.type === 'application/pdf' ? 'PDF' : 'documento'}`);
           }
         } catch (error) {
-          console.error('Error processing PDF:', error);
+          console.error('Error processing document:', error);
           toast({
             title: 'Erro',
-            description: 'Falha ao processar o PDF. Tente novamente.',
+            description: 'Falha ao processar o documento. Tente novamente.',
             variant: 'destructive',
           });
         } finally {
@@ -292,53 +374,63 @@ export default function AiChat() {
 
   const playAIResponse = async (messageId: string, text: string, speed: number = 1.0) => {
     try {
-      // Stop any currently playing audio
-      if (audioState.currentAudio) {
-        audioState.currentAudio.pause();
-        audioState.currentAudio.currentTime = 0;
+      // Stop any currently playing speech
+      speechSynthesis.cancel();
+      
+      setAudioState(prev => ({ 
+        ...prev, 
+        isPlaying: true, 
+        isPaused: false, 
+        messageId, 
+        speed, 
+        usingSynth: true 
+      }));
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Find and set the selected voice
+      const selectedVoice = availableVoices.find(voice => 
+        voice.name === audioState.selectedVoice
+      );
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
+      
+      utterance.rate = speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      utterance.onend = () => {
+        setAudioState(prev => ({ 
+          ...prev, 
+          isPlaying: false, 
+          isPaused: false, 
+          currentAudio: null, 
+          messageId: null,
+          usingSynth: false
+        }));
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event.error);
+        setAudioState(prev => ({ 
+          ...prev, 
+          isPlaying: false, 
+          isPaused: false, 
+          currentAudio: null, 
+          messageId: null,
+          usingSynth: false
+        }));
+        toast({
+          title: 'Erro',
+          description: 'Falha ao reproduzir áudio. Tente novamente.',
+          variant: 'destructive',
+        });
+      };
 
-      setAudioState(prev => ({ ...prev, isPlaying: true, isPaused: false, messageId, speed }));
-
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: { text, speed }
-      });
-
-      if (error) throw error;
-
-      if (data?.audioContent) {
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-          { type: 'audio/mpeg' }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.onended = () => {
-          setAudioState(prev => ({ 
-            ...prev, 
-            isPlaying: false, 
-            isPaused: false, 
-            currentAudio: null, 
-            messageId: null 
-          }));
-          URL.revokeObjectURL(audioUrl);
-        };
-
-        audio.onerror = () => {
-          setAudioState(prev => ({ 
-            ...prev, 
-            isPlaying: false, 
-            isPaused: false, 
-            currentAudio: null, 
-            messageId: null 
-          }));
-          URL.revokeObjectURL(audioUrl);
-        };
-
-        setAudioState(prev => ({ ...prev, currentAudio: audio }));
-        await audio.play();
-      }
+      synthUtteranceRef.current = utterance;
+      speechSynthesis.speak(utterance);
+      
     } catch (error) {
       console.error('Error playing AI response:', error);
       setAudioState(prev => ({ 
@@ -346,7 +438,8 @@ export default function AiChat() {
         isPlaying: false, 
         isPaused: false, 
         currentAudio: null, 
-        messageId: null 
+        messageId: null,
+        usingSynth: false
       }));
       toast({
         title: 'Erro',
@@ -357,38 +450,47 @@ export default function AiChat() {
   };
 
   const pauseAudio = () => {
-    if (audioState.currentAudio) {
-      audioState.currentAudio.pause();
+    if (audioState.usingSynth) {
+      speechSynthesis.pause();
       setAudioState(prev => ({ ...prev, isPaused: true }));
     }
   };
 
   const resumeAudio = () => {
-    if (audioState.currentAudio) {
-      audioState.currentAudio.play();
+    if (audioState.usingSynth) {
+      speechSynthesis.resume();
       setAudioState(prev => ({ ...prev, isPaused: false }));
     }
   };
 
   const stopAudio = () => {
-    if (audioState.currentAudio) {
-      audioState.currentAudio.pause();
-      audioState.currentAudio.currentTime = 0;
+    if (audioState.usingSynth) {
+      speechSynthesis.cancel();
     }
     setAudioState(prev => ({ 
       ...prev, 
       isPlaying: false, 
       isPaused: false, 
       currentAudio: null, 
-      messageId: null 
+      messageId: null,
+      usingSynth: false
     }));
   };
 
   const changeSpeed = (speed: number) => {
-    if (audioState.currentAudio) {
-      audioState.currentAudio.playbackRate = speed;
+    if (audioState.usingSynth && synthUtteranceRef.current) {
+      // For speech synthesis, we need to restart with new rate
+      const wasPlaying = audioState.isPlaying && !audioState.isPaused;
+      if (wasPlaying) {
+        stopAudio();
+        // We'll need to replay with new speed, but this is a limitation of Web Speech API
+      }
     }
     setAudioState(prev => ({ ...prev, speed }));
+  };
+
+  const changeVoice = (voiceName: string) => {
+    setAudioState(prev => ({ ...prev, selectedVoice: voiceName }));
   };
 
   const sendMessage = async () => {
@@ -612,7 +714,7 @@ export default function AiChat() {
                       {message.role === 'assistant' && (
                         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/20">
                           {audioState.isPlaying && audioState.messageId === message.id ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {audioState.isPaused ? (
                                 <Button
                                   variant="ghost"
@@ -641,7 +743,7 @@ export default function AiChat() {
                                 <Square className="h-3 w-3" />
                               </Button>
                               <div className="flex gap-1">
-                                {[1, 1.5, 2].map((speed) => (
+                                {[0.5, 1, 1.5, 2].map((speed) => (
                                   <Button
                                     key={speed}
                                     variant={audioState.speed === speed ? "secondary" : "ghost"}
@@ -655,15 +757,33 @@ export default function AiChat() {
                               </div>
                             </div>
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => playAIResponse(message.id, message.content)}
-                              className="h-6 w-6 p-0"
-                              title="Ouvir resposta"
-                            >
-                              <Volume2 className="h-3 w-3" />
-                            </Button>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => playAIResponse(message.id, message.content)}
+                                className="h-6 w-6 p-0"
+                                title="Ouvir resposta"
+                              >
+                                <Volume2 className="h-3 w-3" />
+                              </Button>
+                              {availableVoices.length > 0 && (
+                                <select
+                                  className="text-xs bg-transparent border border-border rounded px-1 py-0.5"
+                                  value={audioState.selectedVoice || ''}
+                                  onChange={(e) => changeVoice(e.target.value)}
+                                  title="Escolher voz"
+                                >
+                                  {availableVoices
+                                    .filter(voice => voice.lang.includes('en-US'))
+                                    .map((voice) => (
+                                    <option key={voice.name} value={voice.name}>
+                                      {voice.name.split(' ')[0]} {voice.name.includes('female') || voice.name.toLowerCase().includes('karen') || voice.name.toLowerCase().includes('samantha') || voice.name.toLowerCase().includes('susan') ? '♀' : voice.name.toLowerCase().includes('male') ? '♂' : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -693,24 +813,29 @@ export default function AiChat() {
             </div>
           </CardContent>
           
-          {/* Voice Recording Modal */}
+          {/* Speech Recognition Modal */}
           {isRecording && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <Card className="w-80 p-6">
+              <Card className="w-96 p-6">
                 <div className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
                     <Mic className="h-8 w-8 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold">Gravando áudio...</h3>
+                  <h3 className="text-lg font-semibold">Ouvindo...</h3>
                   <p className="text-sm text-muted-foreground">
-                    Fale claramente. O áudio será convertido em texto e enviado para o IA.
+                    Fale claramente em {speechState.language === 'pt-BR' ? 'português' : 'inglês'}.
                   </p>
+                  {speechState.interimTranscript && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm italic text-muted-foreground">{speechState.interimTranscript}</p>
+                    </div>
+                  )}
                   <div className="flex gap-2 justify-center">
-                    <Button variant="outline" onClick={cancelRecording}>
+                    <Button variant="outline" onClick={cancelSpeechRecognition}>
                       Cancelar
                     </Button>
-                    <Button onClick={stopRecording}>
-                      Enviar
+                    <Button onClick={stopSpeechRecognition}>
+                      Parar
                     </Button>
                   </div>
                 </div>
@@ -752,7 +877,7 @@ export default function AiChat() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileUpload}
-                accept=".txt,.pdf,.jpg,.jpeg,.png,.gif"
+                accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                 className="hidden"
               />
               
@@ -766,15 +891,26 @@ export default function AiChat() {
                 <Upload className="h-4 w-4" />
               </Button>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={startRecording}
-                disabled={isLoading || isRecording}
-                title="Gravar áudio"
-              >
-                <Mic className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={startSpeechRecognition}
+                  disabled={isLoading || isRecording || !recognitionRef.current}
+                  title={`Reconhecimento de voz (${speechState.language === 'pt-BR' ? 'Português' : 'English'})`}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSpeechLanguage}
+                  disabled={isLoading || isRecording}
+                  title="Alternar idioma do reconhecimento de voz"
+                  className="text-xs"
+                >
+                  {speechState.language === 'pt-BR' ? 'PT' : 'EN'}
+                </Button>
               
               <Button 
                 onClick={sendMessage} 
@@ -790,7 +926,7 @@ export default function AiChat() {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2">
-              Faça perguntas, grave áudio, ou envie arquivos (incluindo PDFs) para análise! Use Enter para enviar.
+              Faça perguntas, use reconhecimento de voz, ou envie arquivos (PDF, DOC, DOCX, imagens) para análise! Use Enter para enviar.
             </p>
           </div>
         </Card>

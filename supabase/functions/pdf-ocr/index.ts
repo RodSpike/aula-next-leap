@@ -25,7 +25,7 @@ serve(async (req) => {
       if (!f) throw new Error('No file provided');
       filename = f.name;
       mimeType = f.type;
-      console.log('Processing PDF file (multipart):', filename);
+      console.log('Processing document file (multipart):', filename, 'type:', mimeType);
 
       const arrayBuffer = await f.arrayBuffer();
       base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
@@ -37,7 +37,7 @@ serve(async (req) => {
       }
       filename = String(body.name);
       mimeType = String(body.type);
-      console.log('Processing PDF file (json):', filename);
+      console.log('Processing document file (json):', filename, 'type:', mimeType);
       base64 = String(body.data);
       if (base64.includes(',')) base64 = base64.split(',')[1];
     }
@@ -59,7 +59,7 @@ serve(async (req) => {
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'Extract all English text from this document/image. Return only the extracted text. If multi-page, extract everything.' },
+                { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
                 { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
               ]
             }
@@ -99,7 +99,7 @@ serve(async (req) => {
         contents: [
           {
             parts: [
-              { text: 'Extract all English text from this document/image. Return only the extracted text with line breaks. If multi-page, include everything.' },
+              { text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting and line breaks. If multi-page, include everything. For Word documents, maintain structure.' },
               { inline_data: { mime_type: mimeType, data: base64 } }
             ]
           }
