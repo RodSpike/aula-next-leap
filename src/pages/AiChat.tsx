@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { detectPortuguese, hasPortugueseMixed } from "@/utils/portugueseDetection";
 import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -28,9 +29,14 @@ interface AudioState {
 
 interface SpeechRecognitionState {
   isListening: boolean;
-  language: string;
   interimTranscript: string;
   finalTranscript: string;
+}
+
+interface TranslationInfo {
+  originalText: string;
+  translatedText: string;
+  hasTranslation: boolean;
 }
 
 export default function AiChat() {
@@ -55,10 +61,10 @@ export default function AiChat() {
   });
   const [speechState, setSpeechState] = useState<SpeechRecognitionState>({
     isListening: false,
-    language: 'pt-BR',
     interimTranscript: '',
     finalTranscript: '',
   });
+  const [translationInfo, setTranslationInfo] = useState<TranslationInfo | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +115,24 @@ export default function AiChat() {
     };
   }, []);
 
+  const translateText = async (text: string): Promise<TranslationInfo> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('translate-text', {
+        body: { text }
+      });
+
+      if (error) {
+        console.error('Translation error:', error);
+        return { originalText: text, translatedText: text, hasTranslation: false };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return { originalText: text, translatedText: text, hasTranslation: false };
+    }
+  };
+
   // Initialize speech recognition
   useEffect(() => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -117,13 +141,14 @@ export default function AiChat() {
       
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = speechState.language;
+      recognition.lang = 'pt-BR'; // Always use Portuguese for better mixed language detection
       
       recognition.onstart = () => {
         setSpeechState(prev => ({ ...prev, isListening: true, interimTranscript: '', finalTranscript: '' }));
+        setTranslationInfo(null);
       };
       
-      recognition.onresult = (event: any) => {
+      recognition.onresult = async (event: any) => {
         let interimTranscript = '';
         let finalTranscript = '';
         
@@ -139,11 +164,13 @@ export default function AiChat() {
         setSpeechState(prev => ({ ...prev, interimTranscript, finalTranscript }));
         
         if (finalTranscript) {
-          setInputMessage(finalTranscript);
-          toast({
-            title: 'Sucesso',
-            description: 'Áudio convertido para texto!',
-          });
+          // Check if translation is needed
+          if (hasPortugueseMixed(finalTranscript) || detectPortuguese(finalTranscript)) {
+            const translationResult = await translateText(finalTranscript);
+            setTranslationInfo(translationResult);
+          } else {
+            setTranslationInfo({ originalText: finalTranscript, translatedText: finalTranscript, hasTranslation: false });
+          }
         }
       };
       
@@ -169,7 +196,7 @@ export default function AiChat() {
         recognitionRef.current.stop();
       }
     };
-  }, [speechState.language]);
+  }, []);
 
   const loadMessages = async () => {
     if (!user) return;
@@ -242,7 +269,6 @@ export default function AiChat() {
     }
 
     try {
-      recognitionRef.current.lang = speechState.language;
       recognitionRef.current.start();
       setIsRecording(true);
     } catch (error) {
@@ -267,11 +293,16 @@ export default function AiChat() {
     }
     setSpeechState(prev => ({ ...prev, isListening: false, interimTranscript: '', finalTranscript: '' }));
     setIsRecording(false);
+    setTranslationInfo(null);
   };
 
-  const toggleSpeechLanguage = () => {
-    const newLang = speechState.language === 'pt-BR' ? 'en-US' : 'pt-BR';
-    setSpeechState(prev => ({ ...prev, language: newLang }));
+  const acceptTranscription = () => {
+    if (translationInfo) {
+      setInputMessage(translationInfo.translatedText);
+      setSpeechState(prev => ({ ...prev, finalTranscript: '' }));
+      setTranslationInfo(null);
+      setIsRecording(false);
+    }
   };
 
   // This function is now handled by speech recognition
@@ -817,28 +848,50 @@ export default function AiChat() {
           {isRecording && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <Card className="w-96 p-6">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                    <Mic className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold">Ouvindo...</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Fale claramente em {speechState.language === 'pt-BR' ? 'português' : 'inglês'}.
-                  </p>
-                  {speechState.interimTranscript && (
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-sm italic text-muted-foreground">{speechState.interimTranscript}</p>
-                    </div>
-                  )}
-                  <div className="flex gap-2 justify-center">
-                    <Button variant="outline" onClick={cancelSpeechRecognition}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={stopSpeechRecognition}>
-                      Parar
-                    </Button>
-                  </div>
-                </div>
+                 <div className="text-center space-y-4">
+                   <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                     <Mic className="h-8 w-8 text-white" />
+                   </div>
+                   <h3 className="text-lg font-semibold">Ouvindo...</h3>
+                   <p className="text-sm text-muted-foreground">
+                     Fale em português ou inglês - a tradução é automática!
+                   </p>
+                   
+                   {speechState.interimTranscript && (
+                     <div className="p-3 bg-muted rounded-lg">
+                       <p className="text-sm italic text-muted-foreground">{speechState.interimTranscript}</p>
+                     </div>
+                   )}
+                   
+                   {translationInfo && (
+                     <div className="space-y-3">
+                       <div className="p-3 bg-background rounded-lg border">
+                         <p className="text-xs text-muted-foreground mb-1">Original:</p>
+                         <p className="text-sm">"{translationInfo.originalText}"</p>
+                         
+                         {translationInfo.hasTranslation && (
+                           <>
+                             <p className="text-xs text-muted-foreground mt-3 mb-1">Traduzido para inglês:</p>
+                             <p className="text-sm font-medium text-primary">"{translationInfo.translatedText}"</p>
+                           </>
+                         )}
+                       </div>
+                       
+                       <Button onClick={acceptTranscription} className="w-full">
+                         Usar {translationInfo.hasTranslation ? 'Tradução' : 'Texto'}
+                       </Button>
+                     </div>
+                   )}
+                   
+                   <div className="flex gap-2 justify-center">
+                     <Button variant="outline" onClick={cancelSpeechRecognition}>
+                       Cancelar
+                     </Button>
+                     <Button onClick={stopSpeechRecognition}>
+                       Parar
+                     </Button>
+                   </div>
+                 </div>
               </Card>
             </div>
           )}
@@ -891,26 +944,15 @@ export default function AiChat() {
                 <Upload className="h-4 w-4" />
               </Button>
               
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={startSpeechRecognition}
-                  disabled={isLoading || isRecording || !recognitionRef.current}
-                  title={`Reconhecimento de voz (${speechState.language === 'pt-BR' ? 'Português' : 'English'})`}
-                >
-                  <Mic className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleSpeechLanguage}
-                  disabled={isLoading || isRecording}
-                  title="Alternar idioma do reconhecimento de voz"
-                  className="text-xs"
-                >
-                  {speechState.language === 'pt-BR' ? 'PT' : 'EN'}
-                </Button>
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   onClick={startSpeechRecognition}
+                   disabled={isLoading || isRecording || !recognitionRef.current}
+                   title="Reconhecimento de voz automático (Português/Inglês)"
+                 >
+                   <Mic className="h-4 w-4" />
+                 </Button>
               
               <Button 
                 onClick={sendMessage} 
@@ -925,9 +967,9 @@ export default function AiChat() {
               </Button>
             </div>
             
-            <p className="text-xs text-muted-foreground mt-2">
-              Faça perguntas, use reconhecimento de voz, ou envie arquivos (PDF, DOC, DOCX, imagens) para análise! Use Enter para enviar.
-            </p>
+             <p className="text-xs text-muted-foreground mt-2">
+               Faça perguntas em português ou inglês, use reconhecimento de voz automático, ou envie arquivos para análise! Use Enter para enviar.
+             </p>
           </div>
         </Card>
       </div>
