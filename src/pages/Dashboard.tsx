@@ -244,7 +244,7 @@ export default function Dashboard() {
                     Take Your Cambridge Placement Test
                   </h3>
                   <p className="text-muted-foreground mb-3">
-                    Discover your English level and join the perfect learning group for your skill level.
+                    Discover your English level and unlock the appropriate courses for your skill level.
                   </p>
                   <Button onClick={() => navigate('/placement-test')} className="bg-primary hover:bg-primary/90">
                     Start Placement Test

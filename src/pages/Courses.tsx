@@ -5,39 +5,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Filter, BookOpen, MessageSquare, Users, Clock } from "lucide-react";
+import { Search, BookOpen, GraduationCap, Trophy, Lock, CheckCircle } from "lucide-react";
 
 interface Course {
   id: string;
   title: string;
   description: string;
-  level: "Beginner" | "Intermediate" | "Advanced";
+  level: string;
   order_index: number;
-  instructor: string;
-  duration: string;
-  students: number;
-  rating: number;
-  price: string;
-  image: string;
-  category: string;
+  isUnlocked: boolean;
+  lessonsCount: number;
+  completedLessons: number;
+  isCurrentLevel: boolean;
 }
 
-const categories = [
-  { name: "All", icon: BookOpen },
-  { name: "A1", icon: Users },
-  { name: "A2", icon: Users },
-  { name: "B1", icon: BookOpen },
-  { name: "B2", icon: BookOpen },
-  { name: "C1", icon: MessageSquare },
-  { name: "C2", icon: Filter },
-];
+const levelOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+const getLevelIcon = (level: string) => {
+  const icons: { [key: string]: any } = {
+    'A1': BookOpen,
+    'A2': BookOpen, 
+    'B1': GraduationCap,
+    'B2': GraduationCap,
+    'C1': Trophy,
+    'C2': Trophy,
+  };
+  return icons[level] || BookOpen;
+};
 
 export default function Courses() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedLevel, setSelectedLevel] = useState("All");
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,28 +49,71 @@ export default function Courses() {
 
   const fetchCourses = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch courses with lessons count
+      const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
-        .select('*')
+        .select(`
+          *,
+          lessons (count)
+        `)
         .order('order_index');
 
-      if (error) throw error;
+      if (coursesError) throw coursesError;
 
-      // Transform database courses to match the expected format
-      const transformedCourses: Course[] = data.map((course) => ({
-        id: course.id,
-        title: course.title,
-        description: course.description || 'Learn English at this level',
-        level: getLevelDisplayName(course.level),
-        order_index: course.order_index,
-        instructor: "Expert Instructor",
-        duration: "20h",
-        students: Math.floor(Math.random() * 1000) + 500,
-        rating: 4.5 + Math.random() * 0.5,
-        price: "Free",
-        image: "/placeholder.svg",
-        category: course.level,
-      }));
+      // Get user's current level and progress if logged in
+      let userLevel = 'A1'; // Default to A1
+      let userProgress: { [key: string]: number } = {};
+
+      if (user) {
+        // Get user profile for current level
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('cambridge_level')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile?.cambridge_level) {
+          userLevel = profile.cambridge_level;
+        }
+
+        // Get user's lesson progress for each course
+        const { data: progressData } = await supabase
+          .from('user_lesson_progress')
+          .select('lesson_id, completed, lessons!inner(course_id)')
+          .eq('user_id', user.id)
+          .eq('completed', true);
+
+        if (progressData) {
+          progressData.forEach((progress: any) => {
+            const courseId = progress.lessons.course_id;
+            userProgress[courseId] = (userProgress[courseId] || 0) + 1;
+          });
+        }
+      }
+
+      // Transform courses with unlock logic
+      const transformedCourses: Course[] = coursesData.map((course) => {
+        const lessonsCount = course.lessons[0]?.count || 0;
+        const completedLessons = userProgress[course.id] || 0;
+        const userLevelIndex = levelOrder.indexOf(userLevel);
+        const courseLevelIndex = levelOrder.indexOf(course.level);
+        
+        // User can access current level and all previous levels
+        const isUnlocked = courseLevelIndex <= userLevelIndex;
+        const isCurrentLevel = course.level === userLevel;
+
+        return {
+          id: course.id,
+          title: course.title,
+          description: course.description || 'Learn English at this level',
+          level: course.level,
+          order_index: course.order_index,
+          isUnlocked,
+          lessonsCount,
+          completedLessons,
+          isCurrentLevel,
+        };
+      });
 
       setCourses(transformedCourses);
     } catch (error) {
@@ -82,23 +128,11 @@ export default function Courses() {
     }
   };
 
-  const getLevelDisplayName = (level: string): "Beginner" | "Intermediate" | "Advanced" => {
-    const levelNames = {
-      'A1': 'Beginner' as const,
-      'A2': 'Beginner' as const, 
-      'B1': 'Intermediate' as const,
-      'B2': 'Intermediate' as const,
-      'C1': 'Advanced' as const,
-      'C2': 'Advanced' as const
-    };
-    return levelNames[level as keyof typeof levelNames] || 'Beginner';
-  };
-  
   const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || course.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesLevel = selectedLevel === "All" || course.level === selectedLevel;
+    return matchesSearch && matchesLevel;
   });
 
   if (loading) {
@@ -124,11 +158,11 @@ export default function Courses() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-              English Course Catalog
+              English Learning Levels
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Discover our comprehensive English courses taught by expert instructors. 
-              Start your learning journey today.
+              Progress through structured English courses from A1 to C2. 
+              Complete assessments to unlock new levels.
             </p>
             
             {/* Search */}
@@ -145,22 +179,34 @@ export default function Courses() {
         </div>
       </section>
 
-      {/* Filters */}
+      {/* Level Filters */}
       <section className="py-8 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap gap-3">
-            {categories.map((category) => (
-              <Button
-                key={category.name}
-                variant={selectedCategory === category.name ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category.name)}
-                className="flex items-center space-x-2"
-              >
-                <category.icon className="h-4 w-4" />
-                <span>{category.name}</span>
-              </Button>
-            ))}
+            <Button
+              variant={selectedLevel === "All" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedLevel("All")}
+              className="flex items-center space-x-2"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span>All Levels</span>
+            </Button>
+            {levelOrder.map((level) => {
+              const Icon = getLevelIcon(level);
+              return (
+                <Button
+                  key={level}
+                  variant={selectedLevel === level ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedLevel(level)}
+                  className="flex items-center space-x-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{level}</span>
+                </Button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -175,7 +221,7 @@ export default function Courses() {
             
             <div className="flex items-center space-x-2">
               <Badge variant="outline">
-                {selectedCategory}
+                {selectedLevel}
               </Badge>
             </div>
           </div>
