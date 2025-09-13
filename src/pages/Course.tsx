@@ -39,6 +39,17 @@ interface Exercise {
   order_index: number;
 }
 
+interface LessonContentItem {
+  id: string;
+  lesson_id: string;
+  section_type: string;
+  title: string;
+  explanation?: string;
+  examples?: any;
+  content?: any;
+  order_index: number;
+}
+
 export default function Course() {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
@@ -47,9 +58,11 @@ export default function Course() {
   const [course, setCourse] = useState<Course | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [lessonContent, setLessonContent] = useState<LessonContentItem[]>([]);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showIntroduction, setShowIntroduction] = useState(true);
 
   useEffect(() => {
     if (courseId && user) {
@@ -80,9 +93,11 @@ export default function Course() {
       if (lessonsError) throw lessonsError;
       setLessons(lessonsData || []);
 
-      // Load exercises for all lessons
+      // Load exercises and lesson content for all lessons
       if (lessonsData && lessonsData.length > 0) {
         const lessonIds = lessonsData.map(lesson => lesson.id);
+        
+        // Load exercises
         const { data: exercisesData, error: exercisesError } = await supabase
           .from('exercises')
           .select('*')
@@ -91,6 +106,16 @@ export default function Course() {
 
         if (exercisesError) throw exercisesError;
         setExercises(exercisesData || []);
+
+        // Load lesson content
+        const { data: contentData, error: contentError } = await supabase
+          .from('lesson_content')
+          .select('*')
+          .in('lesson_id', lessonIds)
+          .order('order_index');
+
+        if (contentError) throw contentError;
+        setLessonContent(contentData || []);
       }
     } catch (error) {
       console.error('Error loading course data:', error);
@@ -220,6 +245,9 @@ export default function Course() {
 
   const currentLesson = lessons[currentLessonIndex];
   const currentLessonExercises = exercises.filter(ex => ex.lesson_id === currentLesson?.id);
+  const currentLessonContent = lessonContent.filter(content => content.lesson_id === currentLesson?.id);
+  const introductionContent = currentLessonContent.filter(content => content.section_type === 'introduction');
+  const practiceContent = currentLessonContent.filter(content => content.section_type === 'practice');
 
   return (
     <div className="min-h-screen bg-background">
@@ -295,42 +323,114 @@ export default function Course() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentLesson && (
           <div className="space-y-8">
-            <LessonContent content={[]} />
-            
-            {currentLessonExercises.length > 0 && (
-              <ExerciseActivity
-                exercises={currentLessonExercises.map(ex => ({
-                  ...ex,
-                  exercise_type: 'multiple_choice' as const,
-                  title: `Exercise ${ex.order_index + 1}`,
-                  instructions: 'Choose the correct answer.',
-                  points: 10,
-                  options: Array.isArray(ex.options) ? ex.options : 
-                    typeof ex.options === 'object' && ex.options ? 
-                    Object.values(ex.options) : ['Option A', 'Option B', 'Option C']
-                }))}
-                onComplete={(score, totalPoints) => {
-                  const percentage = Math.round((score / totalPoints) * 100);
-                  handleLessonComplete(currentLesson.id, percentage);
-                }}
-              />
+            {/* Toggle between Introduction and Activities */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex rounded-lg border p-1 bg-muted">
+                <Button
+                  variant={showIntroduction ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowIntroduction(true)}
+                  className="rounded-md px-3"
+                >
+                  📚 Explicação
+                </Button>
+                <Button
+                  variant={!showIntroduction ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowIntroduction(false)}
+                  className="rounded-md px-3"
+                >
+                  🎯 Atividades
+                </Button>
+              </div>
+            </div>
+
+            {showIntroduction ? (
+              // Introduction/Explanation Content
+              <div className="space-y-6">
+                {introductionContent.length > 0 ? (
+                  <LessonContent content={introductionContent} />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Conteúdo de explicação será adicionado em breve para esta lição.
+                    </p>
+                  </div>
+                )}
+                
+                {practiceContent.length > 0 && (
+                  <LessonContent content={practiceContent} />
+                )}
+
+                <div className="flex justify-center pt-6">
+                  <Button
+                    onClick={() => setShowIntroduction(false)}
+                    className="px-8"
+                  >
+                    Começar Atividades →
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // Activities/Exercises Content
+              <div className="space-y-6">
+                {currentLessonExercises.length > 0 ? (
+                  <ExerciseActivity
+                    exercises={currentLessonExercises.map(ex => ({
+                      ...ex,
+                      exercise_type: 'multiple_choice' as const,
+                      title: `Exercise ${ex.order_index + 1}`,
+                      instructions: 'Choose the correct answer.',
+                      points: 10,
+                      options: Array.isArray(ex.options) ? ex.options : 
+                        typeof ex.options === 'object' && ex.options ? 
+                        Object.values(ex.options) : ['Option A', 'Option B', 'Option C']
+                    }))}
+                    onComplete={(score, totalPoints) => {
+                      const percentage = Math.round((score / totalPoints) * 100);
+                      handleLessonComplete(currentLesson.id, percentage);
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Exercícios serão adicionados em breve para esta lição.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-center pt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowIntroduction(true)}
+                  >
+                    ← Voltar à Explicação
+                  </Button>
+                </div>
+              </div>
             )}
             
             {/* Navigation */}
-            <div className="flex justify-between">
+            <div className="flex justify-between pt-8 border-t">
               <Button
                 variant="outline"
-                onClick={() => setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1))}
+                onClick={() => {
+                  setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1));
+                  setShowIntroduction(true);
+                }}
                 disabled={currentLessonIndex === 0}
               >
-                Previous Lesson
+                ← Lição Anterior
               </Button>
               
               <Button
-                onClick={() => setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1))}
+                onClick={() => {
+                  setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1));
+                  setShowIntroduction(true);
+                }}
                 disabled={currentLessonIndex === lessons.length - 1}
               >
-                Next Lesson
+                Próxima Lição →
               </Button>
             </div>
           </div>

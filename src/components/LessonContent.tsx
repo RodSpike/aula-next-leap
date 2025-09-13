@@ -36,6 +36,10 @@ interface LessonContentProps {
 export function LessonContent({ content }: LessonContentProps) {
   const getSectionIcon = (type: string) => {
     switch (type) {
+      case 'introduction':
+        return <BookOpen className="w-5 h-5" />;
+      case 'practice':
+        return <Target className="w-5 h-5" />;
       case 'grammar':
         return <BookOpen className="w-5 h-5" />;
       case 'vocabulary':
@@ -59,6 +63,10 @@ export function LessonContent({ content }: LessonContentProps) {
 
   const getSectionColor = (type: string) => {
     switch (type) {
+      case 'introduction':
+        return 'bg-primary/10 border-primary/20 dark:bg-primary/5';
+      case 'practice':
+        return 'bg-secondary/10 border-secondary/20 dark:bg-secondary/5';
       case 'grammar':
         return 'bg-blue-50 border-blue-200 dark:bg-blue-950/30';
       case 'vocabulary':
@@ -78,6 +86,214 @@ export function LessonContent({ content }: LessonContentProps) {
       default:
         return 'bg-gray-50 border-gray-200 dark:bg-gray-950/30';
     }
+  };
+
+  const renderIntroductionContent = (item: LessonContentItem) => {
+    const content = item.content || {};
+    const parts = content.parts || [];
+    
+    return (
+      <div className="space-y-8">
+        {parts.map((part: any, index: number) => (
+          <div key={index} className="space-y-4">
+            <h3 className="text-xl font-semibold text-primary">{part.title}</h3>
+            
+            {part.content && (
+              <p className="text-muted-foreground leading-relaxed">{part.content}</p>
+            )}
+            
+            {/* Handle sections (like Formais/Informais) */}
+            {part.sections && (
+              <div className="grid md:grid-cols-2 gap-6">
+                {part.sections.map((section: any, sIndex: number) => (
+                  <div key={sIndex} className="bg-background/80 p-4 rounded-lg border">
+                    <h4 className="font-medium mb-3 text-lg">{section.title}</h4>
+                    <ul className="space-y-2">
+                      {section.items.map((item: string, iIndex: number) => (
+                        <li key={iIndex} className="text-sm flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Handle alphabet */}
+            {part.alphabet && (
+              <div className="bg-background/50 p-6 rounded-lg border">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {part.alphabet.map((letter: string, lIndex: number) => (
+                    <div key={lIndex} className="text-center p-2 bg-primary/5 rounded border">
+                      <span className="font-mono text-sm">{letter}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Handle number groups */}
+            {part.number_groups && (
+              <div className="space-y-4">
+                {part.number_groups.map((group: any, gIndex: number) => (
+                  <div key={gIndex} className="bg-background/70 p-4 rounded-lg border">
+                    <h4 className="font-medium mb-3">{group.range}</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {group.numbers.map((num: string, nIndex: number) => (
+                        <Badge key={nIndex} variant="secondary" className="text-xs">
+                          {num}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Handle tables */}
+            {part.table && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border rounded-lg">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      {part.table[0].map((header: string, hIndex: number) => (
+                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {part.table.slice(1).map((row: string[], rIndex: number) => (
+                      <tr key={rIndex} className="hover:bg-muted/30">
+                        {row.map((cell: string, cIndex: number) => (
+                          <td key={cIndex} className="border border-border p-3 text-sm">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Handle countries table */}
+            {part.countries_table && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border rounded-lg">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      {part.countries_table[0].map((header: string, hIndex: number) => (
+                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {part.countries_table.slice(1).map((row: string[], rIndex: number) => (
+                      <tr key={rIndex} className="hover:bg-muted/30">
+                        {row.map((cell: string, cIndex: number) => (
+                          <td key={cIndex} className="border border-border p-3 text-sm">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Handle wh-questions table */}
+            {part.wh_table && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border rounded-lg">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      {part.wh_table[0].map((header: string, hIndex: number) => (
+                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {part.wh_table.slice(1).map((row: string[], rIndex: number) => (
+                      <tr key={rIndex} className="hover:bg-muted/30">
+                        {row.map((cell: string, cIndex: number) => (
+                          <td key={cIndex} className="border border-border p-3 text-sm">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {/* Handle sentence types */}
+            {part.sentence_types && (
+              <div className="space-y-4">
+                {part.sentence_types.map((sentenceType: any, stIndex: number) => (
+                  <div key={stIndex} className="bg-background/70 p-4 rounded-lg border">
+                    <h4 className="font-medium mb-3">{sentenceType.type}</h4>
+                    <ul className="space-y-2">
+                      {sentenceType.examples.map((example: string, eIndex: number) => (
+                        <li key={eIndex} className="text-sm flex items-start gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2"></span>
+                          <span>{example}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPracticeContent = (item: LessonContentItem) => {
+    const content = item.content || {};
+    const exercises = content.exercises || [];
+    
+    return (
+      <div className="space-y-6">
+        {exercises.map((exercise: any, index: number) => (
+          <div key={index} className="bg-background/70 p-6 rounded-lg border">
+            <h4 className="font-semibold text-lg mb-3 text-primary">{exercise.title}</h4>
+            
+            {exercise.instructions && (
+              <p className="text-muted-foreground mb-4">{exercise.instructions}</p>
+            )}
+            
+            {exercise.questions && (
+              <div className="space-y-3">
+                {exercise.questions.map((question: string, qIndex: number) => (
+                  <div key={qIndex} className="bg-primary/5 p-3 rounded border-l-4 border-primary">
+                    <p className="text-sm font-medium">{question}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {exercise.example && (
+              <div className="mt-4 bg-secondary/10 p-4 rounded-lg border">
+                <h5 className="font-medium mb-2">Exemplo:</h5>
+                <pre className="text-sm whitespace-pre-wrap font-mono">{exercise.example}</pre>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const renderVocabularyContent = (item: LessonContentItem) => {
@@ -414,6 +630,10 @@ export function LessonContent({ content }: LessonContentProps) {
 
   const renderContentSection = (item: LessonContentItem) => {
     switch (item.section_type) {
+      case 'introduction':
+        return renderIntroductionContent(item);
+      case 'practice':
+        return renderPracticeContent(item);
       case 'vocabulary':
         return renderVocabularyContent(item);
       case 'grammar':
