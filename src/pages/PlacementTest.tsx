@@ -116,7 +116,7 @@ const PlacementTest = () => {
         setFinalResult({
           finalAssessment: true,
           level: currentLevel || 'B1',
-          explanation: `Based on your ${currentQuestion.questionNumber} answers, your Cambridge English level is ${currentLevel || 'B1'}. You completed the full placement test.`,
+          explanation: `Based on your ${currentQuestion.questionNumber} answers, your English level is ${currentLevel || 'B1'}. You completed the full placement test.`,
           questionsAnswered: currentQuestion.questionNumber
         });
         setCurrentQuestion(null);
@@ -245,7 +245,7 @@ const PlacementTest = () => {
         setFinalResult({
           finalAssessment: true,
           level: currentLevel || 'B1',
-          explanation: `Based on your ${currentQuestion.questionNumber} answers, your Cambridge English level is ${currentLevel || 'B1'}. The test encountered a technical issue but your level has been determined.`,
+          explanation: `Based on your ${currentQuestion.questionNumber} answers, your English level is ${currentLevel || 'B1'}. The test encountered a technical issue but your level has been determined.`,
           questionsAnswered: currentQuestion.questionNumber
         });
         setCurrentQuestion(null);
@@ -327,7 +327,7 @@ const PlacementTest = () => {
                 <li>• Up to 20 questions testing grammar, vocabulary, and comprehension</li>
                 <li>• Adaptive difficulty based on your performance</li>
                 <li>• Test may end early if your level is clearly determined</li>
-                <li>• Instant results with your Cambridge level (A2-C2)</li>
+                <li>• Instant results with your English level (A2-C2)</li>
                 <li>• Takes approximately 10-20 minutes</li>
               </ul>
             </div>
