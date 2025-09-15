@@ -215,7 +215,7 @@ const features = [
               Descubra seu nível de inglês
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Faça nosso teste de nivelamento gratuito e descubra exatamente onde você está no seu aprendizado de inglês.
+              Faça nosso teste de nivelamento Cambridge gratuito e descubra exatamente onde você está no seu aprendizado de inglês.
             </p>
           </div>
           
@@ -226,7 +226,7 @@ const features = [
                   <CheckCircle className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">Teste de Nivelamento</h3>
+                  <h3 className="text-xl font-semibold text-foreground">Teste de Nivelamento Cambridge</h3>
                   <p className="text-muted-foreground">Grátis • 10-15 minutos • Resultado imediato</p>
                 </div>
               </div>

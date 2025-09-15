@@ -204,25 +204,19 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
           
           <div className="space-y-3">
             <h4 className="font-medium">Resultados detalhados:</h4>
-            {exercises.map((exercise, index) => {
-              const userAnswer = userAnswers[exercise.id];
-              const isAnswered = userAnswer !== undefined;
-              const isCorrect = isAnswered && checkAnswer(exercise);
-              
+            {exercises.filter(exercise => userAnswers[exercise.id] !== undefined).map((exercise, index) => {
+              const isCorrect = checkAnswer(exercise);
               return (
                 <div 
                   key={exercise.id}
                   className={`p-3 rounded-lg border ${
-                    !isAnswered ? 'bg-gray-50 border-gray-200' :
                     isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        {!isAnswered ? (
-                          <XCircle className="h-4 w-4 text-gray-400" />
-                        ) : isCorrect ? (
+                        {isCorrect ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
@@ -235,9 +229,7 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
                         {exercise.question}
                       </p>
                       <div className="text-xs space-y-1">
-                        <div>Sua resposta: <span className="font-medium">
-                          {isAnswered ? userAnswer : 'Não respondida'}
-                        </span></div>
+                        <div>Sua resposta: <span className="font-medium">{userAnswers[exercise.id]}</span></div>
                         <div>Resposta correta: <span className="font-medium text-green-600">{exercise.correct_answer}</span></div>
                       </div>
                       {exercise.explanation && (
@@ -246,11 +238,8 @@ export function ExerciseActivity({ exercises, onComplete }: ExerciseActivityProp
                         </p>
                       )}
                     </div>
-                    <Badge variant={
-                      !isAnswered ? 'secondary' : 
-                      isCorrect ? 'default' : 'destructive'
-                    } className="text-xs">
-                      {!isAnswered ? 'Pular' : isCorrect ? `+${exercise.points}` : '0'} pts
+                    <Badge variant={isCorrect ? 'default' : 'destructive'} className="text-xs">
+                      {isCorrect ? `+${exercise.points}` : '0'} pts
                     </Badge>
                   </div>
                 </div>
