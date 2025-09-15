@@ -13,7 +13,7 @@ export const seedCourseData = async () => {
       return;
     }
 
-    // Cambridge English courses data
+    // English courses data
     const coursesData = [
       {
         title: "A1 Elementary English",
