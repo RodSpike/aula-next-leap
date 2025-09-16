@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/hooks/useAuth"; 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus } from "lucide-react";
 
 interface UserData {
@@ -556,7 +557,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -564,6 +565,10 @@ export default function AdminPanel() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="content" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Content
             </TabsTrigger>
             <TabsTrigger value="groups" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -626,6 +631,46 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Content Management Tab */}
+          <TabsContent value="content" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Content Management
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Generate and manage lesson content using AI
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-background/50 p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-3">AI Content Generation</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Use the specialized English teaching AI to generate comprehensive lesson content for all courses. 
+                    This will create detailed explanations, vocabulary sections, grammar tables, and practice exercises 
+                    following the same high-quality format as the example lessons.
+                  </p>
+                  <GenerateAllLessonsButton />
+                </div>
+                
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-600" />
+                    Content Features
+                  </h4>
+                  <ul className="text-sm space-y-1 text-amber-800 dark:text-amber-200">
+                    <li>• Comprehensive Portuguese translations</li>
+                    <li>• Structured grammar tables and conjugations</li>
+                    <li>• Progressive difficulty exercises</li>
+                    <li>• Role-play activities and dialogues</li>
+                    <li>• Cultural context and practical examples</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Users Tab */}
