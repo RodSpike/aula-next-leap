@@ -18,6 +18,7 @@ export const Navigation = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -31,7 +32,7 @@ export const Navigation = () => {
           .single();
         
         console.log('Admin check result:', { data, error });
-        setIsAdmin(!!data);
+        setIsAdmin(!!data || (user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false));
       } else {
         setIsAdmin(false);
       }
