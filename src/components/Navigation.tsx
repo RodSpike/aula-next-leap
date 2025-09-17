@@ -22,13 +22,15 @@ export const Navigation = () => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (user) {
-        const { data } = await supabase
+        console.log('Checking admin status for user:', user.id, user.email);
+        const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
           .eq('role', 'admin')
           .single();
         
+        console.log('Admin check result:', { data, error });
         setIsAdmin(!!data);
       } else {
         setIsAdmin(false);
