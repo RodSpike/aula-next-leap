@@ -66,6 +66,7 @@ export default function AdminPanel() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
   
   // States
   const [isAdmin, setIsAdmin] = useState(false);
@@ -425,12 +426,14 @@ export default function AdminPanel() {
         .eq('user_id', user!.id)
         .eq('role', 'admin')
         .single();
-      
-      if (!data) {
+
+      const isMaster = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
+
+      if (!data && !isMaster) {
         navigate("/dashboard");
         return;
       }
-      
+
       // Get current user email for admin controls
       const { data: profile } = await supabase
         .from('profiles')
@@ -438,7 +441,7 @@ export default function AdminPanel() {
         .eq('user_id', user!.id)
         .single();
         
-      setCurrentUserEmail(profile?.email || "");
+      setCurrentUserEmail(profile?.email || user?.email || "");
       setIsAdmin(true);
     } catch (error) {
       navigate("/dashboard");
