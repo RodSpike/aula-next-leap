@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
+import { CourseManagement } from "@/components/CourseManagement";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus } from "lucide-react";
 
 interface UserData {

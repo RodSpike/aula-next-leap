@@ -1,0 +1,361 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, Plus, Edit2, BookOpen } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  level: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+  lessons_count?: number;
+}
+
+interface CourseFormData {
+  title: string;
+  description: string;
+  level: string;
+}
+
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+export const CourseManagement = () => {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [formData, setFormData] = useState<CourseFormData>({
+    title: '',
+    description: '',
+    level: 'A1'
+  });
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          lessons (count)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const coursesWithCount = data.map(course => ({
+        ...course,
+        lessons_count: course.lessons?.[0]?.count || 0
+      }));
+
+      setCourses(coursesWithCount);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch courses",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCourse = async () => {
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .insert([{
+          ...formData,
+          order_index: courses.length + 1
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Course created successfully",
+      });
+
+      setIsCreateDialogOpen(false);
+      resetForm();
+      fetchCourses();
+    } catch (error) {
+      console.error('Error creating course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create course",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateCourse = async () => {
+    if (!editingCourse) return;
+
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update(formData)
+        .eq('id', editingCourse.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Course updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingCourse(null);
+      resetForm();
+      fetchCourses();
+    } catch (error) {
+      console.error('Error updating course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update course",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Are you sure you want to delete this course? This will also delete all associated lessons.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', courseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Course deleted successfully",
+      });
+
+      fetchCourses();
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete course",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openEditDialog = (course: Course) => {
+    setEditingCourse(course);
+    setFormData({
+      title: course.title,
+      description: course.description,
+      level: course.level
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      level: 'A1'
+    });
+  };
+
+  const navigateToCourse = (courseId: string) => {
+    navigate(`/admin/course/${courseId}`);
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading courses...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Course Management</h2>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Course
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create New Course</DialogTitle>
+              <DialogDescription>
+                Create a new English course with level access rules.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Course Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Enter course title"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter course description"
+                />
+              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="level">Course Level</Label>
+              <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select course level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateCourse}>Create Course</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4">
+        {courses.map((course) => (
+          <Card key={course.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5" />
+                    {course.title}
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    {course.description}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigateToCourse(course.id)}
+                  >
+                    Manage Content
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(course)}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteCourse(course.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                <div className="flex gap-4">
+                  <span>Level: <strong>{course.level}</strong></span>
+                  <span>Lessons: <strong>{course.lessons_count || 0}</strong></span>
+                </div>
+                <span>Created: {new Date(course.created_at).toLocaleDateString()}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Course</DialogTitle>
+            <DialogDescription>
+              Update course information and level access rules.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-title">Course Title</Label>
+              <Input
+                id="edit-title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Enter course title"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter course description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-level">Course Level</Label>
+              <Select value={formData.level} onValueChange={(value) => setFormData({ ...formData, level: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select course level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateCourse}>Update Course</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};

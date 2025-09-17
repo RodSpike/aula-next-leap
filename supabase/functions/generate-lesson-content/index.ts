@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -93,14 +93,14 @@ REQUISITOS OBRIGATÓRIOS:
 
 A aula deve ser TÃO DETALHADA quanto a Aula 1 de exemplo que já existe.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${deepSeekApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -112,8 +112,8 @@ A aula deve ser TÃO DETALHADA quanto a Aula 1 de exemplo que já existe.`;
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('DeepSeek API error:', errorData);
+      throw new Error(`DeepSeek API error: ${response.status}`);
     }
 
     const data = await response.json();
