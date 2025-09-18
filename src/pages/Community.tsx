@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
+import { PostInteractions } from "@/components/PostInteractions";
+import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +28,10 @@ import {
   Lock,
   Building2,
   User,
-  Filter
+  Filter,
+  MoreVertical,
+  Edit2,
+  Archive
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -262,7 +268,7 @@ export default function Community() {
   };
 
   const createGroup = async () => {
-    if (!user || !newGroupName.trim() || !newGroupObjective.trim()) return;
+    if (!user || !newGroupName.trim()) return;
 
     try {
       const inviteCode = newGroupType === 'closed' ? 
@@ -276,7 +282,6 @@ export default function Community() {
           level: newGroupLevel,
           created_by: user.id,
           group_type: newGroupType,
-          objective: newGroupObjective,
           invite_code: inviteCode
         });
 
@@ -290,7 +295,6 @@ export default function Community() {
       setNewGroupName("");
       setNewGroupDescription("");
       setNewGroupLevel("A1");
-      setNewGroupObjective("");
       setNewGroupType('open');
       setIsCreateGroupOpen(false);
       fetchGroups();
@@ -583,6 +587,7 @@ export default function Community() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NavigationPersistence />
       <Navigation />
       
       {/* Header */}
@@ -623,16 +628,11 @@ export default function Community() {
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
                       />
-                      <Textarea
-                        placeholder="Group description"
-                        value={newGroupDescription}
-                        onChange={(e) => setNewGroupDescription(e.target.value)}
-                      />
-                      <Textarea
-                        placeholder="Group objective (required)"
-                        value={newGroupObjective}
-                        onChange={(e) => setNewGroupObjective(e.target.value)}
-                      />
+                       <Textarea
+                         placeholder="Group description"
+                         value={newGroupDescription}
+                         onChange={(e) => setNewGroupDescription(e.target.value)}
+                       />
                       <select 
                         className="w-full p-2 border rounded-md"
                         value={newGroupLevel}
@@ -653,9 +653,9 @@ export default function Community() {
                         <option value="open">Open Group (Anyone can join)</option>
                         <option value="closed">Closed Group (Invite code required)</option>
                       </select>
-                      <Button onClick={createGroup} className="w-full" disabled={!newGroupName.trim() || !newGroupObjective.trim()}>
-                        Create Group
-                      </Button>
+                       <Button onClick={createGroup} className="w-full" disabled={!newGroupName.trim()}>
+                         Create Group
+                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -986,48 +986,55 @@ export default function Community() {
                               </div>
                             </div>
                           </div>
-                          <p className="text-sm">{post.content}</p>
-                          
-                           {/* Post Attachments */}
-                           {post.attachments && post.attachments.length > 0 && (
-                             <div className="mt-3 space-y-2">
-                               {post.attachments.map((attachment, index) => (
-                                 <div key={index}>
-                                    {attachment.type === 'youtube' ? (
-                                      <div className="border rounded-lg overflow-hidden">
-                                        <div className="aspect-video">
-                                          <iframe
-                                            src={`https://www.youtube.com/embed/${attachment.videoId}`}
-                                            title="YouTube Video"
-                                            className="w-full h-full"
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                            allowFullScreen
-                                          />
-                                        </div>
-                                      </div>
-                                   ) : attachment.type.startsWith('image/') ? (
-                                     <img
-                                       src={attachment.url}
-                                       alt={attachment.name}
-                                       className="max-w-full h-auto rounded-lg border"
-                                       style={{ maxHeight: '300px' }}
-                                     />
-                                   ) : (
-                                     <a
-                                       href={attachment.url}
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
-                                     >
-                                       <FileText className="h-4 w-4" />
-                                       <span className="text-sm">{attachment.name}</span>
-                                     </a>
-                                   )}
-                                 </div>
-                               ))}
-                             </div>
-                           )}
+                           <p className="text-sm">{post.content}</p>
+                           
+                            {/* Post Attachments */}
+                            {post.attachments && post.attachments.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {post.attachments.map((attachment, index) => (
+                                  <div key={index}>
+                                     {attachment.type === 'youtube' ? (
+                                       <div className="border rounded-lg overflow-hidden">
+                                         <div className="aspect-video">
+                                           <iframe
+                                             src={`https://www.youtube.com/embed/${attachment.videoId}`}
+                                             title="YouTube Video"
+                                             className="w-full h-full"
+                                             frameBorder="0"
+                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                             allowFullScreen
+                                           />
+                                         </div>
+                                       </div>
+                                    ) : attachment.type.startsWith('image/') ? (
+                                      <img
+                                        src={attachment.url}
+                                        alt={attachment.name}
+                                        className="max-w-full h-auto rounded-lg border"
+                                        style={{ maxHeight: '300px' }}
+                                      />
+                                    ) : (
+                                      <a
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
+                                      >
+                                        <FileText className="h-4 w-4" />
+                                        <span className="text-sm">{attachment.name}</span>
+                                      </a>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Post Interactions */}
+                            <PostInteractions 
+                              postId={post.id}
+                              userId={post.user_id}
+                              isAdmin={isAdmin}
+                            />
                         </CardContent>
                       </Card>
                     ))
