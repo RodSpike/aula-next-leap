@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
 import { CourseManagement } from "@/components/CourseManagement";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus } from "lucide-react";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -128,7 +128,8 @@ export default function AdminPanel() {
           description,
           level,
           created_by,
-          created_at
+          created_at,
+          archived
         `)
         .order('created_at', { ascending: false });
 
@@ -660,6 +661,14 @@ export default function AdminPanel() {
                   <GenerateAllLessonsButton />
                 </div>
                 
+                <div className="bg-background/50 p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-3">Manual Lesson Editing</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Edit individual lessons manually with full control over content, explanations, and exercises.
+                  </p>
+                  <CourseManagement />
+                </div>
+                
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <Star className="w-4 h-4 text-amber-600" />
@@ -911,6 +920,7 @@ export default function AdminPanel() {
                         <TableHead>Level</TableHead>
                         <TableHead>Creator</TableHead>
                         <TableHead>Members</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -932,16 +942,42 @@ export default function AdminPanel() {
                           <TableCell>{group.creator_display_name}</TableCell>
                           <TableCell>{group.member_count}</TableCell>
                           <TableCell>
+                            {(group as any).archived ? (
+                              <Badge variant="destructive">Archived</Badge>
+                            ) : (
+                              <Badge variant="secondary">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             {new Date(group.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setSelectedGroup(group)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setSelectedGroup(group)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {(group as any).archived ? (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleUpdateGroup(group.id, { archived: false })}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  onClick={() => handleUpdateGroup(group.id, { archived: true })}
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

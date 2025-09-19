@@ -145,13 +145,24 @@ export default function Community() {
     }
   }, [selectedGroup?.id, groups]);
 
-  // Auto-select group from URL (?group=ID)
+  // Auto-select group from URL (?group=ID) or localStorage
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const groupId = params.get('group');
-    if (groupId && groups.length > 0) {
-      const match = groups.find(g => g.id === groupId);
-      if (match) setSelectedGroup(match);
+    const savedGroupId = localStorage.getItem('selectedGroupId');
+    
+    if (groups.length > 0) {
+      let targetGroupId = groupId || savedGroupId;
+      if (targetGroupId) {
+        const match = groups.find(g => g.id === targetGroupId);
+        if (match) {
+          setSelectedGroup(match);
+          // Clear localStorage after using it
+          if (savedGroupId) {
+            localStorage.removeItem('selectedGroupId');
+          }
+        }
+      }
     }
   }, [location.search, groups]);
 

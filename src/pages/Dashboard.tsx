@@ -448,7 +448,10 @@ export default function Dashboard() {
                           <p className="font-medium">{group.name}</p>
                           <p className="text-sm text-muted-foreground">{group.level} Level</p>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => navigate('/community')}>Visit</Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          localStorage.setItem('selectedGroupId', group.id);
+                          navigate('/community');
+                        }}>Visit</Button>
                       </div>
                     ))}
                   </div>

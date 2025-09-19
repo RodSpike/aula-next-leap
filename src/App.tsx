@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { InitializeCourses } from "@/components/InitializeCourses";
 import { FloatingChatBubble } from "@/components/FloatingChatBubble";
+import { NavigationPersistence } from "@/components/NavigationPersistence";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -30,6 +31,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
+        <NavigationPersistence />
         <InitializeCourses />
         <TooltipProvider>
           <Toaster />

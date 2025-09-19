@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, Edit2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { LessonEditor } from "@/components/LessonEditor";
 
 interface Course {
   id: string;
@@ -21,6 +21,7 @@ interface Course {
   created_at: string;
   updated_at: string;
   lessons_count?: number;
+  lessons?: any[];
 }
 
 interface CourseFormData {
@@ -37,13 +38,14 @@ export const CourseManagement = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<Course | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CourseFormData>({
     title: '',
     description: '',
     level: 'A1'
   });
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCourses();
@@ -55,7 +57,11 @@ export const CourseManagement = () => {
         .from('courses')
         .select(`
           *,
-          lessons (count)
+          lessons (
+            id,
+            title,
+            order_index
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -63,7 +69,7 @@ export const CourseManagement = () => {
 
       const coursesWithCount = data.map(course => ({
         ...course,
-        lessons_count: course.lessons?.[0]?.count || 0
+        lessons_count: course.lessons?.length || 0
       }));
 
       setCourses(coursesWithCount);
@@ -185,8 +191,13 @@ export const CourseManagement = () => {
     });
   };
 
-  const navigateToCourse = (courseId: string) => {
-    navigate(`/admin/course/${courseId}`);
+  const openLessonEditor = (course: Course) => {
+    setSelectedCourseForLessons(course);
+    if (course.lessons && course.lessons.length > 0) {
+      setSelectedLessonId(course.lessons[0].id);
+    } else {
+      setSelectedLessonId(null);
+    }
   };
 
   if (loading) {
@@ -272,7 +283,7 @@ export const CourseManagement = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigateToCourse(course.id)}
+                    onClick={() => openLessonEditor(course)}
                   >
                     Manage Content
                   </Button>
@@ -354,6 +365,66 @@ export const CourseManagement = () => {
             </Button>
             <Button onClick={handleUpdateCourse}>Update Course</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lesson Editor Dialog */}
+      <Dialog 
+        open={!!selectedCourseForLessons} 
+        onOpenChange={() => {
+          setSelectedCourseForLessons(null);
+          setSelectedLessonId(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Lessons - {selectedCourseForLessons?.title}</DialogTitle>
+            <DialogDescription>
+              Create and edit lesson content and exercises for this course.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCourseForLessons && (
+            <div className="space-y-4">
+              {/* Lesson Selection */}
+              {selectedCourseForLessons.lessons && selectedCourseForLessons.lessons.length > 0 && (
+                <div>
+                  <Label>Select Lesson to Edit:</Label>
+                  <Select value={selectedLessonId || ""} onValueChange={setSelectedLessonId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a lesson" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCourseForLessons.lessons
+                        .sort((a, b) => a.order_index - b.order_index)
+                        .map((lesson) => (
+                          <SelectItem key={lesson.id} value={lesson.id}>
+                            {lesson.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              {selectedLessonId && (
+                <LessonEditor
+                  lessonId={selectedLessonId}
+                  lessonTitle={selectedCourseForLessons.lessons?.find(l => l.id === selectedLessonId)?.title || "Lesson"}
+                  onClose={() => {
+                    setSelectedCourseForLessons(null);
+                    setSelectedLessonId(null);
+                    fetchCourses(); // Refresh courses to update lesson counts
+                  }}
+                />
+              )}
+              
+              {!selectedLessonId && selectedCourseForLessons.lessons?.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  This course has no lessons yet. Use the AI Content Generation to create lessons first.
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
