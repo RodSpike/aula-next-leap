@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PersonalProgress } from "@/components/PersonalProgress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,8 @@ import {
   Filter,
   MoreVertical,
   Edit2,
-  Archive
+  Archive,
+  Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -45,11 +47,11 @@ interface CommunityGroup {
   max_members: number;
   created_at: string;
   group_type: 'open' | 'closed';
-  objective?: string;
   invite_code?: string;
   member_count?: number;
   is_member?: boolean;
   can_post?: boolean;
+  archived?: boolean;
 }
 
 interface GroupPost {
@@ -72,6 +74,7 @@ interface GroupPost {
 export default function Community() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const [groups, setGroups] = useState<CommunityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<CommunityGroup | null>(null);
   const [posts, setPosts] = useState<GroupPost[]>([]);
@@ -89,6 +92,10 @@ export default function Community() {
   const [groupFilter, setGroupFilter] = useState<"all" | "official" | "user">("all");
   const [userProfile, setUserProfile] = useState<any>(null);
   const [selectedGroupForCode, setSelectedGroupForCode] = useState<CommunityGroup | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isEditPostOpen, setIsEditPostOpen] = useState(false);
+  const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [editPostContent, setEditPostContent] = useState<string>("");
 
   useEffect(() => {
     if (user) {
@@ -97,6 +104,33 @@ export default function Community() {
         fetchGroups();
       });
     }
+  }, [user]);
+
+  // Admin role check and immediate visibility updates
+  useEffect(() => {
+    const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
+    const checkAdminStatus = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      setIsAdmin(!!data || (user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false));
+    };
+
+    checkAdminStatus();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkAdminStatus();
+    };
+    window.addEventListener('focus', checkAdminStatus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', checkAdminStatus as any);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -111,12 +145,23 @@ export default function Community() {
     }
   }, [selectedGroup?.id, groups]);
 
+  // Auto-select group from URL (?group=ID)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const groupId = params.get('group');
+    if (groupId && groups.length > 0) {
+      const match = groups.find(g => g.id === groupId);
+      if (match) setSelectedGroup(match);
+    }
+  }, [location.search, groups]);
+
   const fetchGroups = async () => {
     try {
       // First get all community groups
       const { data, error } = await supabase
         .from('community_groups')
         .select('*')
+        .eq('archived', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -391,6 +436,41 @@ export default function Community() {
         description: error.message || "Failed to leave group",
         variant: "destructive",
       });
+    }
+  };
+
+  const archiveGroup = async (group: CommunityGroup) => {
+    const proceed = confirm(group.archived ? 'Restore this group?' : 'Archive this group? It will be hidden from public view.');
+    if (!proceed) return;
+    try {
+      const { error } = await supabase
+        .from('community_groups')
+        .update({ archived: !group.archived })
+        .eq('id', group.id);
+      if (error) throw error;
+      toast({ title: 'Success', description: group.archived ? 'Group restored' : 'Group archived' });
+      if (selectedGroup?.id === group.id && !group.archived) {
+        setSelectedGroup(null);
+      }
+      fetchGroups();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update group', variant: 'destructive' });
+    }
+  };
+
+  const deleteGroup = async (group: CommunityGroup) => {
+    if (!confirm('Delete this group permanently? This action cannot be undone.')) return;
+    try {
+      const { error } = await supabase
+        .from('community_groups')
+        .delete()
+        .eq('id', group.id);
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Group deleted' });
+      if (selectedGroup?.id === group.id) setSelectedGroup(null);
+      fetchGroups();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete group', variant: 'destructive' });
     }
   };
 
@@ -734,6 +814,30 @@ export default function Community() {
                             <Badge variant={isUserCurrentLevel ? "default" : "outline"} className="text-xs">
                               {group.level}
                             </Badge>
+                            {isAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => { e.stopPropagation(); archiveGroup(group); }}
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive Group
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={(e) => { e.stopPropagation(); deleteGroup(group); }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Group
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </div>
                       {group.description && (
@@ -853,19 +957,13 @@ export default function Community() {
                            <h4 className="font-semibold text-primary mb-2">
                              {selectedGroup.is_default ? '🏫 Official Aula Click Community' : '👥 User Community'}
                            </h4>
-                           {selectedGroup.is_default ? (
-                             <p className="text-sm text-muted-foreground">
-                               Welcome to the official {selectedGroup.level} level community! 
-                               This is your space to practice English, get help from peers, and improve together. 
-                               Connect with other learners at your level and enhance your language skills.
-                             </p>
-                           ) : (
-                             selectedGroup.objective && (
-                               <p className="text-sm text-muted-foreground">
-                                 <strong>Group Objective:</strong> {selectedGroup.objective}
-                               </p>
-                             )
-                           )}
+                            {selectedGroup.is_default ? (
+                              <p className="text-sm text-muted-foreground">
+                                Welcome to the official {selectedGroup.level} level community! 
+                                This is your space to practice English, get help from peers, and improve together. 
+                                Connect with other learners at your level and enhance your language skills.
+                              </p>
+                            ) : null}
                          </div>
                          
                          {selectedGroup.description && (
@@ -1034,6 +1132,22 @@ export default function Community() {
                               postId={post.id}
                               userId={post.user_id}
                               isAdmin={isAdmin}
+                              onEditPost={() => {
+                                setEditPostId(post.id);
+                                setEditPostContent(post.content);
+                                setIsEditPostOpen(true);
+                              }}
+                              onDeletePost={async () => {
+                                if (!confirm('Delete this post?')) return;
+                                try {
+                                  const { error } = await supabase.rpc('admin_delete_post', { post_id: post.id });
+                                  if (error) throw error;
+                                  toast({ title: 'Success', description: 'Post deleted' });
+                                  fetchPosts(selectedGroup.id);
+                                } catch (error: any) {
+                                  toast({ title: 'Error', description: error.message || 'Failed to delete post', variant: 'destructive' });
+                                }
+                              }}
                             />
                         </CardContent>
                       </Card>
@@ -1065,9 +1179,43 @@ export default function Community() {
                 </CardContent>
               </Card>
             )}
+           </div>
+         </div>
+       </div>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={isEditPostOpen} onOpenChange={setIsEditPostOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={editPostContent}
+              onChange={(e) => setEditPostContent(e.target.value)}
+              rows={6}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditPostOpen(false)}>Cancel</Button>
+              <Button onClick={async () => {
+                if (!editPostId) return;
+                try {
+                  const { error } = await supabase
+                    .from('group_posts')
+                    .update({ content: editPostContent })
+                    .eq('id', editPostId);
+                  if (error) throw error;
+                  toast({ title: 'Success', description: 'Post updated' });
+                  setIsEditPostOpen(false);
+                  if (selectedGroup) fetchPosts(selectedGroup.id);
+                } catch (error: any) {
+                  toast({ title: 'Error', description: error.message || 'Failed to update post', variant: 'destructive' });
+                }
+              }}>Save</Button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        </DialogContent>
+      </Dialog>
+     </div>
+   );
+ }

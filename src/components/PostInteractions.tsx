@@ -98,23 +98,10 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
 
       if (error) throw error;
 
-      // Get profile data separately
-      const commentsWithProfiles = await Promise.all(
-        (data || []).map(async (comment) => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('display_name')
-            .eq('user_id', comment.user_id)
-            .single();
-
-          return {
-            ...comment,
-            profiles: profileData || { display_name: 'Unknown User' }
-          };
-        })
-      );
-
-      if (error) throw error;
+      const commentsWithProfiles = (data || []).map((comment) => ({
+        ...comment,
+        profiles: { display_name: 'Member' }
+      }));
 
       setComments(commentsWithProfiles);
       setCommentCount(commentsWithProfiles.length);
