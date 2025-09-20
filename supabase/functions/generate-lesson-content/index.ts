@@ -1,17 +1,12 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
-const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,121 +14,82 @@ serve(async (req) => {
   }
 
   try {
-    const { lessonTitle, courseLevel, lessonDescription } = await req.json();
-    
-    console.log(`Generating content for lesson: ${lessonTitle} (${courseLevel})`);
+    const { lessonTitle, courseLevel } = await req.json();
 
-    // Your specialized AI prompt
-    const systemPrompt = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
+    if (!openAIApiKey) {
+      throw new Error('Missing OPENAI_API_KEY secret');
+    }
 
-1. Ser paciente, encorajador e solidário
-2. Fornecer explicações claras sobre gramática, vocabulário e pronunciação
-3. Corrigir erros gentilmente e explicar por que a correção é necessária
-4. Oferecer exemplos práticos e exercícios de inglês
-5. Ajudar com prática de conversação e discussões
-6. Responder perguntas sobre regras gramaticais e conceitos do inglês
-7. Sugerir melhorias para estudos e aprendizado de inglês
-8. Ser envolvente e tornar o aprendizado divertido
-9. Adaptar seu estilo de ensino ao nível do usuário
-10. Fornecer contexto cultural quando relevante
-11. Criar exercícios interativos fazendo perguntas como "Agora vamos fazer um exercício. Qual é..." ou "Você pode me dizer..."
-12. Guiar estudantes através de aprendizado passo a passo com perguntas de acompanhamento
+    const systemPrompt = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Siga estas regras:
+- Use texto simples (sem markdown), com quebras de linha para legibilidade
+- Adapte ao nível informado e inclua traduções PT-BR
+- Sempre inclua exercícios progressivos e um role-play final`;
 
-REGRAS DE FORMATAÇÃO:
-- Use texto simples sem formatação markdown
-- NÃO use ** para texto em negrito
-- NÃO use * para ênfase
-- NÃO use # para cabeçalhos
-- Use formatação de texto simples e limpa
-- Use quebras de linha para melhor legibilidade
-- Use letras maiúsculas para ênfase quando necessário
-- Use aspas para exemplos`;
+    const userPrompt = `Crie uma AULA COMPLETA para o nível ${courseLevel} sobre "${lessonTitle}" seguindo este formato:
 
-    const userPrompt = `Crie uma aula COMPLETA e DETALHADA de inglês para o nível ${courseLevel} sobre "${lessonTitle}". 
-
-IMPORTANTE: Siga EXATAMENTE este formato estruturado (baseado no exemplo da Aula 1):
-
-Aula X: [Título da Aula]
+Aula: ${lessonTitle}
 
 Objetivo:
-- [Lista de objetivos específicos da aula]
+- Liste objetivos específicos
 
-Parte 1: [Nome da primeira parte]
-[Conteúdo detalhado da primeira parte, incluindo:]
-- Vocabulário com traduções em português
-- Seções organizadas (como Formais/Informais quando aplicável)
-- Exemplos práticos com traduções
-- Atividades sugeridas
+Parte 1: [título]
+- Vocabulário (com tradução)
+- Explicações claras
+- Exemplos práticos (com tradução)
 
-Parte 2: [Nome da segunda parte]
-[Conteúdo gramatical ou estrutural, incluindo:]
-- Tabelas com conjugações/regras quando aplicável
-- Exemplos de frases (afirmativas, negativas, interrogativas)
-- Traduções em português para todos os exemplos
+Parte 2: [título]
+- Regras/gramática (tabelas em texto simples se necessário)
+- Exemplos afirmativos/negativos/interrogativos (com tradução)
 
-Parte 3: [Nome da terceira parte]
-[Conteúdo adicional relevante ao tópico]
-- Mais vocabulário ou estruturas
-- Tabelas de referência quando necessário
-- Exemplos contextualizados
+Parte 3: [título]
+- Conteúdo adicional relevante
+- Mais exemplos contextualizados (com tradução)
 
 Práticas e Exercícios:
-1. [Exercício 1 com instruções claras]
-2. [Exercício 2 com exemplos]
-3. [Exercício 3 - Role-Play ou prática oral com diálogo exemplo e tradução]
+1. Exercício 1 com instruções claras
+2. Exercício 2
+3. Role-play/diálogo com tradução
 
-REQUISITOS OBRIGATÓRIOS:
-- Inclua SEMPRE traduções em português
-- Crie tabelas organizadas quando apropriado
-- Forneça exemplos práticos e contextualizados
-- Mantenha o nível ${courseLevel} apropriado
-- Inclua pelo menos 15-20 palavras de vocabulário novo
-- Crie exercícios progressivos (do mais simples ao mais complexo)
-- Termine sempre com uma atividade de role-play ou diálogo
+Requisitos:
+- 15–20 palavras novas de vocabulário
+- Traduções PT-BR em todos os exemplos
+- Conteúdo detalhado porém claro para ${courseLevel}`;
 
-A aula deve ser TÃO DETALHADA quanto a Aula 1 de exemplo que já existe.`;
-
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${deepSeekApiKey}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
+        temperature: 0.6,
         max_tokens: 4000,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('DeepSeek API error:', errorData);
-      throw new Error(`DeepSeek API error: ${response.status}`);
+      const errTxt = await response.text();
+      console.error('OpenAI API error:', errTxt);
+      return new Response(JSON.stringify({ success: false, error: 'OpenAI error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
-    
-    console.log('Generated lesson content successfully');
+    const generatedContent = data.choices?.[0]?.message?.content ?? '';
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      content: generatedContent 
-    }), {
+    return new Response(JSON.stringify({ success: true, content: generatedContent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-  } catch (error) {
-    console.error('Error generating lesson content:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
-    }), {
+  } catch (error: any) {
+    console.error('Error in generate-lesson-content:', error);
+    return new Response(JSON.stringify({ success: false, error: error.message || 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

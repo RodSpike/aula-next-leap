@@ -63,6 +63,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<{ title: string; explanation: string } | null>(null);
+  const [lessonBody, setLessonBody] = useState<string>("");
 
   useEffect(() => {
     fetchLessonData();
@@ -99,6 +100,16 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
         ...item,
         options: item.options as string[],
       })));
+
+      // Fetch full lesson body from lessons table
+      const { data: lessonRow, error: lessonRowError } = await supabase
+        .from('lessons')
+        .select('content')
+        .eq('id', lessonId)
+        .maybeSingle();
+      if (lessonRowError) throw lessonRowError;
+      setLessonBody(lessonRow?.content || '');
+
     } catch (error: any) {
       console.error('Error fetching lesson data:', error);
       toast({
@@ -152,7 +163,31 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
       console.error('Error saving content:', error);
       toast({
         title: "Error",
-        description: "Failed to save content",
+        description: error.message || "Failed to save content",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const saveLessonBody = async () => {
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('lessons')
+        .update({ content: lessonBody })
+        .eq('id', lessonId);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Full lesson saved successfully",
+      });
+    } catch (error: any) {
+      console.error('Error saving lesson body:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save lesson",
         variant: "destructive",
       });
     } finally {
@@ -353,6 +388,27 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
           Close
         </Button>
       </div>
+
+      {/* Full Lesson Body */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Full Lesson Content</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            placeholder="Paste or edit the entire lesson content here"
+            value={lessonBody}
+            onChange={(e) => setLessonBody(e.target.value)}
+            rows={14}
+          />
+          <div className="flex gap-2">
+            <Button onClick={saveLessonBody} disabled={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Full Lesson
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Lesson Content Section */}
       <Card>
