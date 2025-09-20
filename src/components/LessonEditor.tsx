@@ -62,6 +62,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
   const [isAddingContent, setIsAddingContent] = useState(false);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState<{ title: string; explanation: string } | null>(null);
 
   useEffect(() => {
     fetchLessonData();
@@ -306,6 +307,35 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
     setNewExercise({ ...newExercise, options: newOptions });
   };
 
+  const handleEditContent = (content: LessonContent) => {
+    setEditingContentId(content.id!);
+    setEditingContent({
+      title: content.title,
+      explanation: content.explanation || ''
+    });
+  };
+
+  const handleSaveEditedContent = () => {
+    if (!editingContent || !editingContentId) return;
+
+    const content: LessonContent = {
+      id: editingContentId,
+      title: editingContent.title,
+      explanation: editingContent.explanation,
+      section_type: 'explanation',
+      order_index: 0,
+    };
+
+    saveContent(content);
+    setEditingContentId(null);
+    setEditingContent(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingContentId(null);
+    setEditingContent(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -338,26 +368,53 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
         <CardContent className="space-y-4">
           {lessonContent.map((content) => (
             <div key={content.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">{content.title}</h4>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingContentId(content.id!)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteContent(content.id!)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+              {editingContentId === content.id ? (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Content Title"
+                    value={editingContent?.title || ''}
+                    onChange={(e) => setEditingContent(prev => prev ? { ...prev, title: e.target.value } : null)}
+                  />
+                  <Textarea
+                    placeholder="Content Explanation"
+                    value={editingContent?.explanation || ''}
+                    onChange={(e) => setEditingContent(prev => prev ? { ...prev, explanation: e.target.value } : null)}
+                    rows={4}
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveEditedContent} disabled={saving}>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <p className="text-muted-foreground">{content.explanation}</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">{content.title}</h4>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditContent(content)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteContent(content.id!)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">{content.explanation}</p>
+                </>
+              )}
             </div>
           ))}
 

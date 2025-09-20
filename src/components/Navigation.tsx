@@ -93,6 +93,10 @@ export const Navigation = () => {
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
+                onClick={item.name === "My Dashboard" ? () => {
+                  // Clear navigation persistence to force dashboard navigation
+                  localStorage.removeItem('aula-click-nav-state');
+                } : undefined}
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.name}</span>
@@ -112,7 +116,13 @@ export const Navigation = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard">
+                    <Link 
+                      to="/dashboard" 
+                      onClick={() => {
+                        // Clear navigation persistence to force dashboard navigation
+                        localStorage.removeItem('aula-click-nav-state');
+                      }}
+                    >
                       <User className="mr-2 h-4 w-4" />
                       Dashboard
                     </Link>

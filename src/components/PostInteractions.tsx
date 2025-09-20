@@ -197,7 +197,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     }
   };
 
-  const CommentsList = () => (
+  const CommentsList = React.memo(() => (
     <div className="space-y-4">
       <ScrollArea className="max-h-80">
         {comments.map((comment) => (
@@ -226,6 +226,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
       
       <div className="flex space-x-2 pt-4 border-t">
         <Input
+          key={`comment-input-${postId}`}
           placeholder="Write a comment..."
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
@@ -246,7 +247,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
         </Button>
       </div>
     </div>
-  );
+  ));
 
   return (
     <div className="flex items-center justify-between pt-3">

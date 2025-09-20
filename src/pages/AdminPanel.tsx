@@ -107,6 +107,8 @@ export default function AdminPanel() {
   useEffect(() => {
     if (isAdmin && activeTab === "users") {
       fetchAllUsers();
+    } else if (isAdmin && activeTab === "admins") {
+      fetchAllUsers(); // Reuse same function but filter for admins
     } else if (isAdmin && activeTab === "groups") {
       fetchAllGroups();
     } else if (isAdmin && activeTab === "posts") {
@@ -562,7 +564,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -570,6 +572,10 @@ export default function AdminPanel() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="admins" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Admins
             </TabsTrigger>
             <TabsTrigger value="content" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -889,6 +895,148 @@ export default function AdminPanel() {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Admins Tab */}
+          <TabsContent value="admins" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Administrator Management
+                </CardTitle>
+                <div className="flex items-center gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage platform administrators and their permissions
+                  </p>
+                  <Button onClick={fetchAllUsers} disabled={usersLoading}>
+                    {usersLoading ? 'Loading...' : 'Refresh'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {usersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-muted-foreground">Loading administrators...</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Administrator</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Promoted By</TableHead>
+                        <TableHead>Date Promoted</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.filter(user => user.is_admin).map((adminUser) => (
+                        <TableRow key={adminUser.user_id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-medium flex items-center gap-2">
+                                  {adminUser.display_name || adminUser.username || 'Unnamed User'}
+                                  <Shield className="h-4 w-4 text-yellow-500" />
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  User ID: {adminUser.user_id.substring(0, 8)}...
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{adminUser.email}</p>
+                              {MASTER_ADMIN_EMAILS.includes(adminUser.email) && (
+                                <Badge variant="default" className="text-xs mt-1">
+                                  Master Admin
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {(adminUser as any).promoted_by ? (
+                                <span>Admin Promoted</span>
+                              ) : (
+                                <span className="text-muted-foreground">System/Founder</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {new Date(adminUser.created_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {/* Only master admin can demote other admins (except themselves) */}
+                              {currentUserEmail === 'rodspike2k8@gmail.com' && 
+                               adminUser.email !== 'rodspike2k8@gmail.com' && 
+                               !MASTER_ADMIN_EMAILS.includes(adminUser.email) ? (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm"
+                                      onClick={() => setSelectedUser(adminUser)}
+                                    >
+                                      <UserMinus className="h-4 w-4 mr-2" />
+                                      Demote Admin
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Demote Administrator</DialogTitle>
+                                      <DialogDescription>
+                                        Are you sure you want to remove administrator privileges from {adminUser.display_name || adminUser.email}? 
+                                        This will revert them to a regular user account.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                      <Button 
+                                        variant="outline" 
+                                        onClick={() => setSelectedUser(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button 
+                                        variant="destructive"
+                                        onClick={() => {
+                                          handleDemoteUser(adminUser.user_id);
+                                          setSelectedUser(null);
+                                        }}
+                                      >
+                                        Demote to User
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <div className="text-xs text-muted-foreground">
+                                  {MASTER_ADMIN_EMAILS.includes(adminUser.email) 
+                                    ? "Master Admin - Cannot Demote" 
+                                    : "Protected Admin"}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+                
+                {users.filter(user => user.is_admin).length === 0 && !usersLoading && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No administrators found.
+                  </div>
                 )}
               </CardContent>
             </Card>
