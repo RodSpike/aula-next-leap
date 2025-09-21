@@ -481,7 +481,7 @@ export default function AdminPanel() {
             .select('role, promoted_by')
             .eq('user_id', profile.user_id)
             .eq('role', 'admin')
-            .single();
+            .maybeSingle();
 
           // Get active courses count
           const { count: activeCourses } = await supabase

@@ -29,35 +29,94 @@ serve(async (req) => {
 - Adapte ao nível informado e inclua traduções PT-BR
 - Sempre inclua exercícios progressivos e um role-play final`;
 
-    const userPrompt = `Crie uma AULA COMPLETA para o nível ${courseLevel} sobre "${lessonTitle}" seguindo este formato:
+    const userPrompt = `Crie uma AULA COMPLETA para o nível ${courseLevel} sobre "${lessonTitle}" seguindo EXATAMENTE este formato estruturado:
 
 Aula: ${lessonTitle}
 
 Objetivo:
-- Liste objetivos específicos
+Aprender [descreva o objetivo principal da aula]. Entender [conceito gramatical específico]. Praticar [habilidades específicas].
 
-Parte 1: [título]
-- Vocabulário (com tradução)
-- Explicações claras
-- Exemplos práticos (com tradução)
+Parte 1: [Título da primeira seção - ex: "Cumprimentos e Introduções"]
+Vocabulário: [Categoria do vocabulário - ex: "Saudações (Greetings)"]
+• Hello - Olá
+• Good morning - Bom dia
+• How are you? - Como vai você?
+• Nice to meet you - Prazer em conhecê-lo
+• Goodbye - Tchau
 
-Parte 2: [título]
-- Regras/gramática (tabelas em texto simples se necessário)
-- Exemplos afirmativos/negativos/interrogativos (com tradução)
+Exemplos práticos:
+- Hello, my name is John. (Olá, meu nome é John.)
+- Good morning, class! (Bom dia, turma!)
+- How are you today? (Como você está hoje?)
 
-Parte 3: [título]
-- Conteúdo adicional relevante
-- Mais exemplos contextualizados (com tradução)
+Parte 2: [Título da segunda seção - ex: "Gramática: Verbo To Be"]
+Regras principais:
+Formas afirmativas:
+- I am (I'm) - Eu sou/estou
+- You are (You're) - Você é/está
+- He/She/It is (He's/She's/It's) - Ele/Ela é/está
+
+Formas negativas:
+- I am not (I'm not) - Eu não sou/estou
+- You are not (You aren't) - Você não é/está
+- He/She/It is not (isn't) - Ele/Ela não é/está
+
+Formas interrogativas:
+- Are you...? - Você é/está...?
+- Is he/she...? - Ele/ela é/está...?
+- Am I...? - Eu sou/estou...?
+
+Exemplos contextualizados:
+Afirmativo: I am a student. (Eu sou um estudante.)
+Negativo: She is not Brazilian. (Ela não é brasileira.)
+Interrogativo: Are you hungry? (Você está com fome?)
+
+Parte 3: [Título da terceira seção - ex: "Perguntas com Wh-"]
+Lista de palavras interrogativas:
+• What - O que/Qual
+• Where - Onde
+• When - Quando
+• Who - Quem
+• Why - Por que
+• How - Como
+
+Exemplos em contexto:
+- What is your name? (Qual é o seu nome?)
+- Where are you from? (De onde você é?)
+- When is your birthday? (Quando é seu aniversário?)
 
 Práticas e Exercícios:
-1. Exercício 1 com instruções claras
-2. Exercício 2
-3. Role-play/diálogo com tradução
 
-Requisitos:
-- 15–20 palavras novas de vocabulário
-- Traduções PT-BR em todos os exemplos
-- Conteúdo detalhado porém claro para ${courseLevel}`;
+Exercício 1: Complete com a forma correta do verbo "to be"
+1. I _____ a teacher. (am/is/are)
+2. She _____ from Brazil. (am/is/are)
+3. They _____ students. (am/is/are)
+
+Exercício 2: Traduza para o inglês
+1. Eu sou médico.
+2. Você não é brasileiro.
+3. Ela está feliz?
+
+Role-play: Apresentação pessoal
+A: Hello! My name is Maria. What's your name?
+B: Hi Maria! I'm Pedro. Nice to meet you.
+A: Nice to meet you too. Where are you from?
+B: I'm from São Paulo. And you?
+A: I'm from Rio de Janeiro.
+
+Tradução:
+A: Olá! Meu nome é Maria. Qual é o seu nome?
+B: Oi Maria! Eu sou Pedro. Prazer em conhecê-la.
+A: Prazer em conhecê-lo também. De onde você é?
+B: Eu sou de São Paulo. E você?
+A: Eu sou do Rio de Janeiro.
+
+REQUISITOS OBRIGATÓRIOS:
+- Mínimo 15-20 palavras de vocabulário com tradução
+- Todas as frases em inglês devem ter tradução em português
+- Conteúdo apropriado para nível ${courseLevel}
+- Estrutura clara e didática
+- Exercícios progressivos do básico ao avançado`;
 
     const payload = {
       model: 'deepseek/deepseek-chat',
