@@ -248,6 +248,7 @@ export default function Course() {
   const currentLessonContent = lessonContent.filter(content => content.lesson_id === currentLesson?.id);
   const introductionContent = currentLessonContent.filter(content => content.section_type === 'introduction');
   const practiceContent = currentLessonContent.filter(content => content.section_type === 'practice');
+  const lessonHtml = currentLesson?.content || "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -348,14 +349,23 @@ export default function Course() {
             {showIntroduction ? (
               // Introduction/Explanation Content
               <div className="space-y-6">
+                {lessonHtml && (
+                  <article
+                    className="max-w-none"
+                    dangerouslySetInnerHTML={{ __html: lessonHtml }}
+                  />
+                )}
+
                 {introductionContent.length > 0 ? (
                   <LessonContent content={introductionContent} />
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      Conteúdo de explicação será adicionado em breve para esta lição.
-                    </p>
-                  </div>
+                  !lessonHtml && (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Conteúdo de explicação será adicionado em breve para esta lição.
+                      </p>
+                    </div>
+                  )
                 )}
                 
                 {practiceContent.length > 0 && (

@@ -1,11 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
@@ -16,8 +15,13 @@ serve(async (req) => {
   try {
     const { lessonTitle, courseLevel } = await req.json();
 
-    if (!openAIApiKey) {
-      throw new Error('Missing OPENAI_API_KEY secret');
+    const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!openRouterApiKey) {
+      console.error('Missing OPENROUTER_API_KEY secret');
+      return new Response(JSON.stringify({ success: false, error: 'Missing OPENROUTER_API_KEY secret' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const systemPrompt = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Siga estas regras:
@@ -55,34 +59,39 @@ Requisitos:
 - Traduções PT-BR em todos os exemplos
 - Conteúdo detalhado porém claro para ${courseLevel}`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const payload = {
+      model: 'deepseek/deepseek-chat',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1600,
+      stream: false
+    };
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openRouterApiKey}`,
+        'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
+        'X-Title': 'Generate Lesson Content',
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.6,
-        max_tokens: 4000,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errTxt = await response.text();
-      console.error('OpenAI API error:', errTxt);
-      return new Response(JSON.stringify({ success: false, error: 'OpenAI error' }), {
-        status: 500,
+      console.error('OpenRouter API error:', response.status, errTxt);
+      return new Response(JSON.stringify({ success: false, error: `OpenRouter error ${response.status}` }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const data = await response.json();
-    const generatedContent = data.choices?.[0]?.message?.content ?? '';
+    const generatedContent = data?.choices?.[0]?.message?.content ?? '';
 
     return new Response(JSON.stringify({ success: true, content: generatedContent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -90,7 +99,7 @@ Requisitos:
   } catch (error: any) {
     console.error('Error in generate-lesson-content:', error);
     return new Response(JSON.stringify({ success: false, error: error.message || 'Unknown error' }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

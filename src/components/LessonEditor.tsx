@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Edit, Save, X } from "lucide-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface Exercise {
   id?: string;
@@ -64,6 +66,19 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<{ title: string; explanation: string } | null>(null);
   const [lessonBody, setLessonBody] = useState<string>("");
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      [{ align: [] }],
+      ['link', 'clean']
+    ]
+  };
+  const quillFormats = [
+    'header', 'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet', 'align', 'link'
+  ];
 
   useEffect(() => {
     fetchLessonData();
@@ -395,12 +410,15 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
           <CardTitle>Full Lesson Content</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Paste or edit the entire lesson content here"
-            value={lessonBody}
-            onChange={(e) => setLessonBody(e.target.value)}
-            rows={14}
-          />
+          <div className="rounded border">
+            <ReactQuill 
+              theme="snow" 
+              value={lessonBody} 
+              onChange={setLessonBody}
+              modules={quillModules}
+              formats={quillFormats}
+            />
+          </div>
           <div className="flex gap-2">
             <Button onClick={saveLessonBody} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
