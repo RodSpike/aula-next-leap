@@ -63,13 +63,31 @@ export default function Course() {
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showIntroduction, setShowIntroduction] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [lessonProgress, setLessonProgress] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     if (courseId && user) {
       loadCourseData();
       loadProgress();
+      checkAdminStatus();
     }
   }, [courseId, user]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('user_has_admin_role', { user_uuid: user.id });
+      
+      if (error) throw error;
+      setIsAdmin(data || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
 
   const loadCourseData = async () => {
     try {
@@ -140,6 +158,13 @@ export default function Course() {
 
       if (error) throw error;
 
+      // Build lesson progress map
+      const progressMap: {[key: string]: number} = {};
+      data?.forEach(p => {
+        progressMap[p.lesson_id] = p.score || 0;
+      });
+      setLessonProgress(progressMap);
+
       const completedLessons = data?.filter(p => p.completed).length || 0;
       const totalLessons = lessons.length;
       const progressPercent = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
@@ -184,6 +209,13 @@ export default function Course() {
         variant: "destructive",
       });
     }
+  };
+
+  const canAccessNextLesson = () => {
+    if (isAdmin) return true;
+    
+    const currentScore = lessonProgress[currentLesson?.id] || 0;
+    return currentScore >= 70;
   };
 
   if (!user) {
@@ -351,7 +383,7 @@ export default function Course() {
               <div className="space-y-6">
                 {lessonHtml && (
                   <article
-                    className="max-w-none"
+                    className="max-w-none prose prose-lg dark:prose-invert mx-auto"
                     dangerouslySetInnerHTML={{ __html: lessonHtml }}
                   />
                 )}
@@ -438,7 +470,7 @@ export default function Course() {
                   setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1));
                   setShowIntroduction(true);
                 }}
-                disabled={currentLessonIndex === lessons.length - 1}
+                disabled={currentLessonIndex === lessons.length - 1 || (!isAdmin && !canAccessNextLesson())}
               >
                 Próxima Lição →
               </Button>

@@ -475,7 +475,11 @@ export default function AdminPanel() {
       // Get aggregated stats for each user
       const usersWithStats = await Promise.all(
         profilesData.map(async (profile) => {
-          // Check if user is admin
+          // Check if user has admin role using RPC function
+          const { data: hasAdminRole } = await supabase
+            .rpc('user_has_admin_role', { user_uuid: profile.user_id });
+
+          // Get role details for promoted_by info
           const { data: adminRole } = await supabase
             .from('user_roles')
             .select('role, promoted_by')
@@ -521,7 +525,7 @@ export default function AdminPanel() {
             study_hours: Math.round(studyHours * 10) / 10,
             groups_joined: groupsJoined || 0,
             certificates: certificates || 0,
-            is_admin: !!adminRole,
+            is_admin: !!hasAdminRole,
             promoted_by: adminRole?.promoted_by
           };
         })

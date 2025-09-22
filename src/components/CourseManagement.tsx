@@ -11,6 +11,7 @@ import { Trash2, Plus, Edit2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonEditor } from "@/components/LessonEditor";
+import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
 
 interface Course {
   id: string;
@@ -208,13 +209,15 @@ export const CourseManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Course Management</h2>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Course
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <GenerateAllLessonsButton />
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Course
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Create New Course</DialogTitle>
@@ -262,7 +265,8 @@ export const CourseManagement = () => {
               <Button onClick={handleCreateCourse}>Create Course</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-4">
