@@ -218,22 +218,46 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
     if (!user) return;
 
     try {
-      await supabase
-        .from('direct_conversation_state')
-        .upsert({
-          user_id: user.id,
-          other_user_id: otherUserId,
-          group_id: groupId,
-          deleted_before: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,other_user_id,group_id'
-        });
+      // Check if this is a private group chat
+      if (otherUserId.startsWith('group_')) {
+        const groupId = otherUserId.replace('group_', '');
+        
+        // Remove user from the group (leave the group)
+        const { error } = await supabase
+          .from('group_members')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('user_id', user.id);
 
-      // Refresh conversations and clear selection if this was the selected user
-      await fetchConversations();
-      if (selectedUser?.user_id === otherUserId) {
-        setSelectedUser(null);
-        setMessages([]);
+        if (error) throw error;
+
+        // Refresh conversations and clear selection
+        await fetchConversations();
+        if (selectedUser?.user_id === otherUserId) {
+          setSelectedUser(null);
+          setMessages([]);
+          setIsPrivateGroup(false);
+          setPrivateGroupId(null);
+        }
+      } else {
+        // Handle regular direct message conversation deletion
+        await supabase
+          .from('direct_conversation_state')
+          .upsert({
+            user_id: user.id,
+            other_user_id: otherUserId,
+            group_id: groupId,
+            deleted_before: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,other_user_id,group_id'
+          });
+
+        // Refresh conversations and clear selection if this was the selected user
+        await fetchConversations();
+        if (selectedUser?.user_id === otherUserId) {
+          setSelectedUser(null);
+          setMessages([]);
+        }
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
