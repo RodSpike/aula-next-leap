@@ -59,6 +59,7 @@ interface ConversationSummary {
 interface MessagingSystemProps {
   groupId: string;
   groupName: string;
+  groupLevel?: string;
   members: GroupMember[];
   isOpen: boolean;
   onClose: () => void;
@@ -67,6 +68,7 @@ interface MessagingSystemProps {
 export const MessagingSystem: React.FC<MessagingSystemProps> = ({ 
   groupId, 
   groupName, 
+  groupLevel,
   members, 
   isOpen, 
   onClose 
@@ -323,17 +325,24 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
       console.log('Current user:', user.id);
       console.log('Selected user:', selectedUser.user_id);
 
+      const allowedLevels = ['Basic','Intermediate','Advanced','A1','A2','B1','B2','C1','C2'] as const;
+      const levelToUse = allowedLevels.includes((groupLevel as any)) ? (groupLevel as any) : 'B1';
+
+      const payload = {
+        name: privateGroupName || `Chat with ${getDisplayName(selectedUser)}`,
+        description: 'Private chat group',
+        level: levelToUse,
+        group_type: 'closed',
+        created_by: user.id,
+        max_members: 10
+      } as const;
+
+      console.log('Group payload:', payload);
+
       // Create private group
       const { data: groupData, error: groupError } = await supabase
         .from('community_groups')
-        .insert({
-          name: privateGroupName || `Chat with ${getDisplayName(selectedUser)}`,
-          description: 'Private chat group',
-          level: 'Basic',  // Use 'Basic' instead of 'mixed'
-          group_type: 'closed',  // Use 'closed' instead of 'private'
-          created_by: user.id,
-          max_members: 10
-        })
+        .insert(payload)
         .select()
         .single();
 

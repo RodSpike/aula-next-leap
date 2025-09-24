@@ -1348,6 +1348,7 @@ export default function Community() {
             onClose={() => setIsChatOpen(false)}
             groupId={selectedGroup.id}
             groupName={selectedGroup.name}
+            groupLevel={selectedGroup.level}
             members={groupMembers.map(m => {
               console.log('Mapping member:', m); // Debug log
               return {
