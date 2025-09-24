@@ -24,15 +24,22 @@ export const Navigation = () => {
     const checkAdminStatus = async () => {
       if (user) {
         console.log('Checking admin status for user:', user.id, user.email);
+        
+        // Check if user has admin role in database
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
+          .eq('role', 'admin');
         
-        console.log('Admin check result:', { data, error });
-        setIsAdmin(!!data || (user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false));
+        console.log('Admin check result:', { data, error, dataLength: data?.length });
+        
+        const hasAdminRole = data && data.length > 0;
+        const isMasterAdmin = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
+        
+        console.log('Admin status calculation:', { hasAdminRole, isMasterAdmin });
+        
+        setIsAdmin(hasAdminRole || isMasterAdmin);
       } else {
         setIsAdmin(false);
       }
