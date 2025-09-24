@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -252,27 +252,30 @@ Otherwise, return a completely new question with appropriate difficulty:
   } catch (error) {
     console.error('Error in cambridge-placement-test function:', error);
     
+    // Type-safe error handling
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     // Return appropriate status code based on error type
     let statusCode = 500;
-    let errorMessage = 'Internal server error';
+    let displayMessage = 'Internal server error';
     
-    if (error.message?.includes('API key not configured')) {
+    if (errorMessage.includes('API key not configured')) {
       statusCode = 500;
-      errorMessage = 'Service configuration error';
-    } else if (error.message?.includes('Gemini API failed')) {
+      displayMessage = 'Service configuration error';
+    } else if (errorMessage.includes('Gemini API failed')) {
       statusCode = 502;
-      errorMessage = 'External service error';
-    } else if (error.message?.includes('Failed to parse')) {
+      displayMessage = 'External service error';
+    } else if (errorMessage.includes('Failed to parse')) {
       statusCode = 502;
-      errorMessage = 'Service response error';
-    } else if (error.message?.includes('Invalid action')) {
+      displayMessage = 'Service response error';
+    } else if (errorMessage.includes('Invalid action')) {
       statusCode = 400;
-      errorMessage = 'Invalid request action';
+      displayMessage = 'Invalid request action';
     }
     
     return new Response(JSON.stringify({ 
-      error: errorMessage,
-      details: error.message
+      error: displayMessage,
+      details: errorMessage
     }), {
       status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

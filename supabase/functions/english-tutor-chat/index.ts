@@ -159,11 +159,17 @@ console.log('Sending request to OpenRouter');
     });
   } catch (error) {
     console.error('Error in english-tutor-chat function:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
+    
+    // Type-safe error logging
+    if (error instanceof Error) {
+      console.error('Error stack:', error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+    }
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(JSON.stringify({ 
-      error: `Chat function error: ${(error as Error)?.message || 'Unknown error'}`
+      error: `Chat function error: ${errorMessage}`
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

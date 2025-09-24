@@ -1,4 +1,28 @@
 project_id = "frbmvljizolvxcxdkefa"
 
+[functions.cambridge-placement-test]
+verify_jwt = false
+
+[functions.create-course-content]
+verify_jwt = false
+
+[functions.english-tutor-chat]
+verify_jwt = false
+
+[functions.generate-lesson-content]
+verify_jwt = false
+
+[functions.pdf-ocr]
+verify_jwt = false
+
 [functions.populate-learning-content]
+verify_jwt = false
+
+[functions.text-to-speech]
+verify_jwt = false
+
+[functions.translate-text]
+verify_jwt = false
+
+[functions.voice-to-text]
 verify_jwt = false
