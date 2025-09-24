@@ -50,7 +50,7 @@ export const NavigationPersistence = () => {
     }
   }, [location, user, loading]);
 
-  // Restore navigation state on auth change
+  // Restore navigation state on auth change with improved persistence
   useEffect(() => {
     if (!loading && user) {
       const loginTimestamp = localStorage.getItem(LOGIN_TIMESTAMP_KEY);
@@ -69,7 +69,7 @@ export const NavigationPersistence = () => {
         return;
       }
 
-      // Not a fresh login - restore previous state if available
+      // Not a fresh login - restore previous state if available and not on dashboard
       if (savedState && location.pathname === '/dashboard') {
         try {
           const state: NavigationState = JSON.parse(savedState);
@@ -78,19 +78,28 @@ export const NavigationPersistence = () => {
           const isRecentState = (Date.now() - state.timestamp) < 24 * 60 * 60 * 1000;
           
           if (isRecentState && state.path !== '/dashboard') {
-            navigate(state.path);
+            // Use replace instead of navigate to avoid triggering reload
+            window.history.replaceState(null, '', state.path);
             
-            // Restore scroll position after navigation
+            // Restore scroll position and specific elements
             setTimeout(() => {
               if (state.scrollPosition) {
                 window.scrollTo(0, state.scrollPosition);
               }
               
               // Handle lesson/course specific restoration
-              if (state.lessonId && location.pathname.startsWith('/course/')) {
+              if (state.lessonId && state.path.startsWith('/course/')) {
                 const lessonElement = document.getElementById(`lesson-${state.lessonId}`);
                 if (lessonElement) {
                   lessonElement.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+              
+              // Handle group restoration in community
+              if (state.groupId && state.path.startsWith('/community')) {
+                const groupElement = document.querySelector(`[data-group-id="${state.groupId}"]`);
+                if (groupElement) {
+                  (groupElement as HTMLElement).click();
                 }
               }
             }, 100);
@@ -101,7 +110,7 @@ export const NavigationPersistence = () => {
         }
       }
     }
-  }, [user, loading, navigate, location.pathname]);
+  }, [user, loading, location.pathname]);
 
   return null;
 };

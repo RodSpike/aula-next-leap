@@ -7,18 +7,26 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle, XCircle, Trophy } from "lucide-react";
 
 interface Exercise {
-  type: 'multiple_choice' | 'fill_blank';
+  type?: 'multiple_choice' | 'fill_blank';
+  exercise_type?: 'multiple_choice' | 'fill_blank';
   question: string;
   options: string[];
   correct_answer: string;
   explanation: string;
+  title?: string;
+  instructions?: string;
+  points?: number;
+  id?: string;
+  lesson_id?: string;
+  order_index?: number;
 }
 
 interface ExerciseActivityProps {
   exercises: Exercise[];
+  onComplete?: (score: number, totalPoints: number) => void;
 }
 
-export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises }) => {
+export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, onComplete }) => {
   const [currentExercise, setCurrentExercise] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>(new Array(exercises.length).fill(''));
   const [showResults, setShowResults] = useState(false);
@@ -34,6 +42,9 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises })
       setCurrentExercise(currentExercise + 1);
     } else {
       setShowResults(true);
+      const score = calculateScore();
+      const totalPoints = exercises.length;
+      onComplete?.(score, totalPoints);
     }
   };
 

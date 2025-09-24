@@ -1,0 +1,219 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Send, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+
+interface GroupMessage {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  profiles?: {
+    display_name?: string;
+    username?: string;
+    avatar_url?: string;
+  };
+  user_roles?: {
+    role: string;
+  }[];
+}
+
+interface GroupChatProps {
+  groupId: string;
+  groupName: string;
+}
+
+export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<GroupMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (groupId) {
+      fetchMessages();
+      subscribeToMessages();
+    }
+  }, [groupId]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const fetchMessages = async () => {
+    try {
+      // First get the messages
+      const { data: messageData, error: messageError } = await supabase
+        .from('group_chat_messages')
+        .select('id, content, created_at, sender_id')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: true });
+
+      if (messageError) throw messageError;
+
+      // Then get profiles and roles separately
+      const messagesWithData = await Promise.all((messageData || []).map(async (message) => {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name, username, avatar_url')
+          .eq('user_id', message.sender_id)
+          .single();
+
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', message.sender_id)
+          .eq('role', 'admin');
+        
+        return {
+          ...message,
+          profiles: profileData,
+          user_roles: roleData || []
+        };
+      }));
+
+      setMessages(messagesWithData);
+    } catch (error) {
+      console.error('Error fetching group messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel(`group-chat-${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'group_chat_messages',
+          filter: `group_id=eq.${groupId}`,
+        },
+        (payload) => {
+          fetchMessages(); // Refetch to get profile data
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('group_chat_messages')
+        .insert({
+          group_id: groupId,
+          sender_id: user.id,
+          content: newMessage.trim(),
+        });
+
+      if (error) throw error;
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const getDisplayName = (message: GroupMessage) => {
+    return message.profiles?.display_name || message.profiles?.username || 'Anonymous User';
+  };
+
+  const getAvatarFallback = (message: GroupMessage) => {
+    const name = getDisplayName(message);
+    return name.charAt(0).toUpperCase();
+  };
+
+  const isAdmin = (message: GroupMessage) => {
+    return message.user_roles?.some(role => role.role === 'admin');
+  };
+
+  if (loading) {
+    return <div className="p-4">Loading messages...</div>;
+  }
+
+  return (
+    <Card className="flex-1 flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          {groupName} - Group Chat
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col p-4">
+        <ScrollArea className="flex-1 pr-4 mb-4">
+          <div className="space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No messages yet. Start the conversation!
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div key={message.id} className="flex items-start gap-3">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={message.profiles?.avatar_url} />
+                    <AvatarFallback>{getAvatarFallback(message)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">
+                        {getDisplayName(message)}
+                      </span>
+                      {isAdmin(message) && (
+                        <Badge variant="secondary" className="text-xs">
+                          Admin
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-sm">{message.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        <div className="flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            className="flex-1"
+          />
+          <Button onClick={sendMessage} disabled={!newMessage.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

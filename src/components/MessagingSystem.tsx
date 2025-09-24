@@ -2,51 +2,43 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { 
-  MessageCircle, 
-  Send, 
-  Users, 
-  MessageSquare, 
-  X,
-  Bot,
-  User as UserIcon,
-  Minimize2,
-  Maximize2
-} from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { MessageCircle, Send, Bot, Users, UserIcon, X, Minimize2, Maximize2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { OnlineStatus } from "./OnlineStatus";
+import { OnlineStatus } from './OnlineStatus';
+import { GroupChat } from './GroupChat';
 
 interface DirectMessage {
   id: string;
-  sender_id: string;
-  receiver_id: string;
   content: string;
   created_at: string;
-  read_at: string | null;
+  sender_id: string;
+  receiver_id: string;
+  read_at?: string;
   sender_profile?: {
-    display_name: string;
-    avatar_url: string;
+    display_name?: string;
+    username?: string;
+    avatar_url?: string;
   };
   receiver_profile?: {
-    display_name: string;
-    avatar_url: string;
+    display_name?: string;
+    username?: string;
+    avatar_url?: string;
   };
 }
 
 interface GroupMember {
   user_id: string;
-  profiles: {
-    display_name: string;
-    avatar_url: string;
-    username: string;
+  status: string;
+  profiles?: {
+    display_name?: string;
+    username?: string;
+    avatar_url?: string;
   };
 }
 
@@ -58,19 +50,19 @@ interface MessagingSystemProps {
   onClose: () => void;
 }
 
-export const MessagingSystem: React.FC<MessagingSystemProps> = ({
-  groupId,
-  groupName,
-  members,
-  isOpen,
-  onClose,
+export const MessagingSystem: React.FC<MessagingSystemProps> = ({ 
+  groupId, 
+  groupName, 
+  members, 
+  isOpen, 
+  onClose 
 }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'ai-tutor' | 'direct' | 'group'>('ai-tutor');
+  const [activeTab, setActiveTab] = useState<'ai-tutor' | 'direct' | 'group'>('direct');
   const [selectedUser, setSelectedUser] = useState<GroupMember | null>(null);
-  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,59 +73,65 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
     }
   }, [isOpen, selectedUser]);
 
-  const fetchDirectMessages = async () => {
-    if (!user || !selectedUser) return;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
+  const fetchDirectMessages = async () => {
+    if (!selectedUser || !user) return;
+
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('direct_messages')
-        .select('*')
+        .select(`
+          id,
+          content,
+          created_at,
+          sender_id,
+          receiver_id,
+          read_at
+        `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.user_id}),and(sender_id.eq.${selectedUser.user_id},receiver_id.eq.${user.id})`)
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      // Fetch profile data separately to avoid relationship issues
-      const enrichedMessages = await Promise.all(
-        (data || []).map(async (message) => {
-          const { data: senderProfile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', message.sender_id)
-            .single();
+      // Get profile data for messages
+      const messagesWithProfiles = await Promise.all((data || []).map(async (msg) => {
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('display_name, username, avatar_url')
+          .eq('user_id', msg.sender_id)
+          .single();
 
-          const { data: receiverProfile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', message.receiver_id)
-            .single();
+        const { data: receiverProfile } = await supabase
+          .from('profiles')
+          .select('display_name, username, avatar_url')
+          .eq('user_id', msg.receiver_id)
+          .single();
 
-          return {
-            ...message,
-            sender_profile: senderProfile || { display_name: 'Unknown', avatar_url: '' },
-            receiver_profile: receiverProfile || { display_name: 'Unknown', avatar_url: '' },
-          };
-        })
-      );
+        return {
+          ...msg,
+          sender_profile: senderProfile,
+          receiver_profile: receiverProfile
+        };
+      }));
 
-      setDirectMessages(enrichedMessages);
-      scrollToBottom();
-    } catch (error: any) {
+      setMessages(messagesWithProfiles);
+    } catch (error) {
       console.error('Error fetching direct messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const subscribeToDirectMessages = () => {
-    if (!user || !selectedUser) return;
+    if (!selectedUser || !user) return;
 
     const channel = supabase
-      .channel(`direct-messages-${groupId}`)
+      .channel(`direct-messages-${groupId}-${user.id}-${selectedUser.user_id}`)
       .on(
         'postgres_changes',
         {
@@ -143,17 +141,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          const newMessage = payload.new as any;
+          const newMessage = payload.new as DirectMessage;
           if (
-            newMessage && 
-            typeof newMessage === 'object' &&
-            'sender_id' in newMessage &&
-            'receiver_id' in newMessage &&
-            ((newMessage.sender_id === user.id && newMessage.receiver_id === selectedUser.user_id) ||
-            (newMessage.sender_id === selectedUser.user_id && newMessage.receiver_id === user.id))
+            (newMessage.sender_id === user.id && newMessage.receiver_id === selectedUser.user_id) ||
+            (newMessage.sender_id === selectedUser.user_id && newMessage.receiver_id === user.id)
           ) {
-            setDirectMessages(prev => [...prev, newMessage as DirectMessage]);
-            scrollToBottom();
+            fetchDirectMessages();
           }
         }
       )
@@ -165,35 +158,32 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   };
 
   const sendDirectMessage = async () => {
-    if (!user || !selectedUser || !newMessage.trim()) return;
+    if (!selectedUser || !message.trim() || !user) return;
 
+    setLoading(true);
     try {
       const { error } = await supabase
         .from('direct_messages')
         .insert({
           sender_id: user.id,
           receiver_id: selectedUser.user_id,
-          content: newMessage.trim(),
-          group_id: groupId,
+          content: message.trim(),
+          group_id: groupId
         });
 
       if (error) throw error;
 
-      setNewMessage('');
-    } catch (error: any) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
+      setMessage('');
+      scrollToBottom();
+    } catch (error) {
+      console.error('Error sending direct message:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -304,22 +294,18 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                 <div className="relative">
                                   <Avatar className="w-8 h-8">
                                     <AvatarImage src={member.profiles?.avatar_url} />
-                                    <AvatarFallback className="text-xs">
-                                      {getAvatarFallback(member)}
-                                    </AvatarFallback>
+                                    <AvatarFallback>{getAvatarFallback(member)}</AvatarFallback>
                                   </Avatar>
-                                  <OnlineStatus 
-                                    userId={member.user_id} 
-                                    groupId={groupId} 
+                                  <OnlineStatus
+                                    userId={member.user_id}
+                                    groupId={groupId}
                                     showBadge={false}
-                                    className="absolute -bottom-1 -right-1 w-3 h-3 border-2 border-white"
+                                    className="absolute -bottom-1 -right-1 border-2 border-background"
                                   />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">
-                                    {getDisplayName(member)}
-                                  </p>
-                                </div>
+                                <span className="text-sm font-medium">
+                                  {getDisplayName(member)}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -330,70 +316,62 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       <div className="flex-1 flex flex-col">
                         {selectedUser ? (
                           <>
-                            {/* Chat Header */}
-                            <div className="p-3 border-b flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={selectedUser.profiles?.avatar_url} />
-                                <AvatarFallback className="text-xs">
-                                  {getAvatarFallback(selectedUser)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-sm">
-                                  {getDisplayName(selectedUser)}
-                                </h3>
-                                <OnlineStatus 
-                                  userId={selectedUser.user_id} 
-                                  groupId={groupId}
-                                  className="text-xs"
-                                />
+                            <div className="p-3 border-b">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={selectedUser.profiles?.avatar_url} />
+                                  <AvatarFallback>{getAvatarFallback(selectedUser)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h3 className="font-semibold text-sm">{getDisplayName(selectedUser)}</h3>
+                                  <OnlineStatus userId={selectedUser.user_id} groupId={groupId} />
+                                </div>
                               </div>
                             </div>
 
-                            {/* Messages */}
                             <ScrollArea className="flex-1 p-3">
-                              <div className="space-y-3">
-                                {directMessages.map((message) => {
-                                  const isOwn = message.sender_id === user?.id;
-                                  return (
-                                    <div
-                                      key={message.id}
-                                      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                                    >
-                                      <div
-                                        className={`max-w-[70%] p-3 rounded-lg ${
-                                          isOwn
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'bg-muted'
-                                        }`}
-                                      >
-                                        <p className="text-sm">{message.content}</p>
-                                        <p className={`text-xs mt-1 ${
-                                          isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                              <div className="space-y-4">
+                                {messages.length === 0 ? (
+                                  <div className="text-center text-muted-foreground py-8">
+                                    No messages yet. Start a conversation!
+                                  </div>
+                                ) : (
+                                  messages.map((msg) => {
+                                    const isFromCurrentUser = msg.sender_id === user?.id;
+                                    return (
+                                      <div key={msg.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[70%] p-3 rounded-lg ${
+                                          isFromCurrentUser 
+                                            ? 'bg-primary text-primary-foreground ml-4' 
+                                            : 'bg-muted mr-4'
                                         }`}>
-                                          {new Date(message.created_at).toLocaleTimeString()}
-                                        </p>
+                                          <p className="text-sm">{msg.content}</p>
+                                          <span className={`text-xs ${
+                                            isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                          }`}>
+                                            {new Date(msg.created_at).toLocaleTimeString()}
+                                          </span>
+                                        </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })
+                                )}
                                 <div ref={messagesEndRef} />
                               </div>
                             </ScrollArea>
 
-                            {/* Message Input */}
                             <div className="p-3 border-t">
                               <div className="flex gap-2">
                                 <Input
-                                  value={newMessage}
-                                  onChange={(e) => setNewMessage(e.target.value)}
+                                  value={message}
+                                  onChange={(e) => setMessage(e.target.value)}
                                   onKeyPress={handleKeyPress}
-                                  placeholder="Type a message..."
+                                  placeholder={`Message ${getDisplayName(selectedUser)}...`}
                                   className="flex-1"
                                 />
                                 <Button 
-                                  onClick={sendDirectMessage}
-                                  disabled={!newMessage.trim()}
+                                  onClick={sendDirectMessage} 
+                                  disabled={!message.trim() || loading}
                                   size="sm"
                                 >
                                   <Send className="h-4 w-4" />
@@ -404,7 +382,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                         ) : (
                           <div className="flex-1 flex items-center justify-center">
                             <div className="text-center text-muted-foreground">
-                              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <UserIcon className="h-16 w-16 mx-auto mb-4" />
                               <p>Select a member to start chatting</p>
                             </div>
                           </div>
@@ -414,24 +392,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                   </TabsContent>
 
                   <TabsContent value="group" className="flex-1 flex flex-col mt-0">
-                    <Card className="flex-1 flex flex-col">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Group Chat
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-1 flex items-center justify-center">
-                        <div className="text-center space-y-4">
-                          <Users className="h-16 w-16 text-muted-foreground mx-auto" />
-                          <h3 className="text-lg font-semibold">Group Chat Coming Soon</h3>
-                          <p className="text-muted-foreground">
-                            Group chat functionality will be available soon, allowing all members 
-                            to communicate together in one shared space.
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <GroupChat groupId={groupId} groupName={groupName} />
                   </TabsContent>
                 </div>
               </Tabs>
