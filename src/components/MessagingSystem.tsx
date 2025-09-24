@@ -9,7 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { MessageCircle, Send, Bot, Users, UserIcon, X, Minimize2, Maximize2, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { MessageCircle, Send, Bot, Users, UserIcon, X, Minimize2, Maximize2, Trash2, UserPlus, Edit2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineStatus } from './OnlineStatus';
@@ -78,6 +81,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [showAddPeopleDialog, setShowAddPeopleDialog] = useState(false);
+  const [showEditGroupDialog, setShowEditGroupDialog] = useState(false);
+  const [selectedUsersToAdd, setSelectedUsersToAdd] = useState<string[]>([]);
+  const [privateGroupName, setPrivateGroupName] = useState('');
+  const [isPrivateGroup, setIsPrivateGroup] = useState(false);
+  const [privateGroupId, setPrivateGroupId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -305,6 +314,102 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
     }
   };
 
+  const createPrivateGroup = async (participantIds: string[]) => {
+    if (!user || !selectedUser) return;
+
+    try {
+      // Create private group
+      const { data: groupData, error: groupError } = await supabase
+        .from('community_groups')
+        .insert({
+          name: privateGroupName || `Chat with ${getDisplayName(selectedUser)}`,
+          description: 'Private chat group',
+          level: 'mixed',
+          group_type: 'private',
+          created_by: user.id,
+          max_members: 10
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // Add all participants as members
+      const allParticipants = [user.id, selectedUser.user_id, ...participantIds];
+      const memberInserts = allParticipants.map(userId => ({
+        group_id: groupData.id,
+        user_id: userId,
+        status: 'accepted',
+        can_post: true,
+        invited_by: user.id
+      }));
+
+      const { error: membersError } = await supabase
+        .from('group_members')
+        .insert(memberInserts);
+
+      if (membersError) throw membersError;
+
+      // Convert existing direct messages to group messages
+      const existingMessages = messages.map(msg => ({
+        group_id: groupData.id,
+        sender_id: msg.sender_id,
+        content: msg.content,
+        created_at: msg.created_at
+      }));
+
+      if (existingMessages.length > 0) {
+        const { error: messagesError } = await supabase
+          .from('group_chat_messages')
+          .insert(existingMessages);
+
+        if (messagesError) throw messagesError;
+      }
+
+      // Switch to group chat
+      setIsPrivateGroup(true);
+      setPrivateGroupId(groupData.id);
+      setActiveTab('group');
+      setShowAddPeopleDialog(false);
+      setSelectedUsersToAdd([]);
+      
+    } catch (error) {
+      console.error('Error creating private group:', error);
+    }
+  };
+
+  const updateGroupName = async (newName: string) => {
+    if (!privateGroupId || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('community_groups')
+        .update({ name: newName })
+        .eq('id', privateGroupId)
+        .eq('created_by', user.id);
+
+      if (error) throw error;
+      
+      setPrivateGroupName(newName);
+      setShowEditGroupDialog(false);
+    } catch (error) {
+      console.error('Error updating group name:', error);
+    }
+  };
+
+  const handleAddPeople = () => {
+    if (selectedUsersToAdd.length === 0) return;
+    createPrivateGroup(selectedUsersToAdd);
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsersToAdd(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
   const getDisplayName = (member: GroupMember) => {
     return member.profiles?.display_name || member.profiles?.username || 'Anonymous User';
   };
@@ -489,24 +594,49 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                               <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)}>
                                 ← Back
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setUserToDelete(selectedUser.user_id);
-                                  setShowDeleteDialog(true);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowAddPeopleDialog(true)}
+                                  title="Add people to create group chat"
+                                >
+                                  <UserPlus className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToDelete(selectedUser.user_id);
+                                    setShowDeleteDialog(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                             <div className="mt-2 flex items-center gap-3">
                               <Avatar className="w-8 h-8">
                                 <AvatarImage src={selectedUser.profiles?.avatar_url} />
                                 <AvatarFallback>{getAvatarFallback(selectedUser)}</AvatarFallback>
                               </Avatar>
-                              <div>
-                                <h3 className="font-semibold text-sm">{getDisplayName(selectedUser)}</h3>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-sm">{getDisplayName(selectedUser)}</h3>
+                                  {isPrivateGroup && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-4 w-4 p-0"
+                                      onClick={() => {
+                                        setPrivateGroupName(groupName);
+                                        setShowEditGroupDialog(true);
+                                      }}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
                                 <OnlineStatus userId={selectedUser.user_id} groupId={groupId} />
                               </div>
                             </div>
@@ -580,9 +710,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="group" className="flex-1 flex flex-col mt-0">
-                    <GroupChat groupId={groupId} groupName={groupName} />
-                  </TabsContent>
+                   <TabsContent value="group" className="flex-1 flex flex-col mt-0">
+                     <GroupChat 
+                       groupId={isPrivateGroup && privateGroupId ? privateGroupId : groupId} 
+                       groupName={isPrivateGroup ? privateGroupName : groupName} 
+                     />
+                   </TabsContent>
                 </div>
               </Tabs>
             </div>
@@ -614,6 +747,95 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showAddPeopleDialog} onOpenChange={setShowAddPeopleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add People to Chat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="group-name">Group Name (optional)</Label>
+              <Input
+                id="group-name"
+                value={privateGroupName}
+                onChange={(e) => setPrivateGroupName(e.target.value)}
+                placeholder={`Chat with ${selectedUser ? getDisplayName(selectedUser) : 'others'}`}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Select people to add:</Label>
+              <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                {availableMembers
+                  .filter(member => member.user_id !== selectedUser?.user_id && member.status === 'accepted')
+                  .map(member => (
+                    <div key={member.user_id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`user-${member.user_id}`}
+                        checked={selectedUsersToAdd.includes(member.user_id)}
+                        onCheckedChange={() => toggleUserSelection(member.user_id)}
+                      />
+                      <Label 
+                        htmlFor={`user-${member.user_id}`}
+                        className="flex items-center gap-2 cursor-pointer flex-1"
+                      >
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={member.profiles?.avatar_url} />
+                          <AvatarFallback>{getAvatarFallback(member)}</AvatarFallback>
+                        </Avatar>
+                        <span>{getDisplayName(member)}</span>
+                        <OnlineStatus userId={member.user_id} groupId={groupId} showBadge={false} className="w-2 h-2" />
+                      </Label>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddPeopleDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddPeople}
+              disabled={selectedUsersToAdd.length === 0}
+            >
+              Create Group Chat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditGroupDialog} onOpenChange={setShowEditGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Group Name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-group-name">Group Name</Label>
+              <Input
+                id="edit-group-name"
+                value={privateGroupName}
+                onChange={(e) => setPrivateGroupName(e.target.value)}
+                placeholder="Enter group name"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditGroupDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => updateGroupName(privateGroupName)}
+              disabled={!privateGroupName.trim()}
+            >
+              Update Name
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 };
