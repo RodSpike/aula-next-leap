@@ -330,7 +330,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
           name: privateGroupName || `Chat with ${getDisplayName(selectedUser)}`,
           description: 'Private chat group',
           level: 'mixed',
-          group_type: 'private',
+          group_type: 'closed',  // Use 'closed' instead of 'private'
           created_by: user.id,
           max_members: 10
         })
