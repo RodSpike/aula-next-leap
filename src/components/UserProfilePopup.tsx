@@ -226,7 +226,7 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
           <DialogTitle>User Profile</DialogTitle>
         </DialogHeader>
 
-        {isAdmin && (
+        {isAdmin && !profile && (
           <div className="space-y-4 mb-6">
             <div className="flex gap-2">
               <Input
