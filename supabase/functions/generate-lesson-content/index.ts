@@ -321,6 +321,27 @@ CERTIFIQUE-SE de criar conteúdo completo, detalhado e bem estruturado seguindo 
 
 SEMPRE inclua pelo menos 15-20 palavras de vocabulário na primeira tabela.
 
+INCLUA TAMBÉM ATIVIDADES PRÁTICAS (activities/exercises) usando o seguinte formato JSON após o conteúdo HTML:
+
+<activities>
+[
+  {
+    "type": "multiple_choice",
+    "question": "Qual é a nacionalidade de alguém que nasceu no Brasil?",
+    "options": ["Brazilian", "Brazillian", "Brasilian", "Brasiliam"],
+    "correct_answer": "Brazilian",
+    "explanation": "A nacionalidade de alguém do Brasil é 'Brazilian' (brasileiro/brasileira)."
+  },
+  {
+    "type": "fill_blank",
+    "question": "Complete: She _____ from Germany. She _____ German.",
+    "options": ["is / is", "are / are", "am / am", "is / are"],
+    "correct_answer": "is / is",
+    "explanation": "Usamos 'is' para terceira pessoa singular (she/he/it)."
+  }
+]
+</activities>
+
 REQUISITOS OBRIGATÓRIOS:
 - Use HTML completo com classes Tailwind CSS para estilização
 - Cores azul e verde predominantes como no exemplo
@@ -328,7 +349,7 @@ REQUISITOS OBRIGATÓRIOS:
 - Mínimo 15-20 palavras de vocabulário com tradução e pronúncia
 - Todas as frases em inglês devem ter tradução em português
 - Conteúdo apropriado para nível ${courseLevel}
-- 4-5 exercícios progressivos do básico ao avançado
+- 4-5 exercícios progressivos no formato JSON <activities>
 - Role-play final com diálogo e tradução completa
 - Estrutura visual clara e atrativa para estudantes`;
 

@@ -9,6 +9,9 @@ interface NavigationState {
   path: string;
   timestamp: number;
   groupId?: string;
+  lessonId?: string;
+  courseId?: string;
+  scrollPosition?: number;
 }
 
 export const NavigationPersistence = () => {
@@ -16,19 +19,31 @@ export const NavigationPersistence = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Save current navigation state
+  // Save current navigation state with more granular tracking
   useEffect(() => {
     if (!loading && user && location.pathname !== '/dashboard') {
       const state: NavigationState = {
         path: location.pathname + location.search,
         timestamp: Date.now(),
+        scrollPosition: window.scrollY,
       };
       
-      // Extract group ID from community page URL parameters if present
+      // Extract parameters from URL
       const urlParams = new URLSearchParams(location.search);
       const groupId = urlParams.get('group');
-      if (groupId) {
-        state.groupId = groupId;
+      const lessonId = urlParams.get('lesson');
+      const courseId = urlParams.get('course');
+      
+      if (groupId) state.groupId = groupId;
+      if (lessonId) state.lessonId = lessonId;
+      if (courseId) state.courseId = courseId;
+
+      // For course pages, extract lesson from hash
+      if (location.pathname.startsWith('/course/') && location.hash) {
+        const hashMatch = location.hash.match(/#lesson-(\d+)/);
+        if (hashMatch) {
+          state.lessonId = hashMatch[1];
+        }
       }
 
       localStorage.setItem(NAVIGATION_STORAGE_KEY, JSON.stringify(state));
@@ -64,6 +79,21 @@ export const NavigationPersistence = () => {
           
           if (isRecentState && state.path !== '/dashboard') {
             navigate(state.path);
+            
+            // Restore scroll position after navigation
+            setTimeout(() => {
+              if (state.scrollPosition) {
+                window.scrollTo(0, state.scrollPosition);
+              }
+              
+              // Handle lesson/course specific restoration
+              if (state.lessonId && location.pathname.startsWith('/course/')) {
+                const lessonElement = document.getElementById(`lesson-${state.lessonId}`);
+                if (lessonElement) {
+                  lessonElement.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            }, 100);
           }
         } catch (error) {
           console.error('Error parsing saved navigation state:', error);
@@ -91,6 +121,21 @@ export const navigateToGroup = (groupId: string, navigate: (path: string) => voi
     path,
     timestamp: Date.now(),
     groupId,
+  };
+  localStorage.setItem(NAVIGATION_STORAGE_KEY, JSON.stringify(state));
+};
+
+// Helper function to navigate to specific lesson
+export const navigateToLesson = (courseId: string, lessonId: string, navigate: (path: string) => void) => {
+  const path = `/course/${courseId}#lesson-${lessonId}`;
+  navigate(path);
+  
+  // Update saved state
+  const state: NavigationState = {
+    path,
+    timestamp: Date.now(),
+    courseId,
+    lessonId,
   };
   localStorage.setItem(NAVIGATION_STORAGE_KEY, JSON.stringify(state));
 };

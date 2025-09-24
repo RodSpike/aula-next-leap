@@ -3,6 +3,9 @@ import { useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { PostInteractions } from "@/components/PostInteractions";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
+import { OnlineStatus } from "@/components/OnlineStatus";
+import { MessagingSystem } from "@/components/MessagingSystem";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +71,9 @@ interface GroupPost {
   }[];
   profiles: {
     display_name: string;
+    avatar_url?: string;
   } | null;
+  is_admin?: boolean;
 }
 
 export default function Community() {
@@ -96,6 +101,8 @@ export default function Community() {
   const [isEditPostOpen, setIsEditPostOpen] = useState(false);
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const [editPostContent, setEditPostContent] = useState<string>("");
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -136,6 +143,7 @@ export default function Community() {
   useEffect(() => {
     if (selectedGroup) {
       fetchPosts(selectedGroup.id);
+      fetchGroupMembers(selectedGroup.id);
       
       // Update selected group with latest membership info
       const updatedGroup = groups.find(g => g.id === selectedGroup.id);
@@ -302,13 +310,22 @@ export default function Community() {
       for (const post of postsData || []) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('display_name')
+          .select('display_name, avatar_url')
           .eq('user_id', post.user_id)
           .single();
 
+        // Check if user is admin
+        const { data: adminData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', post.user_id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
         posts.push({
           ...post,
-          profiles: profileData || { display_name: 'Unknown User' }
+          profiles: profileData || { display_name: 'Unknown User', avatar_url: null },
+          is_admin: !!adminData
         });
       }
 
@@ -320,6 +337,25 @@ export default function Community() {
         description: "Failed to load posts",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchGroupMembers = async (groupId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select(`
+          user_id,
+          status,
+          profiles!inner(display_name, avatar_url)
+        `)
+        .eq('group_id', groupId)
+        .eq('status', 'accepted');
+
+      if (error) throw error;
+      setGroupMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching group members:', error);
     }
   };
 
@@ -946,7 +982,7 @@ export default function Community() {
                  <Card>
                    <CardHeader>
                      <div className="flex items-start justify-between">
-                       <div>
+                       <div className="flex-1">
                          <CardTitle className="flex items-center gap-2">
                            {selectedGroup.is_default ? (
                              <Building2 className="h-4 w-4 text-primary" />
@@ -968,13 +1004,13 @@ export default function Community() {
                            <h4 className="font-semibold text-primary mb-2">
                              {selectedGroup.is_default ? '🏫 Official Aula Click Community' : '👥 User Community'}
                            </h4>
-                            {selectedGroup.is_default ? (
-                              <p className="text-sm text-muted-foreground">
-                                Welcome to the official {selectedGroup.level} level community! 
-                                This is your space to practice English, get help from peers, and improve together. 
-                                Connect with other learners at your level and enhance your language skills.
-                              </p>
-                            ) : null}
+                           {selectedGroup.is_default ? (
+                             <p className="text-sm text-muted-foreground">
+                               Welcome to the official {selectedGroup.level} level community! 
+                               This is your space to practice English, get help from peers, and improve together. 
+                               Connect with other learners at your level and enhance your language skills.
+                             </p>
+                           ) : null}
                          </div>
                          
                          {selectedGroup.description && (
@@ -983,13 +1019,58 @@ export default function Community() {
                            </p>
                          )}
                        </div>
-                       <div className="flex items-center text-sm text-muted-foreground">
-                         <Users className="h-4 w-4 mr-1" />
-                         {selectedGroup.member_count || 0} members
+                       <div className="flex items-center gap-4">
+                         <div className="flex items-center text-sm text-muted-foreground">
+                           <Users className="h-4 w-4 mr-1" />
+                           {selectedGroup.member_count || 0} members
+                         </div>
+                         <Button 
+                           variant="outline" 
+                           size="sm"
+                           onClick={() => setIsChatOpen(true)}
+                         >
+                           <MessageSquare className="h-4 w-4 mr-2" />
+                           Group Chat
+                         </Button>
                        </div>
                      </div>
+                     
+                     {/* Online Members */}
+                     {groupMembers.length > 0 && (
+                       <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                         <div className="flex items-center gap-2 mb-2">
+                           <span className="text-sm font-medium">Members Online:</span>
+                         </div>
+                         <div className="flex flex-wrap gap-2">
+                           {groupMembers.slice(0, 8).map((member) => (
+                             <div key={member.user_id} className="flex items-center gap-2">
+                               <Avatar className="w-6 h-6">
+                                 <AvatarImage src={member.profiles?.avatar_url} />
+                                 <AvatarFallback className="text-xs">
+                                   {member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <OnlineStatus 
+                                 userId={member.user_id} 
+                                 groupId={selectedGroup.id}
+                                 showBadge={false}
+                                 className="w-2 h-2"
+                               />
+                               <span className="text-xs text-muted-foreground">
+                                 {member.profiles?.display_name || 'Unknown'}
+                               </span>
+                             </div>
+                           ))}
+                           {groupMembers.length > 8 && (
+                             <span className="text-xs text-muted-foreground">
+                               +{groupMembers.length - 8} more
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                     )}
                    </CardHeader>
-                  </Card>
+                 </Card>
 
                   {/* Personal Progress for English Learning Group */}
                   {selectedGroup.is_default && selectedGroup.name === 'English Learning' && (
@@ -1079,16 +1160,25 @@ export default function Community() {
                       <Card key={post.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                <span className="text-sm font-medium text-primary">
-                                  {post.profiles?.display_name?.charAt(0) || 'U'}
-                                </span>
-                              </div>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={post.profiles?.avatar_url} />
+                                <AvatarFallback>
+                                  {post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
                               <div>
-                                <p className="font-medium text-sm">
-                                  {post.profiles?.display_name || 'Unknown User'}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm">
+                                    {post.profiles?.display_name || 'Unknown User'}
+                                  </p>
+                                  {post.is_admin && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Settings className="h-3 w-3 mr-1" />
+                                      Admin
+                                    </Badge>
+                                  )}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {new Date(post.created_at).toLocaleDateString()}
                                 </p>
@@ -1225,8 +1315,26 @@ export default function Community() {
               }}>Save</Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-     </div>
+         </DialogContent>
+       </Dialog>
+
+       {/* Messaging System */}
+       {selectedGroup && groupMembers && (
+         <MessagingSystem
+           isOpen={isChatOpen}
+           onClose={() => setIsChatOpen(false)}
+           groupId={selectedGroup.id}
+           groupName={selectedGroup.name}
+           members={groupMembers.map(m => ({
+             user_id: m.user_id,
+             profiles: {
+               display_name: m.profiles?.display_name || 'Unknown',
+               avatar_url: m.profiles?.avatar_url || '',
+               username: m.profiles?.display_name || 'Unknown'
+             }
+           }))}
+         />
+       )}
+      </div>
    );
  }
