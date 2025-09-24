@@ -418,27 +418,6 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
 
       console.log('Members added successfully');
 
-      // Convert existing direct messages to group messages
-      const existingMessages = messages.map(msg => ({
-        group_id: groupData.id,
-        sender_id: msg.sender_id,
-        content: msg.content,
-        created_at: msg.created_at
-      }));
-
-      console.log('Converting messages:', existingMessages.length);
-
-      if (existingMessages.length > 0) {
-        const { error: messagesError } = await supabase
-          .from('group_chat_messages')
-          .insert(existingMessages);
-
-        if (messagesError) {
-          console.error('Error converting messages:', messagesError);
-          // Don't throw here - group creation is still successful
-        }
-      }
-
       // Stay in direct messages and refresh conversations
       setShowAddPeopleDialog(false);
       setSelectedUsersToAdd([]);
