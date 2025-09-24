@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { ClickableUserProfile } from "@/components/ClickableUserProfile";
+import { UserProfilePopup } from "@/components/UserProfilePopup";
+import { useUserProfileClick } from "@/hooks/useUserProfileClick";
 
 interface GroupMessage {
   id: string;
@@ -35,6 +38,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isPopupOpen, selectedUserId, selectedProfile, openUserProfile, setIsPopupOpen } = useUserProfileClick();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -174,15 +178,37 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
             ) : (
               messages.map((message) => (
                 <div key={message.id} className="flex items-start gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={message.profiles?.avatar_url} />
-                    <AvatarFallback>{getAvatarFallback(message)}</AvatarFallback>
-                  </Avatar>
+                  <ClickableUserProfile
+                    userId={message.sender_id}
+                    profile={{
+                      user_id: message.sender_id,
+                      display_name: getDisplayName(message),
+                      username: message.profiles?.username,
+                      avatar_url: message.profiles?.avatar_url
+                    }}
+                    onClick={openUserProfile}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={message.profiles?.avatar_url} />
+                      <AvatarFallback>{getAvatarFallback(message)}</AvatarFallback>
+                    </Avatar>
+                  </ClickableUserProfile>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm">
-                        {getDisplayName(message)}
-                      </span>
+                      <ClickableUserProfile
+                        userId={message.sender_id}
+                        profile={{
+                          user_id: message.sender_id,
+                          display_name: getDisplayName(message),
+                          username: message.profiles?.username,
+                          avatar_url: message.profiles?.avatar_url
+                        }}
+                        onClick={openUserProfile}
+                      >
+                        <span className="font-semibold text-sm hover:underline">
+                          {getDisplayName(message)}
+                        </span>
+                      </ClickableUserProfile>
                       {isAdmin(message) && (
                         <Badge variant="secondary" className="text-xs">
                           Admin
@@ -214,6 +240,13 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           </Button>
         </div>
       </CardContent>
+      
+      <UserProfilePopup
+        isOpen={isPopupOpen}
+        onOpenChange={setIsPopupOpen}
+        userId={selectedUserId}
+        profile={selectedProfile}
+      />
     </Card>
   );
 };

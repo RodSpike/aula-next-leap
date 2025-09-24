@@ -39,6 +39,9 @@ import {
   Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ClickableUserProfile } from "@/components/ClickableUserProfile";
+import { UserProfilePopup } from "@/components/UserProfilePopup";
+import { useUserProfileClick } from "@/hooks/useUserProfileClick";
 
 interface CommunityGroup {
   id: string;
@@ -105,6 +108,7 @@ export default function Community() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInitialTab, setChatInitialTab] = useState<'ai-tutor' | 'direct' | 'group'>('direct');
   const [chatInitialUserId, setChatInitialUserId] = useState<string | undefined>(undefined);
+  const { isPopupOpen, selectedUserId, selectedProfile, openUserProfile, setIsPopupOpen } = useUserProfileClick();
 
   useEffect(() => {
     if (user) {
@@ -1102,25 +1106,37 @@ export default function Community() {
                            <span className="text-sm font-medium">Members Online:</span>
                          </div>
                          <div className="flex flex-wrap gap-2">
-                           {groupMembers.slice(0, 8).map((member) => (
-                             <div key={member.user_id} className="flex items-center gap-2">
-                               <Avatar className="w-6 h-6">
-                                 <AvatarImage src={member.profiles?.avatar_url} />
-                                 <AvatarFallback className="text-xs">
-                                   {member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                 </AvatarFallback>
-                               </Avatar>
-                               <OnlineStatus 
-                                 userId={member.user_id} 
-                                 groupId={selectedGroup.id}
-                                 showBadge={false}
-                                 className="w-2 h-2"
-                               />
-                               <span className="text-xs text-muted-foreground">
-                                 {member.profiles?.display_name || 'Unknown'}
-                               </span>
-                             </div>
-                           ))}
+                            {groupMembers.slice(0, 8).map((member) => (
+                              <ClickableUserProfile
+                                key={member.user_id}
+                                userId={member.user_id}
+                                profile={{
+                                  user_id: member.user_id,
+                                  display_name: member.profiles?.display_name || 'Unknown',
+                                  username: member.profiles?.username,
+                                  avatar_url: member.profiles?.avatar_url
+                                }}
+                                onClick={openUserProfile}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-6 h-6">
+                                    <AvatarImage src={member.profiles?.avatar_url} />
+                                    <AvatarFallback className="text-xs">
+                                      {member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <OnlineStatus 
+                                    userId={member.user_id} 
+                                    groupId={selectedGroup.id}
+                                    showBadge={false}
+                                    className="w-2 h-2"
+                                  />
+                                  <span className="text-xs text-muted-foreground hover:underline">
+                                    {member.profiles?.display_name || 'Unknown'}
+                                  </span>
+                                </div>
+                              </ClickableUserProfile>
+                            ))}
                            {groupMembers.length > 8 && (
                              <span className="text-xs text-muted-foreground">
                                +{groupMembers.length - 8} more
@@ -1221,17 +1237,37 @@ export default function Community() {
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={post.profiles?.avatar_url} />
-                                <AvatarFallback>
-                                  {post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                </AvatarFallback>
-                              </Avatar>
+                              <ClickableUserProfile
+                                userId={post.user_id}
+                                profile={{
+                                  user_id: post.user_id,
+                                  display_name: post.profiles?.display_name || 'Unknown User',
+                                  avatar_url: post.profiles?.avatar_url
+                                }}
+                                onClick={openUserProfile}
+                              >
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={post.profiles?.avatar_url} />
+                                  <AvatarFallback>
+                                    {post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </ClickableUserProfile>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="font-medium text-sm">
-                                    {post.profiles?.display_name || 'Unknown User'}
-                                  </p>
+                                  <ClickableUserProfile
+                                    userId={post.user_id}
+                                    profile={{
+                                      user_id: post.user_id,
+                                      display_name: post.profiles?.display_name || 'Unknown User',
+                                      avatar_url: post.profiles?.avatar_url
+                                    }}
+                                    onClick={openUserProfile}
+                                  >
+                                    <p className="font-medium text-sm hover:underline">
+                                      {post.profiles?.display_name || 'Unknown User'}
+                                    </p>
+                                  </ClickableUserProfile>
                                   {post.is_admin && (
                                     <Badge variant="secondary" className="text-xs">
                                       <Settings className="h-3 w-3 mr-1" />
@@ -1405,7 +1441,14 @@ export default function Community() {
               };
             })}
           />
-        )}
-      </div>
-   );
- }
+         )}
+
+         <UserProfilePopup
+           isOpen={isPopupOpen}
+           onOpenChange={setIsPopupOpen}
+           userId={selectedUserId}
+           profile={selectedProfile}
+         />
+       </div>
+     );
+   }

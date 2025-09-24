@@ -17,6 +17,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ClickableUserProfile } from "@/components/ClickableUserProfile";
+import { UserProfilePopup } from "@/components/UserProfilePopup";
+import { useUserProfileClick } from "@/hooks/useUserProfileClick";
 
 interface PostInteractionsProps {
   postId: string;
@@ -54,6 +57,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
   const isMobile = useIsMobile();
   const isDesktop = !isMobile;
+  const { isPopupOpen, selectedUserId, selectedProfile, openUserProfile, setIsPopupOpen } = useUserProfileClick();
 
   useEffect(() => {
     if (user) {
@@ -202,17 +206,35 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
       <ScrollArea className="max-h-80">
         {comments.map((comment) => (
           <div key={comment.id} className="flex space-x-3 mb-4">
-            <Avatar className="w-8 h-8">
-              <AvatarFallback>
-                {comment.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <ClickableUserProfile
+              userId={comment.user_id}
+              profile={{
+                user_id: comment.user_id,
+                display_name: comment.profiles?.display_name || 'Unknown User'
+              }}
+              onClick={openUserProfile}
+            >
+              <Avatar className="w-8 h-8">
+                <AvatarFallback>
+                  {comment.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </ClickableUserProfile>
             <div className="flex-1">
               <div className="bg-muted rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-sm">
-                    {comment.profiles?.display_name || 'Unknown User'}
-                  </span>
+                  <ClickableUserProfile
+                    userId={comment.user_id}
+                    profile={{
+                      user_id: comment.user_id,
+                      display_name: comment.profiles?.display_name || 'Unknown User'
+                    }}
+                    onClick={openUserProfile}
+                  >
+                    <span className="font-medium text-sm hover:underline">
+                      {comment.profiles?.display_name || 'Unknown User'}
+                    </span>
+                  </ClickableUserProfile>
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                   </span>
@@ -331,6 +353,13 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      
+      <UserProfilePopup
+        isOpen={isPopupOpen}
+        onOpenChange={setIsPopupOpen}
+        userId={selectedUserId}
+        profile={selectedProfile}
+      />
     </div>
   );
 };
