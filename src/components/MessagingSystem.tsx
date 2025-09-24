@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineStatus } from './OnlineStatus';
 import { GroupChat } from './GroupChat';
+import { PrivateGroupChat } from './PrivateGroupChat';
 
 interface DirectMessage {
   id: string;
@@ -162,6 +163,41 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
               avatar_url: partnerMember.profiles?.avatar_url,
               last_message: msg.content,
               last_message_time: msg.created_at
+            });
+          }
+        }
+      }
+
+      // Also get private group chats where user is a member
+      const { data: privateGroups } = await supabase
+        .from('community_groups')
+        .select(`
+          id,
+          name,
+          created_at,
+          group_chat_messages!inner (
+            content,
+            created_at
+          )
+        `)
+        .eq('group_type', 'closed')
+        .eq('group_members.user_id', user.id)
+        .eq('group_members.status', 'accepted')
+        .order('group_chat_messages.created_at', { ascending: false })
+        .limit(1, { foreignTable: 'group_chat_messages' });
+
+      // Add private groups to conversations
+      if (privateGroups) {
+        for (const group of privateGroups) {
+          const lastMessage = group.group_chat_messages?.[0];
+          if (lastMessage) {
+            conversationMap.set(`group_${group.id}`, {
+              user_id: `group_${group.id}`,
+              display_name: group.name,
+              username: '',
+              avatar_url: undefined,
+              last_message: lastMessage.content,
+              last_message_time: lastMessage.created_at
             });
           }
         }
@@ -397,12 +433,10 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         }
       }
 
-      // Switch to group chat
-      setIsPrivateGroup(true);
-      setPrivateGroupId(groupData.id);
-      setActiveTab('group');
+      // Stay in direct messages and refresh conversations
       setShowAddPeopleDialog(false);
       setSelectedUsersToAdd([]);
+      await fetchConversations();
       
       console.log('Private group creation completed successfully');
       
@@ -587,32 +621,67 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                   <ScrollArea className="h-[300px]">
                                     <div className="space-y-2">
                                       {conversations.map(conv => (
-                                        <div
-                                          key={conv.user_id}
-                                          className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer group"
-                                          onClick={() => {
-                                            const member = members.find(m => m.user_id === conv.user_id);
-                                            if (member) setSelectedUser(member);
-                                          }}
-                                        >
-                                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarImage src={conv.avatar_url} />
-                                              <AvatarFallback>{conv.display_name.charAt(0).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                              <div className="flex items-center gap-1">
-                                                <OnlineStatus 
-                                                  userId={conv.user_id} 
-                                                  groupId={groupId} 
-                                                  showBadge={false}
-                                                  className="w-2 h-2"
-                                                />
-                                                <p className="text-sm font-medium truncate">{conv.display_name}</p>
-                                              </div>
-                                              <p className="text-xs text-muted-foreground truncate">{conv.last_message}</p>
-                                            </div>
-                                          </div>
+                                         <div
+                                           key={conv.user_id}
+                                           className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer group"
+                                           onClick={() => {
+                                             if (conv.user_id.startsWith('group_')) {
+                                               // Handle private group selection
+                                               const groupId = conv.user_id.replace('group_', '');
+                                               setPrivateGroupId(groupId);
+                                               setIsPrivateGroup(true);
+                                               setPrivateGroupName(conv.display_name);
+                                               // Create a placeholder user for the UI
+                                               setSelectedUser({
+                                                 user_id: conv.user_id,
+                                                 status: 'accepted',
+                                                 profiles: {
+                                                   display_name: conv.display_name,
+                                                   username: '',
+                                                   avatar_url: conv.avatar_url
+                                                 }
+                                               });
+                                             } else {
+                                               // Handle regular user selection
+                                               const member = members.find(m => m.user_id === conv.user_id);
+                                               if (member) {
+                                                 setSelectedUser(member);
+                                                 setIsPrivateGroup(false);
+                                                 setPrivateGroupId(null);
+                                               }
+                                             }
+                                           }}
+                                         >
+                                             <div className="flex items-center gap-2 flex-1 min-w-0">
+                                               <Avatar className="w-8 h-8">
+                                                 <AvatarImage src={conv.avatar_url} />
+                                                 <AvatarFallback>
+                                                   {conv.user_id.startsWith('group_') ? 
+                                                     <Users className="w-4 h-4" /> : 
+                                                     conv.display_name.charAt(0).toUpperCase()
+                                                   }
+                                                 </AvatarFallback>
+                                               </Avatar>
+                                               <div className="flex-1 min-w-0">
+                                                 <div className="flex items-center gap-1">
+                                                   {!conv.user_id.startsWith('group_') && (
+                                                     <OnlineStatus 
+                                                       userId={conv.user_id} 
+                                                       groupId={groupId} 
+                                                       showBadge={false}
+                                                       className="w-2 h-2"
+                                                     />
+                                                   )}
+                                                   <p className="text-sm font-medium truncate flex items-center gap-1">
+                                                     {conv.user_id.startsWith('group_') && (
+                                                       <Users className="w-3 h-3" />
+                                                     )}
+                                                     {conv.display_name}
+                                                   </p>
+                                                 </div>
+                                                 <p className="text-xs text-muted-foreground truncate">{conv.last_message}</p>
+                                               </div>
+                                             </div>
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -692,57 +761,67 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       {/* Right side: Chat Area */}
                       <div className="flex-1 flex flex-col">
                         {selectedUser ? (
-                          <>
-                            <ScrollArea className="flex-1 p-3">
-                              <div className="space-y-4">
-                                {messages.length === 0 ? (
-                                  <div className="text-center text-muted-foreground py-8">
-                                    No messages yet. Start a conversation!
-                                  </div>
-                                ) : (
-                                  messages.map((msg) => {
-                                    const isFromCurrentUser = msg.sender_id === user?.id;
-                                    return (
-                                      <div key={msg.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[70%] p-3 rounded-lg ${
-                                          isFromCurrentUser 
-                                            ? 'bg-primary text-primary-foreground ml-4' 
-                                            : 'bg-muted mr-4'
-                                        }`}>
-                                          <p className="text-sm">{msg.content}</p>
-                                          <span className={`text-xs ${
-                                            isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                                          }`}>
-                                            {new Date(msg.created_at).toLocaleTimeString()}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                                <div ref={messagesEndRef} />
-                              </div>
-                            </ScrollArea>
+                           <>
+                             {/* Show either private group chat or direct messages */}
+                             {selectedUser.user_id.startsWith('group_') ? (
+                               <PrivateGroupChat
+                                 groupId={privateGroupId!}
+                                 groupName={privateGroupName}
+                               />
+                             ) : (
+                               <>
+                                 <ScrollArea className="flex-1 p-3">
+                                   <div className="space-y-4">
+                                     {messages.length === 0 ? (
+                                       <div className="text-center text-muted-foreground py-8">
+                                         No messages yet. Start a conversation!
+                                       </div>
+                                     ) : (
+                                       messages.map((msg) => {
+                                         const isFromCurrentUser = msg.sender_id === user?.id;
+                                         return (
+                                           <div key={msg.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                                             <div className={`max-w-[70%] p-3 rounded-lg ${
+                                               isFromCurrentUser 
+                                                 ? 'bg-primary text-primary-foreground ml-4' 
+                                                 : 'bg-muted mr-4'
+                                             }`}>
+                                               <p className="text-sm">{msg.content}</p>
+                                               <span className={`text-xs ${
+                                                 isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                               }`}>
+                                                 {new Date(msg.created_at).toLocaleTimeString()}
+                                               </span>
+                                             </div>
+                                           </div>
+                                         );
+                                       })
+                                     )}
+                                     <div ref={messagesEndRef} />
+                                   </div>
+                                 </ScrollArea>
 
-                            <div className="p-3 border-t">
-                              <div className="flex gap-2">
-                                <Input
-                                  value={message}
-                                  onChange={(e) => setMessage(e.target.value)}
-                                  onKeyPress={handleKeyPress}
-                                  placeholder={`Message ${getDisplayName(selectedUser)}...`}
-                                  className="flex-1"
-                                />
-                                <Button 
-                                  onClick={sendDirectMessage} 
-                                  disabled={!message.trim() || loading}
-                                  size="sm"
-                                >
-                                  <Send className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </>
+                                 <div className="p-3 border-t">
+                                   <div className="flex gap-2">
+                                     <Input
+                                       value={message}
+                                       onChange={(e) => setMessage(e.target.value)}
+                                       onKeyPress={handleKeyPress}
+                                       placeholder={`Message ${getDisplayName(selectedUser)}...`}
+                                       className="flex-1"
+                                     />
+                                     <Button 
+                                       onClick={sendDirectMessage} 
+                                       disabled={!message.trim() || loading}
+                                       size="sm"
+                                     >
+                                       <Send className="h-4 w-4" />
+                                     </Button>
+                                   </div>
+                                 </div>
+                               </>
+                             )}
+                           </>
                         ) : (
                           <div className="flex-1 flex items-center justify-center">
                             <div className="text-center text-muted-foreground">
@@ -757,8 +836,8 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
 
                    <TabsContent value="group" className="flex-1 flex flex-col mt-0">
                      <GroupChat 
-                       groupId={isPrivateGroup && privateGroupId ? privateGroupId : groupId} 
-                       groupName={isPrivateGroup ? privateGroupName : groupName} 
+                       groupId={groupId} 
+                       groupName={groupName} 
                      />
                    </TabsContent>
                 </div>
