@@ -185,6 +185,36 @@ export type Database = {
         }
         Relationships: []
       }
+      direct_conversation_state: {
+        Row: {
+          created_at: string
+          deleted_before: string
+          group_id: string
+          id: string
+          other_user_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_before?: string
+          group_id: string
+          id?: string
+          other_user_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_before?: string
+          group_id?: string
+          id?: string
+          other_user_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           content: string
