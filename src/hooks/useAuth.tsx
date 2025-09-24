@@ -40,15 +40,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .select('birthdate, cambridge_level')
                 .eq('user_id', session.user.id)
                 .single();
-              
-              if (!profile?.birthdate) {
-                navigate("/onboarding");
-              } else {
-                navigate("/dashboard");
+
+              // Only redirect after a real login flow (login/signup/root). Otherwise, stay put.
+              const currentPath = window.location.pathname;
+              const isAuthContext = currentPath === '/' || currentPath === '/login' || currentPath === '/signup';
+
+              if (isAuthContext) {
+                if (!profile?.birthdate) {
+                  navigate('/onboarding');
+                } else {
+                  navigate('/dashboard');
+                }
               }
             } catch (e) {
-              // If profile doesn't exist, go to onboarding
-              navigate("/onboarding");
+              const currentPath = window.location.pathname;
+              const isAuthContext = currentPath === '/' || currentPath === '/login' || currentPath === '/signup';
+              if (isAuthContext) {
+                // If profile doesn't exist, go to onboarding
+                navigate('/onboarding');
+              }
             }
           }, 0);
         }
