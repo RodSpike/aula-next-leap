@@ -120,6 +120,7 @@ export type Database = {
           id: string
           invite_code: string | null
           is_default: boolean | null
+          is_private_chat: boolean
           level: string
           max_members: number | null
           name: string
@@ -134,6 +135,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           is_default?: boolean | null
+          is_private_chat?: boolean
           level: string
           max_members?: number | null
           name: string
@@ -148,6 +150,7 @@ export type Database = {
           id?: string
           invite_code?: string | null
           is_default?: boolean | null
+          is_private_chat?: boolean
           level?: string
           max_members?: number | null
           name?: string
