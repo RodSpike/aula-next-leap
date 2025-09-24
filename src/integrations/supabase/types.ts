@@ -339,6 +339,7 @@ export type Database = {
           created_at: string | null
           group_id: string
           id: string
+          is_system_message: boolean
           sender_id: string
           updated_at: string | null
         }
@@ -347,6 +348,7 @@ export type Database = {
           created_at?: string | null
           group_id: string
           id?: string
+          is_system_message?: boolean
           sender_id: string
           updated_at?: string | null
         }
@@ -355,6 +357,7 @@ export type Database = {
           created_at?: string | null
           group_id?: string
           id?: string
+          is_system_message?: boolean
           sender_id?: string
           updated_at?: string | null
         }

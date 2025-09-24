@@ -12,6 +12,7 @@ interface GroupMessage {
   content: string;
   created_at: string;
   sender_id: string;
+  is_system_message?: boolean;
   sender?: {
     display_name?: string;
     username?: string;
@@ -42,16 +43,17 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
 
   const fetchMessages = async () => {
     try {
-      const { data, error } = await supabase
-        .from('group_chat_messages')
-        .select(`
-          id,
-          content,
-          created_at,
-          sender_id
-        `)
-        .eq('group_id', groupId)
-        .order('created_at', { ascending: true });
+        const { data, error } = await supabase
+          .from('group_chat_messages')
+          .select(`
+            id,
+            content,
+            created_at,
+            sender_id,
+            is_system_message
+          `)
+          .eq('group_id', groupId)
+          .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -156,6 +158,18 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
           ) : (
             messages.map((message) => {
               const isFromCurrentUser = message.sender_id === user?.id;
+              const isSystemMessage = message.is_system_message;
+              
+              if (isSystemMessage) {
+                return (
+                  <div key={message.id} className="flex justify-center my-2">
+                    <div className="bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full">
+                      {message.content}
+                    </div>
+                  </div>
+                );
+              }
+              
               return (
                 <div key={message.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
                   {!isFromCurrentUser && (
