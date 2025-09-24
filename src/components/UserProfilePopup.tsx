@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Search, Copy } from "lucide-react";
+
+import { MessageCircle, Copy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +50,13 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
       fetchUserProfile(userId);
     }
   }, [isOpen, userId, initialProfile]);
+
+  // Keep local state in sync with incoming prop
+  useEffect(() => {
+    if (initialProfile) {
+      setProfile(initialProfile);
+    }
+  }, [initialProfile]);
 
   const checkAdminStatus = async () => {
     if (!user) return;
@@ -151,7 +158,8 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
   };
 
   const handleDirectMessage = async () => {
-    if (!profile || !user) return;
+    const targetId = profile?.user_id || userId;
+    if (!targetId || !user) return;
 
     try {
       // Find a default group to create the private chat in
@@ -176,7 +184,7 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
         state: {
           openDirectMessage: true,
           groupId: defaultGroup.id,
-          partnerId: profile.user_id
+          partnerId: targetId
         }
       });
 
@@ -192,8 +200,9 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
   };
 
   const copyUserId = () => {
-    if (profile?.user_id) {
-      navigator.clipboard.writeText(profile.user_id);
+    const idToCopy = profile?.user_id || userId;
+    if (idToCopy) {
+      navigator.clipboard.writeText(idToCopy);
       toast({
         title: "Copied",
         description: "User ID copied to clipboard",
@@ -227,59 +236,59 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
         </DialogHeader>
 
 
-        {profile ? (
-          <div className="space-y-6">
-            <div className="flex flex-col items-center space-y-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile.avatar_url} />
-                <AvatarFallback className="text-2xl">
-                  {profile.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+        {(() => {
+          const p = profile ?? initialProfile ?? null;
+          if (!p && userId) {
+            // We will rely on fetch effect + loading state
+          }
 
-              <div className="text-center space-y-2">
-                <h3 className="text-xl font-semibold">
-                  {profile.display_name || profile.username || 'Anonymous User'}
-                </h3>
-                
-                {profile.username && (
-                  <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                )}
+          if (!p) {
+            return (
+              <div className="text-center py-8 text-muted-foreground">No user selected</div>
+            );
+          }
 
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <span>ID: {profile.user_id.slice(0, 8)}...</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={copyUserId}
-                  >
-                    <Copy className="h-3 w-3" />
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col items-center space-y-4">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={p.avatar_url} />
+                  <AvatarFallback className="text-2xl">
+                    {p.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-semibold">
+                    {p.display_name || 'User'}
+                  </h3>
+
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <span>ID: {p.user_id.slice(0, 8)}...</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={copyUserId}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {p.user_id !== user?.id && (
+                <div className="flex justify-center">
+                  <Button onClick={handleDirectMessage} className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Send Direct Message
                   </Button>
                 </div>
-
-                {isAdmin && profile.email && (
-                  <p className="text-xs text-muted-foreground">
-                    Email: {profile.email}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
+          );
+        })()}
 
-            {profile.user_id !== user?.id && (
-              <div className="flex justify-center">
-                <Button onClick={handleDirectMessage} className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Send Direct Message
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            {isAdmin ? 'Search for a user to view their profile' : 'No user profile found'}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
