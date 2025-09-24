@@ -174,10 +174,10 @@ export const OngoingChats: React.FC = () => {
 
   const handleConversationClick = (conversation: ConversationItem) => {
     if (conversation.type === 'direct') {
-      // Navigate to friends page and open messaging system
-      navigate('/friends', { 
+      // All direct messages from OngoingChats are group-based, so navigate to Community
+      navigate('/community', { 
         state: { 
-          openChat: true, 
+          openDirectMessage: true, 
           partnerId: conversation.partner_id,
           groupId: conversation.group_id 
         } 

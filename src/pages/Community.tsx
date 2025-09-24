@@ -103,6 +103,8 @@ export default function Community() {
   const [editPostContent, setEditPostContent] = useState<string>("");
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInitialTab, setChatInitialTab] = useState<'ai-tutor' | 'direct' | 'group'>('direct');
+  const [chatInitialUserId, setChatInitialUserId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +114,36 @@ export default function Community() {
       });
     }
   }, [user]);
+
+  // Handle navigation state for auto-opening chats
+  useEffect(() => {
+    const state = location.state as any;
+    if (state && groups.length > 0) {
+      if (state.openGroupChat && state.groupId) {
+        // Find and select the group
+        const groupToOpen = groups.find(g => g.id === state.groupId);
+        if (groupToOpen) {
+          setSelectedGroup(groupToOpen);
+          setChatInitialTab('group');
+          setChatInitialUserId(undefined);
+          setIsChatOpen(true);
+          // Clear the state to prevent re-opening on refresh
+          window.history.replaceState(null, '', location.pathname);
+        }
+      } else if (state.openDirectMessage && state.groupId && state.partnerId) {
+        // Find and select the group, then open direct messages tab
+        const groupToOpen = groups.find(g => g.id === state.groupId);
+        if (groupToOpen) {
+          setSelectedGroup(groupToOpen);
+          setChatInitialTab('direct');
+          setChatInitialUserId(state.partnerId);
+          setIsChatOpen(true);
+          // Clear the state to prevent re-opening on refresh
+          window.history.replaceState(null, '', location.pathname);
+        }
+      }
+    }
+  }, [groups, location.state]);
 
   // Admin role check and immediate visibility updates
   useEffect(() => {
@@ -1048,14 +1080,18 @@ export default function Community() {
                            <Users className="h-4 w-4 mr-1" />
                            {selectedGroup.member_count || 0} members
                          </div>
-                         <Button 
-                           variant="outline" 
-                           size="sm"
-                           onClick={() => setIsChatOpen(true)}
-                         >
-                           <MessageSquare className="h-4 w-4 mr-2" />
-                           Group Chat
-                         </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setChatInitialTab('group');
+                              setChatInitialUserId(undefined);
+                              setIsChatOpen(true);
+                            }}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Group Chat
+                          </Button>
                        </div>
                      </div>
                      
@@ -1346,10 +1382,16 @@ export default function Community() {
         {selectedGroup && groupMembers && (
           <MessagingSystem
             isOpen={isChatOpen}
-            onClose={() => setIsChatOpen(false)}
+            onClose={() => {
+              setIsChatOpen(false);
+              setChatInitialTab('direct');
+              setChatInitialUserId(undefined);
+            }}
             groupId={selectedGroup.id}
             groupName={selectedGroup.name}
             groupLevel={selectedGroup.level}
+            initialTab={chatInitialTab}
+            initialSelectedUserId={chatInitialUserId}
             members={groupMembers.map(m => {
               console.log('Mapping member:', m); // Debug log
               return {

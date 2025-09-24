@@ -64,6 +64,8 @@ interface MessagingSystemProps {
   members: GroupMember[];
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'ai-tutor' | 'direct' | 'group';
+  initialSelectedUserId?: string;
 }
 
 export const MessagingSystem: React.FC<MessagingSystemProps> = ({ 
@@ -72,10 +74,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   groupLevel,
   members, 
   isOpen, 
-  onClose 
+  onClose,
+  initialTab = 'direct',
+  initialSelectedUserId
 }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'ai-tutor' | 'direct' | 'group'>('direct');
+  const [activeTab, setActiveTab] = useState<'ai-tutor' | 'direct' | 'group'>(initialTab);
   const [selectedUser, setSelectedUser] = useState<GroupMember | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [message, setMessage] = useState('');
@@ -98,6 +102,16 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
       fetchConversations();
     }
   }, [isOpen, activeTab, user]);
+
+  // Auto-select user when initialSelectedUserId is provided
+  useEffect(() => {
+    if (initialSelectedUserId && members.length > 0 && !selectedUser) {
+      const userToSelect = members.find(member => member.user_id === initialSelectedUserId);
+      if (userToSelect) {
+        setSelectedUser(userToSelect);
+      }
+    }
+  }, [initialSelectedUserId, members, selectedUser]);
 
   useEffect(() => {
     if (isOpen && selectedUser) {

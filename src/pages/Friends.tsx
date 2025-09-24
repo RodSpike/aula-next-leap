@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ interface FriendRequest {
 export default function Friends() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
@@ -83,6 +85,24 @@ export default function Friends() {
       setSearchResults([]);
     }
   }, [searchQuery]);
+
+  // Handle navigation state for auto-opening chat
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openChat && state?.partnerId && friends.length > 0 && user) {
+      // Find the friend by partner ID
+      const friendToOpen = friends.find(friend => {
+        const friendProfile = getFriendProfile(friend);
+        return friendProfile?.user_id === state.partnerId;
+      });
+
+      if (friendToOpen) {
+        setSelectedFriend(friendToOpen);
+        // Clear the state to prevent re-opening on refresh
+        window.history.replaceState(null, '', location.pathname);
+      }
+    }
+  }, [friends, location.state, user]);
 
   const loadFriends = async () => {
     if (!user) return;
