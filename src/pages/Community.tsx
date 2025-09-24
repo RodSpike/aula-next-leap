@@ -1325,14 +1325,15 @@ export default function Community() {
            onClose={() => setIsChatOpen(false)}
            groupId={selectedGroup.id}
            groupName={selectedGroup.name}
-           members={groupMembers.map(m => ({
-             user_id: m.user_id,
-             profiles: {
-               display_name: m.profiles?.display_name || 'Unknown',
-               avatar_url: m.profiles?.avatar_url || '',
-               username: m.profiles?.display_name || 'Unknown'
-             }
-           }))}
+            members={groupMembers.map(m => ({
+              user_id: m.user_id,
+              status: m.status || 'accepted',
+              profiles: {
+                display_name: m.profiles?.display_name || 'Unknown',
+                avatar_url: m.profiles?.avatar_url || '',
+                username: m.profiles?.display_name || 'Unknown'
+              }
+            }))}
          />
        )}
       </div>
