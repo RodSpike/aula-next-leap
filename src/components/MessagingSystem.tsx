@@ -168,40 +168,45 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         }
       }
 
-      // Also get private group chats where user is a member
-      const { data: privateGroups } = await supabase
-        .from('community_groups')
-        .select(`
-          id,
-          name,
-          created_at,
-          group_chat_messages!inner (
-            content,
-            created_at
-          )
-        `)
-        .eq('group_type', 'closed')
-        .eq('group_members.user_id', user.id)
-        .eq('group_members.status', 'accepted')
-        .order('group_chat_messages.created_at', { ascending: false })
-        .limit(1, { foreignTable: 'group_chat_messages' });
+      // Also add private group chats (created for DMs) where user is a member
+      // Step 1: fetch memberships
+      const { data: memberships }: any = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id)
+        .eq('status', 'accepted');
 
-      // Add private groups to conversations
-      if (privateGroups) {
-        for (const group of privateGroups) {
-          const lastMessage = group.group_chat_messages?.[0];
-          if (lastMessage) {
-            conversationMap.set(`group_${group.id}`, {
-              user_id: `group_${group.id}`,
-              display_name: group.name,
-              username: '',
-              avatar_url: undefined,
-              last_message: lastMessage.content,
-              last_message_time: lastMessage.created_at
-            });
-          }
+      const groupIds = (memberships || []).map(m => m.group_id);
+
+      if (groupIds.length > 0) {
+        // Step 2: fetch only private-chat groups
+        const { data: privateGroups } = await (supabase as any)
+          .from('community_groups')
+          .select('id, name')
+          .in('id', groupIds)
+          .eq('is_private_chat', true);
+
+        // Step 3: fetch last message for each private group (sequential to keep TS simple)
+        for (const g of privateGroups || []) {
+          const { data: lastMsg } = await supabase
+            .from('group_chat_messages')
+            .select('content, created_at')
+            .eq('group_id', g.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          conversationMap.set(`group_${g.id}`, {
+            user_id: `group_${g.id}`,
+            display_name: g.name,
+            username: '',
+            avatar_url: undefined,
+            last_message: lastMsg?.content || 'New private group',
+            last_message_time: lastMsg?.created_at || new Date().toISOString()
+          });
         }
       }
+
 
       setConversations(Array.from(conversationMap.values()));
     } catch (error) {
@@ -370,7 +375,8 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         level: levelToUse,
         group_type: 'closed',
         created_by: user.id,
-        max_members: 10
+        max_members: 10,
+        is_private_chat: true
       } as const;
 
       console.log('Group payload:', payload);

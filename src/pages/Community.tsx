@@ -181,6 +181,7 @@ export default function Community() {
         .from('community_groups')
         .select('*')
         .eq('archived', false)
+        .eq('is_private_chat', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
