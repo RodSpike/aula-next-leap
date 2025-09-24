@@ -226,50 +226,6 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
           <DialogTitle>User Profile</DialogTitle>
         </DialogHeader>
 
-        {isAdmin && !profile && (
-          <div className="space-y-4 mb-6">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search by name, email, or user ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
-              />
-              <Button onClick={searchUsers} disabled={searchLoading} size="icon">
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {searchResults.length > 0 && (
-              <div className="max-h-48 overflow-y-auto space-y-2 border rounded-lg p-2">
-                {searchResults.map((result) => (
-                  <div
-                    key={result.user_id}
-                    className="flex items-center gap-3 p-2 hover:bg-muted rounded-md cursor-pointer"
-                    onClick={() => selectUser(result)}
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={result.avatar_url} />
-                      <AvatarFallback>
-                        {result.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {result.display_name || result.username || 'Anonymous'}
-                      </p>
-                      {result.email && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {result.email}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {profile ? (
           <div className="space-y-6">
