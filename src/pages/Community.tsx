@@ -342,20 +342,43 @@ export default function Community() {
 
   const fetchGroupMembers = async (groupId: string) => {
     try {
-      const { data, error } = await supabase
+      // First get the group members
+      const { data: membersData, error: membersError } = await supabase
         .from('group_members')
         .select(`
           user_id,
-          status,
-          profiles!inner(display_name, avatar_url)
+          status
         `)
         .eq('group_id', groupId)
         .eq('status', 'accepted');
 
-      if (error) throw error;
-      setGroupMembers(data || []);
+      if (membersError) throw membersError;
+
+      // Then get profiles for each member
+      const membersWithProfiles = await Promise.all(
+        (membersData || []).map(async (member) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url, username')
+            .eq('user_id', member.user_id)
+            .single();
+
+          return {
+            ...member,
+            profiles: profileData || { 
+              display_name: 'Unknown User', 
+              avatar_url: null, 
+              username: 'unknown' 
+            }
+          };
+        })
+      );
+
+      console.log('Fetched group members:', membersWithProfiles);
+      setGroupMembers(membersWithProfiles);
     } catch (error) {
       console.error('Error fetching group members:', error);
+      setGroupMembers([]); // Set empty array on error to prevent undefined issues
     }
   };
 
@@ -1318,24 +1341,27 @@ export default function Community() {
          </DialogContent>
        </Dialog>
 
-       {/* Messaging System */}
-       {selectedGroup && groupMembers && (
-         <MessagingSystem
-           isOpen={isChatOpen}
-           onClose={() => setIsChatOpen(false)}
-           groupId={selectedGroup.id}
-           groupName={selectedGroup.name}
-            members={groupMembers.map(m => ({
-              user_id: m.user_id,
-              status: m.status || 'accepted',
-              profiles: {
-                display_name: m.profiles?.display_name || 'Unknown',
-                avatar_url: m.profiles?.avatar_url || '',
-                username: m.profiles?.display_name || 'Unknown'
-              }
-            }))}
-         />
-       )}
+        {/* Messaging System */}
+        {selectedGroup && groupMembers && (
+          <MessagingSystem
+            isOpen={isChatOpen}
+            onClose={() => setIsChatOpen(false)}
+            groupId={selectedGroup.id}
+            groupName={selectedGroup.name}
+            members={groupMembers.map(m => {
+              console.log('Mapping member:', m); // Debug log
+              return {
+                user_id: m.user_id,
+                status: m.status || 'accepted',
+                profiles: {
+                  display_name: m.profiles?.display_name || 'Unknown',
+                  avatar_url: m.profiles?.avatar_url || '',
+                  username: m.profiles?.username || m.profiles?.display_name || 'Unknown'
+                }
+              };
+            })}
+          />
+        )}
       </div>
    );
  }

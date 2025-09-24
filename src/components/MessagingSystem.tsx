@@ -315,6 +315,15 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   };
 
   const availableMembers = members.filter(member => member.user_id !== user?.id);
+  
+  // Debug logging
+  console.log('MessagingSystem Debug:', {
+    totalMembers: members.length,
+    availableMembers: availableMembers.length,
+    membersData: members,
+    currentUserId: user?.id,
+    availableMembersData: availableMembers
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
