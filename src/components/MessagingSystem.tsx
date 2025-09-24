@@ -87,6 +87,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   const [privateGroupName, setPrivateGroupName] = useState('');
   const [isPrivateGroup, setIsPrivateGroup] = useState(false);
   const [privateGroupId, setPrivateGroupId] = useState<string | null>(null);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -318,6 +319,10 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
     if (!user || !selectedUser) return;
 
     try {
+      console.log('Creating private group with participants:', participantIds);
+      console.log('Current user:', user.id);
+      console.log('Selected user:', selectedUser.user_id);
+
       // Create private group
       const { data: groupData, error: groupError } = await supabase
         .from('community_groups')
@@ -332,10 +337,17 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         .select()
         .single();
 
-      if (groupError) throw groupError;
+      if (groupError) {
+        console.error('Error creating group:', groupError);
+        throw groupError;
+      }
+
+      console.log('Group created successfully:', groupData);
 
       // Add all participants as members
       const allParticipants = [user.id, selectedUser.user_id, ...participantIds];
+      console.log('Adding participants:', allParticipants);
+
       const memberInserts = allParticipants.map(userId => ({
         group_id: groupData.id,
         user_id: userId,
@@ -348,7 +360,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         .from('group_members')
         .insert(memberInserts);
 
-      if (membersError) throw membersError;
+      if (membersError) {
+        console.error('Error adding members:', membersError);
+        throw membersError;
+      }
+
+      console.log('Members added successfully');
 
       // Convert existing direct messages to group messages
       const existingMessages = messages.map(msg => ({
@@ -358,12 +375,17 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
         created_at: msg.created_at
       }));
 
+      console.log('Converting messages:', existingMessages.length);
+
       if (existingMessages.length > 0) {
         const { error: messagesError } = await supabase
           .from('group_chat_messages')
           .insert(existingMessages);
 
-        if (messagesError) throw messagesError;
+        if (messagesError) {
+          console.error('Error converting messages:', messagesError);
+          // Don't throw here - group creation is still successful
+        }
       }
 
       // Switch to group chat
@@ -373,8 +395,12 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
       setShowAddPeopleDialog(false);
       setSelectedUsersToAdd([]);
       
+      console.log('Private group creation completed successfully');
+      
     } catch (error) {
       console.error('Error creating private group:', error);
+      // Add user-friendly error display
+      alert(`Failed to create group chat: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -397,9 +423,19 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
     }
   };
 
-  const handleAddPeople = () => {
-    if (selectedUsersToAdd.length === 0) return;
-    createPrivateGroup(selectedUsersToAdd);
+  const handleAddPeople = async () => {
+    if (selectedUsersToAdd.length === 0 || isCreatingGroup) return;
+    
+    console.log('handleAddPeople called with users:', selectedUsersToAdd);
+    setIsCreatingGroup(true);
+    
+    try {
+      await createPrivateGroup(selectedUsersToAdd);
+    } catch (error) {
+      console.error('Error in handleAddPeople:', error);
+    } finally {
+      setIsCreatingGroup(false);
+    }
   };
 
   const toggleUserSelection = (userId: string) => {
@@ -798,9 +834,9 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
             </Button>
             <Button 
               onClick={handleAddPeople}
-              disabled={selectedUsersToAdd.length === 0}
+              disabled={selectedUsersToAdd.length === 0 || isCreatingGroup}
             >
-              Create Group Chat
+              {isCreatingGroup ? 'Creating...' : 'Create Group Chat'}
             </Button>
           </DialogFooter>
         </DialogContent>
