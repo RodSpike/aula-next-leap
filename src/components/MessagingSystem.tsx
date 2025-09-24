@@ -179,7 +179,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
       const groupIds = (memberships || []).map(m => m.group_id);
 
       if (groupIds.length > 0) {
-        // Step 2: fetch only private-chat groups
+        // Step 2: fetch only private-chat groups where user is still a member
         const { data: privateGroups } = await (supabase as any)
           .from('community_groups')
           .select('id, name')
@@ -188,22 +188,33 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
 
         // Step 3: fetch last message for each private group (sequential to keep TS simple)
         for (const g of privateGroups || []) {
-          const { data: lastMsg } = await supabase
-            .from('group_chat_messages')
-            .select('content, created_at')
+          // Double-check user is still a member of this group
+          const { data: membership } = await supabase
+            .from('group_members')
+            .select('id')
             .eq('group_id', g.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
+            .eq('user_id', user.id)
+            .eq('status', 'accepted')
             .maybeSingle();
 
-          conversationMap.set(`group_${g.id}`, {
-            user_id: `group_${g.id}`,
-            display_name: g.name,
-            username: '',
-            avatar_url: undefined,
-            last_message: lastMsg?.content || 'New private group',
-            last_message_time: lastMsg?.created_at || new Date().toISOString()
-          });
+          if (membership) {
+            const { data: lastMsg } = await supabase
+              .from('group_chat_messages')
+              .select('content, created_at')
+              .eq('group_id', g.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            conversationMap.set(`group_${g.id}`, {
+              user_id: `group_${g.id}`,
+              display_name: g.name,
+              username: '',
+              avatar_url: undefined,
+              last_message: lastMsg?.content || 'New private group',
+              last_message_time: lastMsg?.created_at || new Date().toISOString()
+            });
+          }
         }
       }
 
@@ -222,6 +233,25 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
       if (otherUserId.startsWith('group_')) {
         const groupId = otherUserId.replace('group_', '');
         
+        // Get user's display name for the system message
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('display_name, username')
+          .eq('user_id', user.id)
+          .single();
+
+        const displayName = userProfile?.display_name || userProfile?.username || 'Anonymous User';
+        
+        // Add system message that user left the group
+        await supabase
+          .from('group_chat_messages')
+          .insert({
+            group_id: groupId,
+            sender_id: user.id,
+            content: `${displayName} has left the group`,
+            is_system_message: true
+          });
+
         // Remove user from the group (leave the group)
         const { error } = await supabase
           .from('group_members')
