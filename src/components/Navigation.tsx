@@ -25,22 +25,34 @@ export const Navigation = () => {
       if (user) {
         console.log('Checking admin status for user:', user.id, user.email);
         
-        // Check if user has admin role in database
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
-        
-        console.log('Admin check result:', { data, error, dataLength: data?.length });
-        
-        const hasAdminRole = data && data.length > 0;
+        // First check if user is master admin
         const isMasterAdmin = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
+        console.log('Is master admin:', isMasterAdmin);
         
-        console.log('Admin status calculation:', { hasAdminRole, isMasterAdmin });
+        if (isMasterAdmin) {
+          console.log('User is master admin, setting admin status to true');
+          setIsAdmin(true);
+          return;
+        }
         
-        setIsAdmin(hasAdminRole || isMasterAdmin);
+        // Check if user has admin role in database using the has_role function
+        const { data, error } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+        
+        console.log('Admin role check result:', { data, error });
+        
+        if (error) {
+          console.error('Error checking admin role:', error);
+          setIsAdmin(false);
+          return;
+        }
+        
+        console.log('Setting admin status to:', data);
+        setIsAdmin(data === true);
       } else {
+        console.log('No user, setting admin status to false');
         setIsAdmin(false);
       }
     };
