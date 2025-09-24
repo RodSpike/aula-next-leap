@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown, RotateCcw, MessageCircle } from "lucide-react";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { OngoingChats } from "@/components/OngoingChats";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -434,6 +435,9 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Ongoing Chats Section */}
+            <OngoingChats />
 
             <Card className="mt-6">
               <CardHeader>
