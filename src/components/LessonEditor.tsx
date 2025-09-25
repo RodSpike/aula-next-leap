@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Edit, Save, X } from "lucide-react";
+import { Plus, Trash2, Edit, Save, X, Sparkles } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -66,6 +66,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<{ title: string; explanation: string } | null>(null);
   const [lessonBody, setLessonBody] = useState<string>("");
+  const [enhancing, setEnhancing] = useState<string | null>(null);
+  const [enhancementPreview, setEnhancementPreview] = useState<{ id: string; content: string } | null>(null);
   const quillModules = {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
@@ -386,6 +388,79 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
     setEditingContent(null);
   };
 
+  const enhanceContent = async (content: LessonContent) => {
+    try {
+      setEnhancing(content.id!);
+      
+      const { data, error } = await supabase.functions.invoke('enhance-lesson-content', {
+        body: {
+          content: content.explanation || '',
+          title: content.title,
+          sectionType: content.section_type
+        }
+      });
+
+      if (error) throw error;
+
+      setEnhancementPreview({
+        id: content.id!,
+        content: data.enhancedContent
+      });
+
+    } catch (error: any) {
+      console.error('Error enhancing content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to enhance content",
+        variant: "destructive",
+      });
+    } finally {
+      setEnhancing(null);
+    }
+  };
+
+  const applyEnhancement = async () => {
+    if (!enhancementPreview) return;
+
+    try {
+      setSaving(true);
+      
+      const { error } = await supabase
+        .from('lesson_content')
+        .update({
+          explanation: enhancementPreview.content
+        })
+        .eq('id', enhancementPreview.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Content enhanced successfully",
+      });
+
+      setEnhancementPreview(null);
+      fetchLessonData();
+    } catch (error: any) {
+      console.error('Error applying enhancement:', error);
+      toast({
+        title: "Error",
+        description: "Failed to apply enhancement",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const enhanceAllContent = async () => {
+    for (const content of lessonContent) {
+      await enhanceContent(content);
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -433,10 +508,16 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Lesson Content</CardTitle>
-            <Button onClick={() => setIsAddingContent(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Content
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={enhanceAllContent} disabled={enhancing !== null}>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Enhance All
+              </Button>
+              <Button onClick={() => setIsAddingContent(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Content
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -473,6 +554,15 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => enhanceContent(content)}
+                        disabled={enhancing === content.id}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {enhancing === content.id ? 'Enhancing...' : 'Enhance'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleEditContent(content)}
                       >
                         <Edit className="w-4 h-4" />
@@ -486,7 +576,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
                       </Button>
                     </div>
                   </div>
-                  <p className="text-muted-foreground">{content.explanation}</p>
+                  <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: content.explanation || '' }} />
                 </>
               )}
             </div>
@@ -623,6 +713,35 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Enhancement Preview Dialog */}
+      {enhancementPreview && (
+        <Dialog open={!!enhancementPreview} onOpenChange={() => setEnhancementPreview(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>Enhanced Content Preview</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <h4 className="font-medium mb-2">Enhanced Content:</h4>
+                <div 
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: enhancementPreview.content }}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setEnhancementPreview(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={applyEnhancement} disabled={saving}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Apply Enhancement
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
