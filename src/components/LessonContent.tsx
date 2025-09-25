@@ -696,6 +696,12 @@ export function LessonContent({ content }: LessonContentProps) {
                 </p>
               </div>
             )}
+            {item.content && (item as any).content?.html && (
+              <article
+                className="prose prose-lg dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: (item as any).content.html }}
+              />
+            )}
             
             <Separator />
             

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, BookOpen, Sparkles } from "lucide-react";
 import { COMPLETE_CURRICULUM } from "@/utils/curriculumData";
+import { cleanContentFromExercises } from "@/utils/parseExercises";
 
 export function ComprehensiveLessonGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -47,12 +48,48 @@ export function ComprehensiveLessonGenerator() {
     const exercises = [
       {
         exercise_type: 'multiple_choice',
-        question: `Grammar practice: Choose the correct form for this ${level} level lesson.`,
-        options: ["Option A", "Option B", "Option C", "Option D"],
-        correct_answer: "Option A",
-        explanation: "Basic grammar explanation for this level",
+        question: `Complete: "I ___ a student"`,
+        options: ["am", "is", "are", "be"],
+        correct_answer: "am",
+        explanation: "Use 'am' with 'I' — PT-BR: Use 'am' com o pronome 'I'",
         points: 1,
         order_index: 0
+      },
+      {
+        exercise_type: 'fill_blank',
+        question: `She ___ from Brazil.`,
+        options: ["is", "are", "am", "be"],
+        correct_answer: "is",
+        explanation: "Use 'is' with he/she/it — PT-BR: Use 'is' com he/she/it",
+        points: 1,
+        order_index: 1
+      },
+      {
+        exercise_type: 'true_false',
+        question: `True or False: "They is happy." is correct.`,
+        options: ["True", "False"],
+        correct_answer: "False",
+        explanation: "Plural subject needs 'are' — PT-BR: Sujeito no plural usa 'are'",
+        points: 1,
+        order_index: 2
+      },
+      {
+        exercise_type: 'multiple_choice',
+        question: `Choose the best greeting for the morning:`,
+        options: ["Good morning", "Good night", "See you", "Bye"],
+        correct_answer: "Good morning",
+        explanation: "Morning = Good morning — PT-BR: Manhã = Good morning",
+        points: 1,
+        order_index: 3
+      },
+      {
+        exercise_type: 'fill_blank',
+        question: `We ___ from Brazil.`,
+        options: ["are", "is", "am", "be"],
+        correct_answer: "are",
+        explanation: "Use 'are' with 'we/you/they' — PT-BR: Use 'are' com 'we/you/they'",
+        points: 1,
+        order_index: 4
       }
     ];
 
@@ -355,6 +392,9 @@ export function ComprehensiveLessonGenerator() {
 
             // Parse AI content and create lesson content
             const parsedContent = parseAILessonContent(aiResponse.content, lessonData);
+            // Update lesson HTML with cleaned content (remove activities JSON)
+            const cleanHtml = cleanContentFromExercises(aiResponse.content);
+            await supabase.from('lessons').update({ content: cleanHtml }).eq('id', lesson.id);
             
             // Insert new lesson content
             for (const content of parsedContent.lessonParts) {
@@ -388,6 +428,12 @@ export function ComprehensiveLessonGenerator() {
             
             // Create basic content even if AI fails
             const basicContent = createBasicLessonContent(lessonData, level);
+            // Save a basic HTML explanation as a fallback so students always see content
+            const fallbackHtml = `
+<section class=\"lesson-introduction\"><h2>${lessonData.title}</h2><p>Esta lição cobre: ${lessonData.grammarFocus.join(', ')}</p></section>
+<section class=\"grammar-focus\"><h3>Gramática</h3><ul>${lessonData.grammarFocus.map((p: string) => `<li>${p}</li>`).join('')}</ul></section>
+<section class=\"vocabulary-section\"><h3>Vocabulário</h3><ul>${lessonData.vocabularySets.map((v: string) => `<li>${v}</li>`).join('')}</ul></section>`;
+            await supabase.from('lessons').update({ content: fallbackHtml }).eq('id', lesson.id);
             
             for (const content of basicContent.lessonParts) {
               await supabase.from('lesson_content').insert({
