@@ -280,7 +280,32 @@ export default function Course() {
   const currentLessonContent = lessonContent.filter(content => content.lesson_id === currentLesson?.id);
   const introductionContent = currentLessonContent.filter(content => content.section_type === 'introduction');
   const practiceContent = currentLessonContent.filter(content => content.section_type === 'practice');
-  const lessonHtml = currentLesson?.content || "";
+  // Helper function to normalize lesson HTML content
+  const normalizeLessonHtml = (content: string): string => {
+    if (!content) return '';
+    
+    let cleaned = content.trim();
+    
+    // Remove markdown code fences if present
+    if (cleaned.startsWith('```html') || cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:html)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    }
+    
+    // Extract content from body tags if present
+    const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      cleaned = bodyMatch[1].trim();
+    }
+    
+    // If still no HTML tags, convert newlines to paragraphs for readability
+    if (cleaned && !cleaned.includes('<')) {
+      cleaned = cleaned.split('\n\n').map(p => p.trim()).filter(p => p).map(p => `<p>${p}</p>`).join('');
+    }
+    
+    return cleaned.trim();
+  };
+
+  const lessonHtml = normalizeLessonHtml(currentLesson?.content || "");
 
   return (
     <div className="min-h-screen bg-background">
@@ -385,7 +410,7 @@ export default function Course() {
                   // Enhanced lesson content with proper educational styling
                   <div className="lesson-container">
                     <article
-                      className="max-w-none"
+                      className="prose prose-lg dark:prose-invert max-w-none"
                       dangerouslySetInnerHTML={{ __html: lessonHtml }}
                     />
                   </div>

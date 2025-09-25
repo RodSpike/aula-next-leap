@@ -82,6 +82,26 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
     'list', 'bullet', 'align', 'link'
   ];
 
+  // Helper function to clean enhanced HTML content
+  const cleanEnhancedHtml = (content: string): string => {
+    if (!content) return '';
+    
+    let cleaned = content.trim();
+    
+    // Remove markdown code fences
+    if (cleaned.startsWith('```html') || cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:html)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    }
+    
+    // Extract content from body tags if present
+    const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      cleaned = bodyMatch[1].trim();
+    }
+    
+    return cleaned.trim();
+  };
+
   useEffect(() => {
     fetchLessonData();
   }, [lessonId]);
@@ -404,7 +424,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
 
       setEnhancementPreview({
         id: content.id!,
-        content: data.enhancedContent
+        content: cleanEnhancedHtml(data.enhancedContent)
       });
 
     } catch (error: any) {
@@ -427,22 +447,24 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
       
       if (enhancementPreview.id === 'full-lesson') {
         // Update the full lesson content
+        const cleanedContent = cleanEnhancedHtml(enhancementPreview.content);
         const { error } = await supabase
           .from('lessons')
           .update({
-            content: enhancementPreview.content
+            content: cleanedContent
           })
           .eq('id', lessonId);
 
         if (error) throw error;
         
-        setLessonBody(enhancementPreview.content);
+        setLessonBody(cleanedContent);
       } else {
         // Update lesson content section
+        const cleanedContent = cleanEnhancedHtml(enhancementPreview.content);
         const { error } = await supabase
           .from('lesson_content')
           .update({
-            explanation: enhancementPreview.content
+            explanation: cleanedContent
           })
           .eq('id', enhancementPreview.id);
 
@@ -492,7 +514,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
 
       setEnhancementPreview({
         id: 'full-lesson',
-        content: data.enhancedContent
+        content: cleanEnhancedHtml(data.enhancedContent)
       });
 
     } catch (error: any) {

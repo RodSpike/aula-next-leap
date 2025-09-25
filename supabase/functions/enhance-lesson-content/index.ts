@@ -8,6 +8,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to clean HTML content
+function cleanHtmlContent(content: string): string {
+  if (!content) return '';
+  
+  let cleaned = content.trim();
+  
+  // Remove markdown code fences
+  if (cleaned.startsWith('```html') || cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:html)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+  
+  // Extract content from body tags if present
+  const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) {
+    cleaned = bodyMatch[1].trim();
+  }
+  
+  // Remove script and style tags for security
+  cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  
+  return cleaned.trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -45,7 +69,7 @@ Special handling for different content types:
 - full_lesson: Create a complete lesson structure with proper sections, headings, and flow
 - Individual sections: Focus on that specific section type (grammar, vocabulary, etc.)
 
-Return only the enhanced HTML content, no additional text or explanations.`;
+Return ONLY the raw HTML content without any markdown fences, body tags, or additional text.`;
 
     let userPrompt;
     
@@ -98,11 +122,14 @@ Make it visually appealing with proper structure, but preserve ALL the original 
     }
 
     const data = await response.json();
-    const enhancedContent = data.choices[0].message.content;
+    const rawContent = data.choices[0].message.content;
+
+    // Clean the enhanced content - remove markdown fences, body wrappers, scripts
+    const cleanedContent = cleanHtmlContent(rawContent);
 
     console.log('Content enhanced successfully');
 
-    return new Response(JSON.stringify({ enhancedContent }), {
+    return new Response(JSON.stringify({ enhancedContent: cleanedContent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
