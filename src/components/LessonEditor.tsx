@@ -425,14 +425,30 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
     try {
       setSaving(true);
       
-      const { error } = await supabase
-        .from('lesson_content')
-        .update({
-          explanation: enhancementPreview.content
-        })
-        .eq('id', enhancementPreview.id);
+      if (enhancementPreview.id === 'full-lesson') {
+        // Update the full lesson content
+        const { error } = await supabase
+          .from('lessons')
+          .update({
+            content: enhancementPreview.content
+          })
+          .eq('id', lessonId);
 
-      if (error) throw error;
+        if (error) throw error;
+        
+        setLessonBody(enhancementPreview.content);
+      } else {
+        // Update lesson content section
+        const { error } = await supabase
+          .from('lesson_content')
+          .update({
+            explanation: enhancementPreview.content
+          })
+          .eq('id', enhancementPreview.id);
+
+        if (error) throw error;
+        fetchLessonData();
+      }
 
       toast({
         title: "Success",
@@ -440,7 +456,6 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
       });
 
       setEnhancementPreview(null);
-      fetchLessonData();
     } catch (error: any) {
       console.error('Error applying enhancement:', error);
       toast({
@@ -458,6 +473,37 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
       await enhanceContent(content);
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
+  const enhanceFullLesson = async () => {
+    try {
+      setEnhancing('full-lesson');
+      
+      const { data, error } = await supabase.functions.invoke('enhance-lesson-content', {
+        body: {
+          content: lessonBody,
+          title: lessonTitle,
+          sectionType: 'full_lesson'
+        }
+      });
+
+      if (error) throw error;
+
+      setEnhancementPreview({
+        id: 'full-lesson',
+        content: data.enhancedContent
+      });
+
+    } catch (error: any) {
+      console.error('Error enhancing full lesson:', error);
+      toast({
+        title: "Error",
+        description: "Failed to enhance full lesson content",
+        variant: "destructive",
+      });
+    } finally {
+      setEnhancing(null);
     }
   };
 
@@ -498,6 +544,14 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
             <Button onClick={saveLessonBody} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               Save Full Lesson
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={enhanceFullLesson} 
+              disabled={enhancing === 'full-lesson'}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {enhancing === 'full-lesson' ? 'Enhancing...' : 'Enhance Full Lesson'}
             </Button>
           </div>
         </CardContent>

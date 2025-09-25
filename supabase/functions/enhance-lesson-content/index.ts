@@ -41,14 +41,36 @@ Available CSS classes for styling:
 - .highlight, .important, .tip-box, .example-box
 - Standard educational styling is available
 
+Special handling for different content types:
+- full_lesson: Create a complete lesson structure with proper sections, headings, and flow
+- Individual sections: Focus on that specific section type (grammar, vocabulary, etc.)
+
 Return only the enhanced HTML content, no additional text or explanations.`;
 
-    const userPrompt = `Enhance the visual presentation of this ${sectionType} content:
+    let userPrompt;
+    
+    if (sectionType === 'full_lesson') {
+      userPrompt = `Enhance the visual presentation of this complete lesson:
+
+Title: ${title}
+Content: ${content}
+
+This is a full lesson, so create a comprehensive, well-structured educational experience with:
+- Clear lesson introduction and objectives
+- Properly organized sections with headings
+- Visual elements and highlights
+- Educational flow from introduction to practice
+- Interactive elements where appropriate
+
+Preserve ALL the original educational content while making it visually engaging.`;
+    } else {
+      userPrompt = `Enhance the visual presentation of this ${sectionType} content:
 
 Title: ${title}
 Content: ${content}
 
 Make it visually appealing with proper structure, but preserve ALL the original educational content.`;
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
