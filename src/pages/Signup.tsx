@@ -181,7 +181,7 @@ export default function Signup() {
             <div className="flex items-center justify-center space-x-2 mb-2">
               <Gift className="h-6 w-6 text-primary" />
               <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
-                3 DIAS GRÁTIS
+                7 DIAS GRÁTIS
               </span>
             </div>
             <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
@@ -367,7 +367,7 @@ export default function Signup() {
             {/* Trial Info */}
             <div className="bg-accent/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                ✓ 3 dias de acesso completo grátis<br />
+                ✓ 7 dias de acesso completo grátis<br />
                 ✓ Sem compromisso • Cancele quando quiser
               </p>
             </div>
