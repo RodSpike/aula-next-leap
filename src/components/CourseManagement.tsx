@@ -11,7 +11,7 @@ import { Trash2, Plus, Edit2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonEditor } from "@/components/LessonEditor";
-import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
+
 
 interface Course {
   id: string;
@@ -210,7 +210,6 @@ export const CourseManagement = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Course Management</h2>
         <div className="flex gap-2">
-          <GenerateAllLessonsButton />
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>

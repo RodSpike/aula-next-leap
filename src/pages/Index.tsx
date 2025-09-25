@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SeedDataButton } from "@/components/SeedDataButton";
-import { SeedComprehensiveDataButton } from "@/components/SeedComprehensiveDataButton";
 
 const Index = () => {
 const stats = [
@@ -148,7 +147,6 @@ const features = [
           <div className="text-center mb-8">
             <div className="flex flex-wrap gap-4 justify-center">
               <SeedDataButton />
-              <SeedComprehensiveDataButton />
             </div>
           </div>
 

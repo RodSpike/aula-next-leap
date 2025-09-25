@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/hooks/useAuth"; 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { GenerateAllLessonsButton } from "@/components/GenerateAllLessonsButton";
+
+import { ComprehensiveLessonGenerator } from "@/components/ComprehensiveLessonGenerator";
 import { CourseManagement } from "@/components/CourseManagement";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
 
@@ -666,13 +667,13 @@ export default function AdminPanel() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-background/50 p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-3">AI Content Generation</h3>
+                  <h3 className="text-lg font-semibold mb-3">Comprehensive Curriculum Generation</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Use the specialized English teaching AI to generate comprehensive lesson content for all courses. 
-                    This will create detailed explanations, vocabulary sections, grammar tables, and practice exercises 
-                    following the same high-quality format as the example lessons.
+                    Generate the complete curriculum based on the Aula Click official curriculum document. 
+                    This creates all lessons for A1-C2 levels with appropriate Portuguese support for lower levels (A1-B1) 
+                    and English-only instruction for higher levels (B2-C2). Includes final level tests for progression.
                   </p>
-                  <GenerateAllLessonsButton />
+                  <ComprehensiveLessonGenerator />
                 </div>
                 
                 <div className="bg-background/50 p-6 rounded-lg border">
