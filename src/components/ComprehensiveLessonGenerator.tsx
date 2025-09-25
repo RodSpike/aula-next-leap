@@ -60,82 +60,133 @@ export function ComprehensiveLessonGenerator() {
   };
 
   const parseAILessonContent = (aiContent: string, lessonData: any) => {
-    // Parse the AI content into structured lesson parts and exercises
-    const lessonParts = [
-      {
-        section_type: 'introduction',
-        title: 'Lesson Introduction',
-        content: { html: aiContent.substring(0, Math.min(1000, aiContent.length)) },
-        explanation: `Introduction to ${lessonData.title}`,
-        examples: [],
-        order_index: 0
-      },
-      {
-        section_type: 'grammar',
-        title: 'Grammar Focus',
-        content: { 
-          html: `<h3>Grammar Points</h3><ul>${lessonData.grammarFocus.map((point: string) => `<li>${point}</li>`).join('')}</ul>`,
-          rules: lessonData.grammarFocus
-        },
-        explanation: 'Key grammar concepts for this lesson',
-        examples: [],
-        order_index: 1
-      },
-      {
-        section_type: 'vocabulary', 
-        title: 'Vocabulary',
-        content: {
-          html: `<h3>Vocabulary Sets</h3><ul>${lessonData.vocabularySets.map((set: string) => `<li>${set}</li>`).join('')}</ul>`,
-          words: lessonData.vocabularySets
-        },
-        explanation: 'Essential vocabulary for this lesson',
-        examples: [],
-        order_index: 2
-      },
-      {
-        section_type: 'practice',
-        title: 'Practice Activities',
-        content: {
-          html: `<h3>Activities</h3><ul>${lessonData.activities.map((activity: string) => `<li>${activity}</li>`).join('')}</ul>`,
-          activities: lessonData.activities
-        },
-        explanation: 'Practice exercises and activities',
-        examples: [],
-        order_index: 3
+    try {
+      // Extract exercises from the AI content
+      const activitiesMatch = aiContent.match(/<activities>(.*?)<\/activities>/s);
+      let exercises = [];
+      
+      if (activitiesMatch) {
+        try {
+          const exercisesJson = activitiesMatch[1].trim();
+          const parsedExercises = JSON.parse(exercisesJson);
+          
+          exercises = parsedExercises.map((ex: any, index: number) => ({
+            exercise_type: ex.type === 'fill_blank' ? 'fill_blank' : ex.type === 'true_false' ? 'true_false' : 'multiple_choice',
+            question: ex.question,
+            options: ex.options || [],
+            correct_answer: ex.correct_answer,
+            explanation: ex.explanation || 'No explanation provided',
+            points: 1,
+            order_index: index
+          }));
+        } catch (parseError) {
+          console.error('Error parsing exercises JSON:', parseError);
+        }
       }
-    ];
 
-    const exercises = [
-      {
-        exercise_type: 'multiple_choice',
-        question: `Which form of "to be" is correct: "I ___ a student"?`,
-        options: ["am", "is", "are", "be"],
-        correct_answer: "am",
-        explanation: "Use 'am' with the pronoun 'I'",
-        points: 1,
-        order_index: 0
-      },
-      {
-        exercise_type: 'fill_blank',
-        question: `Complete: "She ___ from Brazil."`,
-        options: ["is", "are", "am", "be"],
-        correct_answer: "is",
-        explanation: "Use 'is' with third person singular (he/she/it)",
-        points: 1,
-        order_index: 1
-      },
-      {
-        exercise_type: 'true_false',
-        question: `True or False: "They are student" is grammatically correct.`,
-        options: ["True", "False"],
-        correct_answer: "False",
-        explanation: "Should be 'They are students' (plural noun)",
-        points: 1,
-        order_index: 2
+      // If no exercises parsed, create fallback exercises
+      if (exercises.length === 0) {
+        exercises = [
+          {
+            exercise_type: 'multiple_choice',
+            question: `Which form of "to be" is correct: "I ___ a student"?`,
+            options: ["am", "is", "are", "be"],
+            correct_answer: "am",
+            explanation: "Use 'am' with the pronoun 'I' - Em português: Use 'am' com o pronome 'I'",
+            points: 1,
+            order_index: 0
+          },
+          {
+            exercise_type: 'fill_blank',
+            question: `Complete: "She ___ from Brazil."`,
+            options: ["is", "are", "am", "be"],
+            correct_answer: "is",
+            explanation: "Use 'is' with third person singular (he/she/it) - Em português: Use 'is' com terceira pessoa do singular",
+            points: 1,
+            order_index: 1
+          },
+          {
+            exercise_type: 'true_false',
+            question: `True or False: "They are student" is grammatically correct.`,
+            options: ["True", "False"],
+            correct_answer: "False",
+            explanation: "Should be 'They are students' (plural noun) - Em português: Deve ser 'They are students' (substantivo plural)",
+            points: 1,
+            order_index: 2
+          }
+        ];
       }
-    ];
 
-    return { lessonParts, exercises };
+      // Clean the content by removing the activities section
+      const cleanContent = aiContent.replace(/<activities>.*?<\/activities>/s, '').trim();
+
+      // Parse lesson sections from the cleaned content
+      const sections = [
+        {
+          section_type: 'introduction',
+          title: 'Introdução da Lição',
+          regex: /<section class="lesson-introduction">(.*?)<\/section>/s
+        },
+        {
+          section_type: 'grammar',
+          title: 'Gramática',
+          regex: /<section class="grammar-focus">(.*?)<\/section>/s
+        },
+        {
+          section_type: 'vocabulary',
+          title: 'Vocabulário',
+          regex: /<section class="vocabulary-section">(.*?)<\/section>/s
+        },
+        {
+          section_type: 'practice',
+          title: 'Atividades Práticas',
+          regex: /<section class="practice-activities">(.*?)<\/section>/s
+        },
+        {
+          section_type: 'cultural',
+          title: 'Notas Culturais',
+          regex: /<section class="cultural-notes">(.*?)<\/section>/s
+        },
+        {
+          section_type: 'summary',
+          title: 'Resumo da Lição',
+          regex: /<section class="lesson-summary">(.*?)<\/section>/s
+        }
+      ];
+
+      const lessonParts = [];
+      
+      sections.forEach((section, index) => {
+        const match = cleanContent.match(section.regex);
+        const content = match ? match[1].trim() : `<h3>${section.title}</h3><p>Conteúdo para ${lessonData.title}</p>`;
+        
+        lessonParts.push({
+          section_type: section.section_type,
+          title: section.title,
+          content: { html: content },
+          explanation: `${section.title} - ${lessonData.title}`,
+          examples: [],
+          order_index: index
+        });
+      });
+
+      // If no sections were parsed, create fallback content
+      if (lessonParts.length === 0) {
+        lessonParts.push({
+          section_type: 'introduction',
+          title: 'Introdução da Lição',
+          content: { html: cleanContent.substring(0, Math.min(2000, cleanContent.length)) || `<h2>${lessonData.title}</h2><p>Esta lição cobre: ${lessonData.grammarFocus.join(', ')}</p>` },
+          explanation: `Introdução à ${lessonData.title}`,
+          examples: [],
+          order_index: 0
+        });
+      }
+
+      return { lessonParts, exercises };
+    } catch (error) {
+      console.error('Error parsing AI lesson content:', error);
+      return createBasicLessonContent(lessonData, 'A1');
+    }
   };
 
   const createLevelTest = async (level: string, courseId: string, levelData: any) => {

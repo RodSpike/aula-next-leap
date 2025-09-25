@@ -82,44 +82,81 @@ ${practicalApplications?.map((item: string) => `- ${item}`).join('\n') || 'No sp
 ACTIVITIES NEEDED:
 ${activities?.map((item: string) => `- ${item}`).join('\n') || 'No specific activities provided'}
 
-Please create a complete lesson with:
+Create a complete lesson with the following structure. Return your response with clear HTML sections and a JSON activities block:
 
-1. **Lesson Introduction** (${languageSupport === 'english_only' ? 'in English' : 'with appropriate Portuguese support'})
-   - Warm-up activity
-   - Learning objectives
-   - Context setting
+<!-- LESSON CONTENT START -->
+<section class="lesson-introduction">
+<h2>Introdução da Lição</h2>
+<!-- Include warm-up, objectives, context in ${languageSupport !== 'english_only' ? 'Portuguese and English' : 'English only'} -->
+</section>
 
-2. **Grammar Section** (with clear explanations ${languageSupport !== 'english_only' ? 'in Portuguese and English' : 'in English'})
-   - Grammar rules with examples
-   - Usage patterns
-   - Common mistakes to avoid
-   - Practice sentences
+<section class="grammar-focus">
+<h2>Gramática</h2>
+<!-- Grammar rules, examples, usage patterns in ${languageSupport !== 'english_only' ? 'Portuguese and English' : 'English only'} -->
+</section>
 
-3. **Vocabulary Section**
-   - Word lists with definitions ${languageSupport !== 'english_only' ? '(in Portuguese and English)' : '(in English)'}
-   - Example sentences
-   - Pronunciation tips
-   - Collocations and phrases
+<section class="vocabulary-section">
+<h2>Vocabulário</h2>
+<!-- Word lists with definitions in ${languageSupport !== 'english_only' ? 'Portuguese and English' : 'English only'} -->
+</section>
 
-4. **Practice Activities**
-   - Multiple choice questions (5-8 questions)
-   - Fill-in-the-blank exercises (5-8 sentences)
-   - True/False questions (3-5 questions)
-   - Speaking practice prompts
-   - Writing exercises
+<section class="practice-activities">
+<h2>Atividades Práticas</h2>
+<!-- Speaking prompts, writing exercises, practical applications -->
+</section>
 
-5. **Cultural Notes** (when relevant)
-   - Cultural context
-   - Real-world usage
-   - Regional variations
+<section class="cultural-notes">
+<h2>Notas Culturais</h2>
+<!-- Cultural context when relevant -->
+</section>
 
-6. **Lesson Summary**
-   - Key points review
-   - Next lesson preview
+<section class="lesson-summary">
+<h2>Resumo da Lição</h2>
+<!-- Key points review -->
+</section>
+<!-- LESSON CONTENT END -->
 
-Format everything as clean HTML with proper tags, tables for grammar rules, and clear exercise instructions. Use colors sparingly - focus on blue (#3B82F6) and green (#10B981) for highlights and important information.
+<activities>
+[
+  {
+    "type": "multiple_choice",
+    "question": "Complete: 'I ___ a student'",
+    "options": ["am", "is", "are", "be"],
+    "correct_answer": "am",
+    "explanation": "Use 'am' with 'I' - Em português: Use 'am' com 'I' (eu sou/estou)"
+  },
+  {
+    "type": "fill_blank",
+    "question": "She ___ from Brazil",
+    "options": ["is", "are", "am", "be"],
+    "correct_answer": "is",
+    "explanation": "Use 'is' with he/she/it - Em português: Use 'is' com he/she/it (ele/ela é/está)"
+  },
+  {
+    "type": "true_false", 
+    "question": "The sentence 'They are student' is correct",
+    "options": ["True", "False"],
+    "correct_answer": "False",
+    "explanation": "Should be 'students' (plural) - Em português: Deve ser 'students' (plural)"
+  },
+  {
+    "type": "multiple_choice",
+    "question": "How do you say 'Good morning' in English?",
+    "options": ["Good morning", "Good night", "Good afternoon", "Good evening"],
+    "correct_answer": "Good morning",
+    "explanation": "Good morning = Bom dia em português"
+  },
+  {
+    "type": "fill_blank",
+    "question": "Complete the greeting: 'Hello, ___ are you?'",
+    "options": ["how", "what", "where", "who"],
+    "correct_answer": "how",
+    "explanation": "How are you? = Como você está? em português"
+  }
+]
+</activities>
 
-Make the content engaging, practical, and appropriate for ${courseLevel} level students.`;
+IMPORTANT: Include 5-8 exercises that specifically test the grammar and vocabulary for this lesson. Use ${languageSupport !== 'english_only' ? 'bilingual explanations (Portuguese + English)' : 'English explanations only'}.`;
 
     console.log('Sending request to OpenRouter API...');
 
