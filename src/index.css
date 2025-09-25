@@ -2,6 +2,166 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Educational Content Styles */
+.lesson-container {
+  @apply max-w-4xl mx-auto p-6 space-y-8;
+}
+
+.lesson-hero {
+  @apply bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-8 border border-primary/20;
+}
+
+.lesson-header {
+  @apply space-y-6;
+}
+
+.lesson-title {
+  @apply text-4xl font-bold text-foreground mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+}
+
+.lesson-objectives {
+  @apply bg-background/80 backdrop-blur-sm rounded-lg p-6 border border-border;
+}
+
+.objectives-title {
+  @apply text-xl font-semibold text-foreground mb-4 flex items-center gap-2;
+}
+
+.objectives-list {
+  @apply space-y-2;
+}
+
+.objectives-list li {
+  @apply text-muted-foreground flex items-start gap-2 before:content-['✓'] before:text-primary before:font-bold before:mt-0.5;
+}
+
+.section-header {
+  @apply mb-6;
+}
+
+.section-title {
+  @apply text-2xl font-bold text-foreground mb-4 flex items-center gap-3 pb-2 border-b border-border;
+}
+
+.grammar-section {
+  @apply space-y-6;
+}
+
+.grammar-content {
+  @apply space-y-8;
+}
+
+.grammar-point {
+  @apply bg-card rounded-xl p-6 border border-border shadow-sm hover:shadow-md transition-shadow;
+}
+
+.grammar-title {
+  @apply text-xl font-semibold text-foreground mb-4 text-primary;
+}
+
+.grammar-explanation {
+  @apply grid md:grid-cols-2 gap-6;
+}
+
+.rule-box {
+  @apply bg-primary/5 rounded-lg p-4 border border-primary/20;
+}
+
+.rule-box h4 {
+  @apply font-semibold text-primary mb-2 flex items-center gap-2 before:content-['📋'];
+}
+
+.rule-box p {
+  @apply text-foreground text-sm leading-relaxed;
+}
+
+.examples-box {
+  @apply bg-secondary/5 rounded-lg p-4 border border-secondary/20;
+}
+
+.examples-box h4 {
+  @apply font-semibold text-secondary mb-3 flex items-center gap-2 before:content-['💡'];
+}
+
+.examples-list {
+  @apply space-y-2;
+}
+
+.examples-list li {
+  @apply text-foreground text-sm bg-background/50 rounded px-3 py-2 border border-border;
+}
+
+.vocabulary-section {
+  @apply space-y-6;
+}
+
+.vocabulary-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+}
+
+.vocab-card {
+  @apply bg-card rounded-lg p-4 border border-border hover:border-primary/50 transition-colors cursor-pointer;
+}
+
+.vocab-card:hover .vocab-word {
+  @apply text-secondary;
+}
+
+.vocab-word {
+  @apply font-bold text-lg text-primary transition-colors;
+}
+
+.vocab-translation {
+  @apply text-muted-foreground text-sm mt-1;
+}
+
+.vocab-example {
+  @apply text-foreground text-xs mt-2 italic bg-secondary/10 rounded px-2 py-1;
+}
+
+.culture-section {
+  @apply bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl p-6 border border-accent/20;
+}
+
+.culture-content {
+  @apply text-foreground max-w-none;
+}
+
+.culture-content p {
+  @apply text-foreground leading-relaxed;
+}
+
+.practice-section {
+  @apply bg-gradient-to-r from-secondary/10 to-secondary/5 rounded-xl p-6 border border-secondary/20;
+}
+
+.practice-intro {
+  @apply text-center;
+}
+
+.practice-intro p {
+  @apply text-foreground text-lg leading-relaxed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .lesson-container {
+    @apply px-4;
+  }
+  
+  .lesson-title {
+    @apply text-3xl;
+  }
+  
+  .grammar-explanation {
+    @apply grid-cols-1;
+  }
+  
+  .vocabulary-grid {
+    @apply grid-cols-1 md:grid-cols-2;
+  }
+}
+
 /* Aula Click Design System - Modern Educational Platform
 All colors MUST be HSL for consistency and theming.
 */

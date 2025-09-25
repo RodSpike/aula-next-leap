@@ -10,8 +10,102 @@ export function ComprehensiveLessonGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
+  // Helper function to create comprehensive lesson content and exercises
   const createBasicLessonContent = (lessonData: any, level: string) => {
-    // Fallback content creation when AI fails
+    // Create rich HTML content for the lesson
+    const isBeginnerLevel = ['A1', 'A2', 'B1'].includes(level);
+    const primaryLang = isBeginnerLevel ? 'pt' : 'en';
+    
+    const generateRichLessonHTML = () => {
+      const grammarPoints = lessonData.grammarFocus || [];
+      const vocabulary = lessonData.vocabularySets || [];
+      const culturalNote = lessonData.culturalNote || '';
+      
+      return `
+        <div class="lesson-container">
+          <section class="lesson-hero">
+            <div class="lesson-header">
+              <h1 class="lesson-title">${lessonData.title}</h1>
+              <div class="lesson-objectives">
+                <h3 class="objectives-title">${primaryLang === 'pt' ? '🎯 Objetivos da Lição' : '🎯 Lesson Objectives'}</h3>
+                <ul class="objectives-list">
+                  <li>${primaryLang === 'pt' ? 'Aprender' : 'Learn'} ${grammarPoints[0] || 'new grammar concepts'}</li>
+                  <li>${primaryLang === 'pt' ? 'Praticar vocabulário essencial' : 'Practice essential vocabulary'}</li>
+                  <li>${primaryLang === 'pt' ? 'Desenvolver habilidades de comunicação' : 'Develop communication skills'}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="grammar-section">
+            <div class="section-header">
+              <h2 class="section-title">📚 ${primaryLang === 'pt' ? 'Foco Gramatical' : 'Grammar Focus'}</h2>
+            </div>
+            <div class="grammar-content">
+              ${grammarPoints.map((point: string, index: number) => `
+                <div class="grammar-point">
+                  <h3 class="grammar-title">${index + 1}. ${point}</h3>
+                  <div class="grammar-explanation">
+                    <div class="rule-box">
+                      <h4>${primaryLang === 'pt' ? 'Regra' : 'Rule'}:</h4>
+                      <p>${getGrammarRule(point, primaryLang)}</p>
+                    </div>
+                    <div class="examples-box">
+                      <h4>${primaryLang === 'pt' ? 'Exemplos' : 'Examples'}:</h4>
+                      <ul class="examples-list">
+                        ${getGrammarExamples(point, primaryLang).map((ex: string) => `<li>${ex}</li>`).join('')}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+          <section class="vocabulary-section">
+            <div class="section-header">
+              <h2 class="section-title">📖 ${primaryLang === 'pt' ? 'Vocabulário' : 'Vocabulary'}</h2>
+            </div>
+            <div class="vocabulary-grid">
+              ${vocabulary.slice(0, 12).map((word: string) => `
+                <div class="vocab-card">
+                  <div class="vocab-word">${word}</div>
+                  <div class="vocab-translation">${getTranslation(word, primaryLang)}</div>
+                  <div class="vocab-example">${getVocabExample(word, primaryLang)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+          ${culturalNote ? `
+          <section class="culture-section">
+            <div class="section-header">
+              <h2 class="section-title">🌍 ${primaryLang === 'pt' ? 'Nota Cultural' : 'Cultural Note'}</h2>
+            </div>
+            <div class="culture-content">
+              <p>${culturalNote}</p>
+            </div>
+          </section>
+          ` : ''}
+
+          <section class="practice-section">
+            <div class="section-header">
+              <h2 class="section-title">💪 ${primaryLang === 'pt' ? 'Vamos Praticar!' : 'Let\'s Practice!'}</h2>
+            </div>
+            <div class="practice-intro">
+              <p>${primaryLang === 'pt' ? 
+                'Agora é hora de colocar em prática o que você aprendeu! Complete os exercícios abaixo.' : 
+                'Now it\'s time to practice what you\'ve learned! Complete the exercises below.'}</p>
+            </div>
+          </section>
+        </div>
+      `;
+    };
+
+    // Generate contextual exercises based on lesson content
+    const exercises = generateContextualExercises(lessonData, level, primaryLang);
+
+    // Create fallback lesson parts with the HTML content
     const lessonParts = [
       {
         section_type: 'introduction',
@@ -45,55 +139,189 @@ export function ComprehensiveLessonGenerator() {
       }
     ];
 
+    return {
+      html: generateRichLessonHTML(),
+      lessonParts,
+      exercises
+    };
+  };
+
+  // Helper functions for content generation
+  const getGrammarRule = (point: string, lang: string) => {
+    const rules: { [key: string]: { pt: string; en: string } } = {
+      'Present Simple': {
+        pt: 'Use o Present Simple para fatos, rotinas e verdades universais. Forma: I/You/We/They + verbo base, He/She/It + verbo + s',
+        en: 'Use Present Simple for facts, routines, and universal truths. Form: I/You/We/They + base verb, He/She/It + verb + s'
+      },
+      'Verb to be': {
+        pt: 'O verbo "to be" significa "ser" ou "estar". Forms: I am, You are, He/She/It is, We/They are',
+        en: 'The verb "to be" indicates existence or state. Forms: I am, You are, He/She/It is, We/They are'
+      },
+      'Articles': {
+        pt: 'Use "a/an" para substantivos contáveis no singular (indefinidos) e "the" para específicos',
+        en: 'Use "a/an" for singular countable nouns (indefinite) and "the" for specific items'
+      }
+    };
+    return rules[point]?.[lang] || `${point} - ${lang === 'pt' ? 'Regra gramatical importante' : 'Important grammar rule'}`;
+  };
+
+  const getGrammarExamples = (point: string, lang: string) => {
+    const examples: { [key: string]: { pt: string[]; en: string[] } } = {
+      'Present Simple': {
+        pt: ['Eu estudo inglês = I study English', 'Ela trabalha no hospital = She works at the hospital'],
+        en: ['I study English every day', 'She works at the hospital', 'We live in Brazil']
+      },
+      'Verb to be': {
+        pt: ['Eu sou estudante = I am a student', 'Eles estão felizes = They are happy'],
+        en: ['I am a teacher', 'You are my friend', 'She is from Brazil']
+      }
+    };
+    return examples[point]?.[lang] || [`Example with ${point}`, `Another example with ${point}`];
+  };
+
+  const getTranslation = (word: string, lang: string) => {
+    const translations: { [key: string]: string } = {
+      'hello': lang === 'pt' ? 'olá' : 'greeting',
+      'goodbye': lang === 'pt' ? 'tchau' : 'farewell',
+      'please': lang === 'pt' ? 'por favor' : 'polite request',
+      'thank you': lang === 'pt' ? 'obrigado(a)' : 'gratitude'
+    };
+    return translations[word.toLowerCase()] || (lang === 'pt' ? 'tradução' : 'translation');
+  };
+
+  const getVocabExample = (word: string, lang: string) => {
+    return lang === 'pt' ? 
+      `Exemplo: "${word}" em uma frase` : 
+      `Example: "${word}" in a sentence`;
+  };
+
+  const generateContextualExercises = (lessonData: any, level: string, lang: string) => {
+    const grammarFocus = lessonData.grammarFocus?.[0] || 'Present Simple';
+    
     const exercises = [
       {
         exercise_type: 'multiple_choice',
-        question: `Complete: "I ___ a student"`,
-        options: ["am", "is", "are", "be"],
-        correct_answer: "am",
-        explanation: "Use 'am' with 'I' — PT-BR: Use 'am' com o pronome 'I'",
+        question: generateQuestionForGrammar(grammarFocus, lang, 'multiple_choice'),
+        options: generateOptionsForGrammar(grammarFocus),
+        correct_answer: getCorrectAnswerForGrammar(grammarFocus),
+        explanation: generateExplanation(grammarFocus, lang),
         points: 1,
         order_index: 0
       },
       {
         exercise_type: 'fill_blank',
-        question: `She ___ from Brazil.`,
-        options: ["is", "are", "am", "be"],
-        correct_answer: "is",
-        explanation: "Use 'is' with he/she/it — PT-BR: Use 'is' com he/she/it",
+        question: generateQuestionForGrammar(grammarFocus, lang, 'fill_blank'),
+        options: generateOptionsForGrammar(grammarFocus, 'fill'),
+        correct_answer: getCorrectAnswerForGrammar(grammarFocus, 'fill'),
+        explanation: generateExplanation(grammarFocus, lang, 'fill'),
         points: 1,
         order_index: 1
       },
       {
         exercise_type: 'true_false',
-        question: `True or False: "They is happy." is correct.`,
+        question: generateQuestionForGrammar(grammarFocus, lang, 'true_false'),
         options: ["True", "False"],
         correct_answer: "False",
-        explanation: "Plural subject needs 'are' — PT-BR: Sujeito no plural usa 'are'",
+        explanation: generateExplanation(grammarFocus, lang, 'true_false'),
         points: 1,
         order_index: 2
       },
       {
         exercise_type: 'multiple_choice',
-        question: `Choose the best greeting for the morning:`,
-        options: ["Good morning", "Good night", "See you", "Bye"],
-        correct_answer: "Good morning",
-        explanation: "Morning = Good morning — PT-BR: Manhã = Good morning",
+        question: lang === 'pt' ? 
+          'Escolha a melhor tradução para "Good morning":' : 
+          'Choose the best response to "How are you?":',
+        options: lang === 'pt' ? 
+          ["Bom dia", "Boa noite", "Até logo", "Tchau"] :
+          ["Fine, thank you", "My name is...", "Goodbye", "Please"],
+        correct_answer: lang === 'pt' ? "Bom dia" : "Fine, thank you",
+        explanation: lang === 'pt' ? 
+          'Morning = Bom dia em português' : 
+          'This is the most common polite response',
         points: 1,
         order_index: 3
       },
       {
         exercise_type: 'fill_blank',
-        question: `We ___ from Brazil.`,
-        options: ["are", "is", "am", "be"],
-        correct_answer: "are",
-        explanation: "Use 'are' with 'we/you/they' — PT-BR: Use 'are' com 'we/you/they'",
-        points: 1,
+        question: generateAdvancedQuestion(lessonData, lang),
+        options: generateAdvancedOptions(lessonData),
+        correct_answer: getAdvancedCorrectAnswer(lessonData),
+        explanation: generateAdvancedExplanation(lessonData, lang),
+        points: 2,
         order_index: 4
       }
     ];
 
-    return { lessonParts, exercises };
+    return exercises;
+  };
+
+  const generateQuestionForGrammar = (grammar: string, lang: string, type: string) => {
+    const questions: { [key: string]: any } = {
+      'Present Simple': {
+        multiple_choice: lang === 'pt' ? 'Complete: "Ela ___ no hospital"' : 'Complete: "She ___ at the hospital"',
+        fill_blank: lang === 'pt' ? 'Complete: "Eu ___ inglês todos os dias"' : 'Complete: "I ___ English every day"',
+        true_false: lang === 'pt' ? 'Verdadeiro ou Falso: "I works" está correto.' : 'True or False: "I works" is correct.'
+      },
+      'Verb to be': {
+        multiple_choice: lang === 'pt' ? 'Complete: "Eu ___ estudante"' : 'Complete: "I ___ a student"',
+        fill_blank: lang === 'pt' ? 'Complete: "Eles ___ felizes"' : 'Complete: "They ___ happy"',
+        true_false: lang === 'pt' ? 'Verdadeiro ou Falso: "She are happy" está correto.' : 'True or False: "She are happy" is correct.'
+      }
+    };
+    return questions[grammar]?.[type] || `Question about ${grammar}`;
+  };
+
+  const generateOptionsForGrammar = (grammar: string, type = 'multiple') => {
+    const options: { [key: string]: any } = {
+      'Present Simple': type === 'fill' ? ["study", "studies", "studying", "studied"] : ["works", "work", "working", "worked"],
+      'Verb to be': type === 'fill' ? ["are", "is", "am", "be"] : ["am", "is", "are", "be"]
+    };
+    return options[grammar] || ["Option A", "Option B", "Option C", "Option D"];
+  };
+
+  const getCorrectAnswerForGrammar = (grammar: string, type = 'multiple') => {
+    const answers: { [key: string]: any } = {
+      'Present Simple': type === 'fill' ? "study" : "works",
+      'Verb to be': type === 'fill' ? "are" : "am"
+    };
+    return answers[grammar] || "Option A";
+  };
+
+  const generateExplanation = (grammar: string, lang: string, type = 'multiple') => {
+    const explanations: { [key: string]: any } = {
+      'Present Simple': {
+        multiple: lang === 'pt' ? 'Use "works" com he/she/it — PT: Use "works" na terceira pessoa' : 'Use "works" with he/she/it',
+        fill: lang === 'pt' ? 'Use "study" com I — PT: Use "study" com primeira pessoa' : 'Use "study" with I',
+        true_false: lang === 'pt' ? 'Incorreto! Use "I work" não "I works"' : 'Incorrect! Use "I work" not "I works"'
+      },
+      'Verb to be': {
+        multiple: lang === 'pt' ? 'Use "am" com I — PT: Use "am" com primeira pessoa' : 'Use "am" with I',
+        fill: lang === 'pt' ? 'Use "are" com they — PT: Use "are" com terceira pessoa plural' : 'Use "are" with they',
+        true_false: lang === 'pt' ? 'Incorreto! Use "She is" não "She are"' : 'Incorrect! Use "She is" not "She are"'
+      }
+    };
+    return explanations[grammar]?.[type] || `Explanation for ${grammar}`;
+  };
+
+  const generateAdvancedQuestion = (lessonData: any, lang: string) => {
+    const vocab = lessonData.vocabularySets?.[0] || 'hello';
+    return lang === 'pt' ? 
+      `Como você diria "${vocab}" em uma situação formal?` :
+      `How would you use "${vocab}" in a formal situation?`;
+  };
+
+  const generateAdvancedOptions = (lessonData: any) => {
+    return ["Very formally", "Casually", "With a smile", "Loudly"];
+  };
+
+  const getAdvancedCorrectAnswer = (lessonData: any) => {
+    return "Very formally";
+  };
+
+  const generateAdvancedExplanation = (lessonData: any, lang: string) => {
+    return lang === 'pt' ? 
+      'Em situações formais, sempre use a forma mais respeitosa' :
+      'In formal situations, always use the most respectful form';
   };
 
   const parseAILessonContent = (aiContent: string, lessonData: any) => {
@@ -426,14 +654,10 @@ export function ComprehensiveLessonGenerator() {
           } catch (error) {
             console.error(`Error generating AI content for lesson ${lessonData.title}:`, error);
             
-            // Create basic content even if AI fails
+            // Create comprehensive content even if AI fails
             const basicContent = createBasicLessonContent(lessonData, level);
-            // Save a basic HTML explanation as a fallback so students always see content
-            const fallbackHtml = `
-<section class=\"lesson-introduction\"><h2>${lessonData.title}</h2><p>Esta lição cobre: ${lessonData.grammarFocus.join(', ')}</p></section>
-<section class=\"grammar-focus\"><h3>Gramática</h3><ul>${lessonData.grammarFocus.map((p: string) => `<li>${p}</li>`).join('')}</ul></section>
-<section class=\"vocabulary-section\"><h3>Vocabulário</h3><ul>${lessonData.vocabularySets.map((v: string) => `<li>${v}</li>`).join('')}</ul></section>`;
-            await supabase.from('lessons').update({ content: fallbackHtml }).eq('id', lesson.id);
+            // Save the rich HTML content
+            await supabase.from('lessons').update({ content: basicContent.html }).eq('id', lesson.id);
             
             for (const content of basicContent.lessonParts) {
               await supabase.from('lesson_content').insert({
@@ -471,14 +695,14 @@ export function ComprehensiveLessonGenerator() {
 
       toast({
         title: "Success!",
-        description: "Complete comprehensive curriculum generated successfully! All previous content has been replaced with new lessons following your provided curriculum structure.",
+        description: "Complete comprehensive curriculum generated successfully! All previous content has been replaced with new lessons following your provided curriculum structure with rich, visual educational content.",
       });
 
     } catch (error) {
-      console.error('Error generating comprehensive lessons:', error);
+      console.error("Error generating comprehensive lessons:", error);
       toast({
         title: "Error",
-        description: "Failed to generate comprehensive lessons. Please check the console for details.",
+        description: "Failed to generate lessons. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -487,24 +711,35 @@ export function ComprehensiveLessonGenerator() {
   };
 
   return (
-    <Button
-      onClick={generateComprehensiveLessons}
-      disabled={isGenerating}
-      className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-      size="lg"
-    >
-      {isGenerating ? (
-        <>
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Generating Comprehensive Lessons...
-        </>
-      ) : (
-        <>
-          <Sparkles className="w-4 h-4 mr-2" />
-          <BookOpen className="w-4 h-4 mr-2" />
-          Generate Complete Curriculum
-        </>
-      )}
-    </Button>
+    <div className="space-y-4">
+      <div className="text-center space-y-2">
+        <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
+          <BookOpen className="w-5 h-5" />
+          Rich Educational Content Generator
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Generate complete curriculum with rich, visual, and bilingual lessons designed for effective learning
+        </p>
+      </div>
+      
+      <Button 
+        onClick={generateComprehensiveLessons} 
+        disabled={isGenerating}
+        className="w-full flex items-center gap-2"
+        size="lg"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generating Rich Content...
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-4 h-4" />
+            Generate Complete Curriculum
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
