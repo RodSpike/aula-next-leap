@@ -154,13 +154,14 @@ export default function Community() {
     const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
     const checkAdminStatus = async () => {
       if (!user) return;
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      setIsAdmin(!!data || (user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false));
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin',
+      });
+      if (error) {
+        console.error('Error checking admin role via RPC:', error);
+      }
+      setIsAdmin((data === true) || (user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false));
     };
 
     checkAdminStatus();

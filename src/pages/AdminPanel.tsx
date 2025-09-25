@@ -424,16 +424,19 @@ export default function AdminPanel() {
 
   const checkAdminAccess = async () => {
     try {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user!.id)
-        .eq('role', 'admin')
-        .single();
+      // Use secure RPC to check admin role and avoid RLS pitfalls
+      const { data: hasAdmin, error } = await supabase.rpc('has_role', {
+        _user_id: user!.id,
+        _role: 'admin',
+      });
 
       const isMaster = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
 
-      if (!data && !isMaster) {
+      if (error) {
+        console.error('Error checking admin access via RPC:', error);
+      }
+
+      if (!(hasAdmin === true || isMaster)) {
         navigate("/dashboard");
         return;
       }
@@ -448,6 +451,7 @@ export default function AdminPanel() {
       setCurrentUserEmail(profile?.email || user?.email || "");
       setIsAdmin(true);
     } catch (error) {
+      console.error('Unexpected error in checkAdminAccess:', error);
       navigate("/dashboard");
     }
   };
