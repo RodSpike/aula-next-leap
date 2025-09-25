@@ -548,6 +548,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_sessions: {
+        Row: {
+          amount: number | null
+          completed_at: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          prospect_email: string | null
+          status: string | null
+          stripe_session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          prospect_email?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          prospect_email?: string | null
+          status?: string | null
+          stripe_session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       post_comments: {
         Row: {
           content: string
@@ -648,6 +684,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      prospects: {
+        Row: {
+          agreed_marketing: boolean | null
+          agreed_terms: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string | null
+          utm_campaign: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          agreed_marketing?: boolean | null
+          agreed_terms?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name?: string | null
+          utm_campaign?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          agreed_marketing?: boolean | null
+          agreed_terms?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string | null
+          utm_campaign?: string | null
+          utm_source?: string | null
         }
         Relationships: []
       }
@@ -857,28 +926,43 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          canceled_at: string | null
           created_at: string
+          current_period_end: string | null
           id: string
           plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscription_ends_at: string | null
+          subscription_status: string | null
           trial_ends_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          canceled_at?: string | null
           created_at?: string
+          current_period_end?: string | null
           id?: string
           plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_ends_at?: string | null
+          subscription_status?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          canceled_at?: string | null
           created_at?: string
+          current_period_end?: string | null
           id?: string
           plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_ends_at?: string | null
+          subscription_status?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
