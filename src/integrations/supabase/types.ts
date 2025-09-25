@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_free_users: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          granted_by: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email: string
+          granted_by: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          granted_by?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
