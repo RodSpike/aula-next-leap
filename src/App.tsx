@@ -25,6 +25,9 @@ import LevelTest from "./pages/LevelTest";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
 import ChatTest from "./pages/ChatTest";
+import Subscribe from "./pages/Subscribe";
+import Welcome from "./pages/Welcome";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -40,20 +43,22 @@ const App = () => (
           <FloatingChatBubble />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/friends" element={<Friends />} />
-            <Route path="/ai-chat" element={<AiChat />} />
-            <Route path="/admin" element={<AdminPanel />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/placement-test" element={<PlacementTest />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/course/:courseId" element={<Course />} />
-            <Route path="/level-test/:fromLevel/:toLevel" element={<LevelTest />} />
-            <Route path="/certificates" element={<Certificates />} />
-            <Route path="/chat-test" element={<ChatTest />} />
+            <Route path="/subscribe" element={<Subscribe />} />
+            <Route path="/welcome" element={<Welcome />} />
+            <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+            <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+            <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+            <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/placement-test" element={<ProtectedRoute><PlacementTest /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/course/:courseId" element={<ProtectedRoute><Course /></ProtectedRoute>} />
+            <Route path="/level-test/:fromLevel/:toLevel" element={<ProtectedRoute><LevelTest /></ProtectedRoute>} />
+            <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+            <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

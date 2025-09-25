@@ -47,27 +47,39 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found, checking trial status");
+      logStep("No Stripe customer found, checking database for trial");
       
-      // Check if user is in trial period by looking at user_subscriptions
+      // Check if user has trial in database
       const { data: subscription } = await supabaseClient
         .from('user_subscriptions')
-        .select('trial_ends_at, subscription_status, plan')
+        .select('*')
         .eq('user_id', user.id)
         .single();
+      
+      if (subscription) {
+        const now = new Date();
+        const trialEnd = new Date(subscription.trial_ends_at);
+        const isInTrial = trialEnd > now;
         
-      const isInTrial = subscription && 
-        subscription.trial_ends_at && 
-        new Date(subscription.trial_ends_at) > new Date();
+        logStep("Database subscription found", { 
+          isInTrial, 
+          trialEnd: subscription.trial_ends_at,
+          status: subscription.subscription_status 
+        });
+        
+        return new Response(JSON.stringify({
+          subscribed: subscription.subscription_status === 'active',
+          in_trial: isInTrial,
+          trial_ends_at: subscription.trial_ends_at,
+          product_id: null
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
       
-      logStep("Trial status checked", { isInTrial, subscription });
-      
-      return new Response(JSON.stringify({ 
-        subscribed: false,
-        in_trial: isInTrial || false,
-        trial_ends_at: subscription?.trial_ends_at || null,
-        plan: subscription?.plan || 'free'
-      }), {
+      logStep("No subscription found");
+      return new Response(JSON.stringify({ subscribed: false, in_trial: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -76,31 +88,72 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const subscriptions = await stripe.subscriptions.list({
+    // Check for active subscriptions
+    const activeSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
       limit: 1,
     });
-    const hasActiveSub = subscriptions.data.length > 0;
+    
+    // Check for trialing subscriptions
+    const trialingSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "trialing",
+      limit: 1,
+    });
+    
+    const hasActiveSub = activeSubscriptions.data.length > 0;
+    const hasTrialSub = trialingSubscriptions.data.length > 0;
+    
     let productId = null;
     let subscriptionEnd = null;
+    let trialEnd = null;
 
     if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
+      const subscription = activeSubscriptions.data[0];
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       productId = subscription.items.data[0].price.product;
-      logStep("Determined subscription tier", { productId });
+      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+    } else if (hasTrialSub) {
+      const subscription = trialingSubscriptions.data[0];
+      trialEnd = new Date(subscription.trial_end ? subscription.trial_end * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      productId = subscription.items.data[0].price.product;
+      logStep("Trial subscription found", { subscriptionId: subscription.id, trialEnd });
     } else {
-      logStep("No active subscription found");
+      // Check database for trial info
+      const { data: dbSubscription } = await supabaseClient
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (dbSubscription) {
+        const now = new Date();
+        const dbTrialEnd = new Date(dbSubscription.trial_ends_at);
+        const isInTrial = dbTrialEnd > now;
+        
+        logStep("Database subscription found", { isInTrial, trialEnd: dbSubscription.trial_ends_at });
+        
+        return new Response(JSON.stringify({
+          subscribed: dbSubscription.subscription_status === 'active',
+          in_trial: isInTrial,
+          trial_ends_at: dbSubscription.trial_ends_at,
+          product_id: productId
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+      
+      logStep("No active or trial subscription found");
     }
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
-      product_id: productId,
+      in_trial: hasTrialSub,
+      trial_ends_at: trialEnd,
       subscription_end: subscriptionEnd,
-      in_trial: false,
-      plan: hasActiveSub ? 'premium' : 'free'
+      product_id: productId
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

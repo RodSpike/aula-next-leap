@@ -10,6 +10,7 @@ import { Eye, EyeOff, Mail, Lock, User, Chrome, Gift } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,45 +30,34 @@ export default function Signup() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Não redirecionar automaticamente: permite sair e criar outra conta nesta página
+    // Don't redirect automatically: allows logout and create another account on this page
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name.trim()) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos.",
+        description: "Nome é obrigatório",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate username format
-    const usernameRegex = /^[a-zA-Z0-9_]+$/;
-    if (!usernameRegex.test(formData.username)) {
+    if (formData.username.trim() && !/^[a-zA-Z0-9_]+$/.test(formData.username.trim())) {
       toast({
         title: "Erro",
-        description: "Nome de usuário deve conter apenas letras, números e underscore.",
+        description: "Nome de usuário deve conter apenas letras, números e underscore",
         variant: "destructive",
       });
       return;
     }
 
-    if (formData.username.length < 3) {
+    if (!formData.email.trim()) {
       toast({
         title: "Erro",
-        description: "Nome de usuário deve ter pelo menos 3 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "As senhas não conferem!",
+        description: "Email é obrigatório",
         variant: "destructive",
       });
       return;
@@ -76,55 +66,81 @@ export default function Signup() {
     if (formData.password.length < 8) {
       toast({
         title: "Erro",
-        description: "A senha deve ter pelo menos 8 caracteres.",
+        description: "Senha deve ter pelo menos 8 caracteres",
         variant: "destructive",
       });
       return;
     }
-    
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.agreeToTerms) {
       toast({
         title: "Erro",
-        description: "Você deve aceitar os termos de uso!",
+        description: "Você deve aceitar os termos e condições",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-    
+
     try {
+      // First, save as prospect (always capture the lead)
+      const { error: prospectError } = await supabase
+        .from('prospects')
+        .insert({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          agreed_terms: formData.agreeToTerms,
+          agreed_marketing: false
+        });
+
+      if (prospectError) {
+        console.error('Error saving prospect:', prospectError);
+        // Don't block signup if prospect save fails
+      }
+
+      // Create user account without email confirmation
       const { error } = await signUp(formData.email, formData.password, formData.name, formData.username);
-      
+
       if (error) {
-        let errorMessage = "Erro ao criar conta. Tente novamente.";
-        
-        if (error.message === "User already registered") {
-          errorMessage = "Este email já está cadastrado. Se você já tem uma conta, clique em 'Fazer login' abaixo.";
-        }
-        
         toast({
-          title: "Erro no cadastro", 
-          description: errorMessage,
+          title: "Erro ao criar conta",
+          description: error.message === 'User already registered' 
+            ? "Este email já está cadastrado. Tente fazer login."
+            : "Ocorreu um erro ao criar sua conta. Tente novamente.",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Verifique seu email e clique no link de confirmação para fazer login.",
-          duration: 8000,
-        });
-        
-        // Don't redirect immediately, let user confirm email first
-        // They will be redirected after email confirmation
+        setLoading(false);
+        return;
       }
+
+      // Show success message and redirect to subscribe
+      toast({
+        title: "Conta criada!",
+        description: "Agora complete o processo para acessar a plataforma.",
+      });
+
+      // Redirect to subscribe page after a short delay
+      setTimeout(() => {
+        navigate('/subscribe');
+      }, 1500);
+      
     } catch (error) {
+      console.error('Signup error:', error);
       toast({
         title: "Erro",
-        description: "Algo deu errado. Tente novamente.",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
