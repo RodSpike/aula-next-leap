@@ -36,7 +36,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1QQD0pGakBPm1tQoKOXQbBrD", // Aula Click Premium price
+          price: "price_1SBEjRK2ADuy4IKKJHHgAHhY", // Aula Click Premium price
           quantity: 1,
         },
       ],

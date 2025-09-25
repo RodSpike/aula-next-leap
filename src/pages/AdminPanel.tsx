@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 import { ComprehensiveLessonGenerator } from "@/components/ComprehensiveLessonGenerator";
 import { CourseManagement } from "@/components/CourseManagement";
+import { AdminFreeUsers } from "@/components/AdminFreeUsers";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
 
 interface UserData {
@@ -573,7 +574,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -585,6 +586,10 @@ export default function AdminPanel() {
             <TabsTrigger value="admins" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Admins
+            </TabsTrigger>
+            <TabsTrigger value="free-users" className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Free Users
             </TabsTrigger>
             <TabsTrigger value="content" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -1270,6 +1275,11 @@ export default function AdminPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Free Users Tab */}
+          <TabsContent value="free-users" className="space-y-6">
+            <AdminFreeUsers />
           </TabsContent>
 
           {/* Audit Log Tab */}

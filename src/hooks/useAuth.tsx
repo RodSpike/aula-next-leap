@@ -41,12 +41,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .eq('user_id', session.user.id)
                 .single();
 
+              // Check if user is admin
+              const { data: hasAdminRole } = await supabase.rpc('has_role', {
+                _user_id: session.user.id,
+                _role: 'admin',
+              });
+
               // Only redirect after a real login flow (login/signup/root). Otherwise, stay put.
               const currentPath = window.location.pathname;
               const isAuthContext = currentPath === '/' || currentPath === '/login' || currentPath === '/signup';
 
               if (isAuthContext) {
-                if (!profile?.birthdate) {
+                if (hasAdminRole) {
+                  // Admins go directly to dashboard
+                  navigate('/dashboard');
+                } else if (!profile?.birthdate) {
                   navigate('/onboarding');
                 } else {
                   navigate('/dashboard');

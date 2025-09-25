@@ -85,3 +85,12 @@ verify_jwt = true
 
 [functions.validate-checkout]
 verify_jwt = false
+
+[functions.check-free-access]
+verify_jwt = true
+
+[functions.grant-free-access]
+verify_jwt = true
+
+[functions.revoke-free-access]
+verify_jwt = true

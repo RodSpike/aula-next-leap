@@ -14,19 +14,45 @@ interface SubscriptionStatus {
   product_id?: string;
 }
 
+interface UserRole {
+  role: string;
+}
+
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkSubscription = async () => {
+    const checkAccess = async () => {
       if (!user) {
         setLoading(false);
         return;
       }
 
       try {
+        // Check user role first
+        const { data: roleData, error: roleError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin',
+        });
+
+        if (!roleError && roleData) {
+          setUserRole({ role: 'admin' });
+          setLoading(false);
+          return; // Admins bypass subscription checks
+        }
+
+        // Check for free user access
+        const { data: freeUserData } = await supabase.functions.invoke('check-free-access');
+        if (freeUserData?.has_free_access) {
+          setSubscriptionStatus({ subscribed: true });
+          setLoading(false);
+          return;
+        }
+
+        // Check subscription for regular users
         const { data, error } = await supabase.functions.invoke('check-subscription');
         
         if (error) {
@@ -36,14 +62,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           setSubscriptionStatus(data);
         }
       } catch (error) {
-        console.error('Error invoking check-subscription:', error);
+        console.error('Error checking access:', error);
         setSubscriptionStatus({ subscribed: false });
       } finally {
         setLoading(false);
       }
     };
 
-    checkSubscription();
+    checkAccess();
   }, [user]);
 
   if (authLoading || loading) {
@@ -56,6 +82,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Admins bypass subscription requirements
+  if (userRole?.role === 'admin') {
+    return <>{children}</>;
   }
 
   // If user doesn't have active subscription or trial, redirect to subscribe page
