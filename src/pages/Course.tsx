@@ -381,27 +381,31 @@ export default function Course() {
             {showIntroduction ? (
               // Introduction/Explanation Content
               <div className="space-y-6">
-                {lessonHtml && (
-                  <article
-                    className="max-w-none prose prose-lg dark:prose-invert mx-auto"
-                    dangerouslySetInnerHTML={{ __html: lessonHtml }}
-                  />
-                )}
-
-                {introductionContent.length > 0 ? (
-                  <LessonContent content={introductionContent} />
+                {lessonHtml ? (
+                  // Enhanced lesson content with proper educational styling
+                  <div className="lesson-container">
+                    <article
+                      className="max-w-none"
+                      dangerouslySetInnerHTML={{ __html: lessonHtml }}
+                    />
+                  </div>
                 ) : (
-                  !lessonHtml && (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">
-                        Conteúdo de explicação será adicionado em breve para esta lição.
-                      </p>
-                    </div>
-                  )
-                )}
-                
-                {practiceContent.length > 0 && (
-                  <LessonContent content={practiceContent} />
+                  // Fallback to old content structure if no enhanced HTML
+                  <>
+                    {introductionContent.length > 0 ? (
+                      <LessonContent content={introductionContent} />
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">
+                          Conteúdo de explicação será adicionado em breve para esta lição.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {practiceContent.length > 0 && (
+                      <LessonContent content={practiceContent} />
+                    )}
+                  </>
                 )}
 
                 <div className="flex justify-center pt-6">
