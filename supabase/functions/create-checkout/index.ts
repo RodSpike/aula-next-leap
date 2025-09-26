@@ -12,28 +12,63 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Supabase client with anon key is enough for auth.getUser when a JWT is provided
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
   );
 
   try {
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    // Try to get authenticated user (but do not require it)
+    let userEmail: string | null = null;
+    let userId: string | null = null;
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      try {
+        const token = authHeader.replace("Bearer ", "");
+        const { data, error } = await supabaseClient.auth.getUser(token);
+        if (!error && data.user?.email) {
+          userEmail = data.user.email;
+          userId = data.user.id;
+        }
+      } catch (_) {
+        // Ignore auth errors – we support guest checkout
+      }
     }
 
+    // Optional email from request body (for guest checkout)
+    let bodyEmail: string | undefined;
+    try {
+      const body = await req.json();
+      if (body && typeof body.email === "string") {
+        bodyEmail = body.email;
+      }
+    } catch (_) {
+      // no body provided
+    }
+
+    if (!userEmail && bodyEmail) userEmail = bodyEmail;
+
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2025-08-27.basil",
+    });
+
+    // Look up existing customer if we have an email
+    let customerId: string | undefined;
+    if (userEmail) {
+      const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      }
+    }
+
+    const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "http://localhost:5173";
+
     const session = await stripe.checkout.sessions.create({
+      // Attach customer or fallback to passing the email (or neither – Stripe will capture it in Checkout)
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: customerId ? undefined : userEmail ?? undefined,
       line_items: [
         {
           price: "price_1SBEjRK2ADuy4IKKJHHgAHhY", // Aula Click Premium price
@@ -41,14 +76,14 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/subscribe?canceled=true`,
+      success_url: `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/subscribe?canceled=true`,
       locale: "pt-BR",
       billing_address_collection: "required",
       subscription_data: {
         trial_period_days: 7,
         metadata: {
-          user_id: user.id,
+          ...(userId ? { user_id: userId } : {}),
         },
       },
     });
