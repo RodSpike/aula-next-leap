@@ -15,15 +15,19 @@ export function PricingSection() {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      // Try with auth if available, but don't block if not
+      // Check if user is authenticated
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
-      const invokeOptions: any = token
-        ? { headers: { Authorization: `Bearer ${token}` } }
-        : {};
+      if (!token) {
+        // Redirect to signup if not authenticated
+        window.location.href = '/signup';
+        return;
+      }
 
-      const { data, error } = await supabase.functions.invoke('create-checkout', invokeOptions);
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       if (error) throw error;
 
