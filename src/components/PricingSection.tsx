@@ -13,8 +13,10 @@ export function PricingSection() {
   const [loading, setLoading] = useState(false);
 
   const handleSubscribe = async () => {
-    if (!user) {
-      window.location.href = '/signup';
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+    if (!session) {
+      window.location.href = '/login';
       return;
     }
 

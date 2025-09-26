@@ -15,14 +15,26 @@ export default function Subscribe() {
   const navigate = useNavigate();
 
   const handleSubscribe = async () => {
-    if (!user) {
-      navigate('/signup');
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+
+    if (!session) {
+      toast({
+        title: "Faça login",
+        description: "Entre para continuar ao checkout.",
+        variant: "destructive",
+      });
+      navigate('/login');
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
       
       if (error) {
         throw error;
