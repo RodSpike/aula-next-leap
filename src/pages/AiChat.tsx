@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { detectPortuguese, hasPortugueseMixed } from "@/utils/portugueseDetection";
 import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { EnhancedChatInput } from "@/components/enhanced/EnhancedChatInput";
+import { useVoiceRecognition } from "@/components/enhanced/VoiceRecognition";
 
 interface Message {
   id: string;
@@ -133,70 +135,30 @@ export default function AiChat() {
     }
   };
 
-  // Initialize speech recognition
-  useEffect(() => {
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
+  // Enhanced voice recognition with better browser compatibility
+  const voiceRecognition = useVoiceRecognition({
+    onTranscript: async (transcript: string) => {
+      setSpeechState(prev => ({ ...prev, finalTranscript: transcript }));
       
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'pt-BR'; // Always use Portuguese for better mixed language detection
-      
-      recognition.onstart = () => {
-        setSpeechState(prev => ({ ...prev, isListening: true, interimTranscript: '', finalTranscript: '' }));
-        setTranslationInfo(null);
-      };
-      
-      recognition.onresult = async (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        setSpeechState(prev => ({ ...prev, interimTranscript, finalTranscript }));
-        
-        if (finalTranscript) {
-          // Check if translation is needed
-          if (hasPortugueseMixed(finalTranscript) || detectPortuguese(finalTranscript)) {
-            const translationResult = await translateText(finalTranscript);
-            setTranslationInfo(translationResult);
-          } else {
-            setTranslationInfo({ originalText: finalTranscript, translatedText: finalTranscript, hasTranslation: false });
-          }
-        }
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setSpeechState(prev => ({ ...prev, isListening: false }));
-        toast({
-          title: 'Erro',
-          description: 'Falha no reconhecimento de voz. Tente novamente.',
-          variant: 'destructive',
-        });
-      };
-      
-      recognition.onend = () => {
-        setSpeechState(prev => ({ ...prev, isListening: false }));
-      };
-      
-      recognitionRef.current = recognition;
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      // Check if translation is needed
+      if (hasPortugueseMixed(transcript) || detectPortuguese(transcript)) {
+        const translationResult = await translateText(transcript);
+        setTranslationInfo(translationResult);
+      } else {
+        setTranslationInfo({ originalText: transcript, translatedText: transcript, hasTranslation: false });
       }
-    };
-  }, []);
+    },
+    onError: (error: string) => {
+      setSpeechState(prev => ({ ...prev, isListening: false }));
+      toast({
+        title: 'Voice Recognition Error',
+        description: error,
+        variant: 'destructive',
+      });
+    },
+    language: 'pt-BR',
+    continuous: false
+  });
 
   const loadMessages = async () => {
     if (!user) return;
@@ -259,38 +221,19 @@ export default function AiChat() {
   };
 
   const startSpeechRecognition = () => {
-    if (!recognitionRef.current) {
-      toast({
-        title: 'Erro',
-        description: 'Reconhecimento de voz não é suportado neste navegador.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      recognitionRef.current.start();
-      setIsRecording(true);
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao iniciar o reconhecimento de voz. Tente novamente.',
-        variant: 'destructive',
-      });
-    }
+    voiceRecognition.startListening();
+    setIsRecording(true);
+    setSpeechState(prev => ({ ...prev, isListening: true, interimTranscript: '', finalTranscript: '' }));
+    setTranslationInfo(null);
   };
 
   const stopSpeechRecognition = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+    voiceRecognition.stopListening();
     setIsRecording(false);
   };
 
   const cancelSpeechRecognition = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-    }
+    voiceRecognition.abortListening();
     setSpeechState(prev => ({ ...prev, isListening: false, interimTranscript: '', finalTranscript: '' }));
     setIsRecording(false);
     setTranslationInfo(null);
@@ -914,58 +857,33 @@ export default function AiChat() {
               </div>
             )}
             
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Digite sua mensagem aqui... (pressione Enter para enviar)"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading || isRecording}
-                className="flex-1"
-                autoFocus
-              />
-              
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                className="hidden"
-              />
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading || isRecording}
-                title="Anexar arquivo"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              
-                 <Button
-                   variant="ghost"
-                   size="icon"
-                   onClick={startSpeechRecognition}
-                   disabled={isLoading || isRecording || !recognitionRef.current}
-                   title="Reconhecimento de voz automático (Português/Inglês)"
-                 >
-                   <Mic className="h-4 w-4" />
-                 </Button>
-              
-              <Button 
-                onClick={sendMessage} 
-                disabled={!inputMessage.trim() || isLoading || isRecording}
-                size="icon"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            <EnhancedChatInput
+              value={inputMessage}
+              onChange={setInputMessage}
+              onSend={sendMessage}
+              onFileSelect={(file) => {
+                // Create a synthetic event to match the expected signature
+                const syntheticEvent = {
+                  target: { files: [file] }
+                } as unknown as React.ChangeEvent<HTMLInputElement>;
+                handleFileUpload(syntheticEvent);
+              }}
+              placeholder="Digite sua mensagem aqui... (pressione Enter para enviar)"
+              disabled={isLoading || isRecording}
+              showVoiceInput={voiceRecognition.isSupported}
+              onVoiceStart={startSpeechRecognition}
+              onVoiceStop={stopSpeechRecognition}
+              isListening={voiceRecognition.isListening}
+              className="space-y-3"
+            />
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
             
              <p className="text-xs text-muted-foreground mt-2">
                Faça perguntas em português ou inglês, use reconhecimento de voz automático, ou envie arquivos para análise! Use Enter para enviar.

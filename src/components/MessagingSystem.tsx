@@ -18,6 +18,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { OnlineStatus } from './OnlineStatus';
 import { GroupChat } from './GroupChat';
 import { PrivateGroupChat } from './PrivateGroupChat';
+import { EnhancedChatInput } from './enhanced/EnhancedChatInput';
+import { EnhancedAIChatInterface } from './enhanced/EnhancedAIChatInterface';
+import { Link } from "react-router-dom";
 
 interface DirectMessage {
   id: string;
@@ -606,29 +609,37 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                 </TabsList>
 
                 <div className="flex-1 flex flex-col px-4">
-                  <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0">
-                    <Card className="flex-1 flex flex-col">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Bot className="h-5 w-5 text-primary" />
-                          AI English Tutor
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-1 flex items-center justify-center">
-                        <div className="text-center space-y-4">
-                          <Bot className="h-16 w-16 text-primary mx-auto" />
-                          <h3 className="text-lg font-semibold">AI Tutor Integration</h3>
-                          <p className="text-muted-foreground">
-                            The AI Tutor feature will be integrated here, allowing you to practice English 
-                            and get instant feedback from our AI assistant.
-                          </p>
-                          <Button className="mt-4">
-                            Start AI Conversation
+                <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0">
+                  <Card className="flex-1 flex flex-col">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Bot className="h-5 w-5 text-primary" />
+                        AI English Tutor
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <Bot className="h-16 w-16 text-primary mx-auto animate-pulse" />
+                        <h3 className="text-lg font-semibold">🤖 AI Tutor Assistant</h3>
+                        <p className="text-muted-foreground">
+                          Your personal AI English tutor is ready to help! Get instant feedback, 
+                          practice conversations, and receive personalized learning assistance.
+                        </p>
+                        <div className="space-y-2">
+                          <Button className="mt-4 bg-gradient-to-r from-primary to-primary/80" asChild>
+                            <Link to="/ai-chat">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Start AI Conversation
+                            </Link>
                           </Button>
+                          <p className="text-xs text-muted-foreground">
+                            💡 Supports voice input, document analysis, and works in Portuguese & English!
+                          </p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
                   <TabsContent value="direct" className="flex-1 flex flex-col mt-0">
                     <div className="flex-1 flex">
@@ -856,20 +867,15 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
 
                                  <div className="p-3 border-t">
                                    <div className="flex gap-2">
-                                     <Input
-                                       value={message}
-                                       onChange={(e) => setMessage(e.target.value)}
-                                       onKeyPress={handleKeyPress}
-                                       placeholder={`Message ${getDisplayName(selectedUser)}...`}
-                                       className="flex-1"
-                                     />
-                                     <Button 
-                                       onClick={sendDirectMessage} 
-                                       disabled={!message.trim() || loading}
-                                       size="sm"
-                                     >
-                                       <Send className="h-4 w-4" />
-                                     </Button>
+                                    <EnhancedChatInput
+                                      value={message}
+                                      onChange={setMessage}
+                                      onSend={sendDirectMessage}
+                                      placeholder={`Message ${getDisplayName(selectedUser)}...`}
+                                      disabled={loading}
+                                      showVoiceInput={false}
+                                      className="w-full"
+                                    />
                                    </div>
                                  </div>
                                </>

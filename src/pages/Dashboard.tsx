@@ -227,9 +227,6 @@ export default function Dashboard() {
             <p className="text-muted-foreground">
               Continue your learning journey
             </p>
-            <Badge variant="secondary" className="mt-2">
-              ✨ 3 days free trial remaining
-            </Badge>
           </div>
         </div>
 

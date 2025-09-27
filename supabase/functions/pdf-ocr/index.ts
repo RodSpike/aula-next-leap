@@ -28,7 +28,18 @@ serve(async (req) => {
       console.log('Processing document file (multipart):', filename, 'type:', mimeType);
 
       const arrayBuffer = await f.arrayBuffer();
-      base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Process in chunks to prevent stack overflow
+      let binary = '';
+      const chunkSize = 0x8000; // 32KB chunks
+      
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      
+      base64 = btoa(binary);
     } else {
       // JSON body: { name, type, data } where data is base64 or data URL
       const body = await req.json();
