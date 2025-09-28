@@ -11,6 +11,8 @@ import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, Mi
 import { Link } from "react-router-dom";
 import { EnhancedChatInput } from "@/components/enhanced/EnhancedChatInput";
 import { useVoiceRecognition } from "@/components/enhanced/VoiceRecognition";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   id: string;
@@ -682,7 +684,26 @@ export default function AiChat() {
                         ? 'bg-primary text-primary-foreground ml-auto'
                         : 'bg-muted'
                     }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <div className="prose dark:prose-invert max-w-none text-sm">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}
+                          components={{
+                            h1: ({node, ...props}) => <h1 className="text-xl font-bold" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-lg font-semibold" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-base font-semibold" {...props} />,
+                            p: ({node, ...props}) => <p className="leading-relaxed" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1" {...props} />,
+                            li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                            code: ({node, inline, ...props}) => inline ? (
+                              <code className="px-1 py-0.5 rounded bg-accent text-foreground" {...props} />
+                            ) : (
+                              <code className="block p-3 rounded bg-accent text-foreground overflow-auto" {...props} />
+                            )
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
                       
                       {/* Audio controls for AI messages */}
                       {message.role === 'assistant' && (

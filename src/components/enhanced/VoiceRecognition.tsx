@@ -18,6 +18,13 @@ export const useVoiceRecognition = ({
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
+  const onErrorRef = useRef(onError);
+  const unsupportedNotifiedRef = useRef(false);
+  const toastNotifiedRef = useRef(false);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     // Check for browser support with fallbacks
@@ -39,7 +46,7 @@ export const useVoiceRecognition = ({
       
       // Add browser-specific configurations
       if ('webkitSpeechRecognition' in window) {
-        recognition.webkit = true;
+        (recognition as any).webkit = true;
       }
 
       recognition.onstart = () => {
@@ -49,14 +56,10 @@ export const useVoiceRecognition = ({
 
       recognition.onresult = (event: any) => {
         let finalTranscript = '';
-        let interimTranscript = '';
-
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
             finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
           }
         }
 
@@ -87,12 +90,17 @@ export const useVoiceRecognition = ({
             errorMessage = `Voice recognition error: ${event.error}`;
         }
         
-        onError?.(errorMessage);
-        toast({
-          title: 'Voice Recognition Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+        onErrorRef.current?.(errorMessage);
+        if (!toastNotifiedRef.current) {
+          toastNotifiedRef.current = true;
+          toast({
+            title: 'Voice Recognition Error',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+          // Reset after a short delay to allow future errors
+          setTimeout(() => { toastNotifiedRef.current = false; }, 1500);
+        }
       };
 
       recognition.onend = () => {
@@ -104,7 +112,10 @@ export const useVoiceRecognition = ({
     } else {
       setIsSupported(false);
       console.warn('Speech recognition not supported in this browser');
-      onError?.('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');
+      if (!unsupportedNotifiedRef.current) {
+        unsupportedNotifiedRef.current = true;
+        onErrorRef.current?.('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');
+      }
     }
 
     return () => {
@@ -112,7 +123,7 @@ export const useVoiceRecognition = ({
         recognitionRef.current.stop();
       }
     };
-  }, [language, continuous, onTranscript, onError, toast]);
+  }, [language, continuous, onTranscript]);
 
   const startListening = () => {
     if (!isSupported) {

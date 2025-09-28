@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EnhancedChatInput } from "./enhanced/EnhancedChatInput";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -120,17 +121,29 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
 
+    // Optimistic UI
+    const optimistic = {
+      id: crypto.randomUUID(),
+      content: newMessage.trim(),
+      created_at: new Date().toISOString(),
+      sender_id: user.id,
+      profiles: { display_name: 'You', username: '', avatar_url: '' },
+      user_roles: []
+    } as any;
+    setMessages(prev => [...prev, optimistic]);
+    const toSend = newMessage.trim();
+    setNewMessage('');
+
     try {
       const { error } = await supabase
         .from('group_chat_messages')
         .insert({
           group_id: groupId,
           sender_id: user.id,
-          content: newMessage.trim(),
+          content: toSend,
         });
 
       if (error) throw error;
-      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -228,16 +241,15 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
         </ScrollArea>
 
         <div className="flex gap-2">
-          <Input
+          <EnhancedChatInput
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onChange={setNewMessage}
+            onSend={sendMessage}
             placeholder="Type a message..."
-            className="flex-1"
+            disabled={false}
+            showVoiceInput={false}
+            className="w-full"
           />
-          <Button onClick={sendMessage} disabled={!newMessage.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </CardContent>
       

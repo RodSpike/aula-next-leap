@@ -380,7 +380,8 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
             (newMessage.sender_id === user.id && newMessage.receiver_id === selectedUser.user_id) ||
             (newMessage.sender_id === selectedUser.user_id && newMessage.receiver_id === user.id)
           ) {
-            fetchDirectMessages();
+            setMessages(prev => [...prev, newMessage]);
+            scrollToBottom();
           }
         }
       )
@@ -394,25 +395,31 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
   const sendDirectMessage = async () => {
     if (!selectedUser || !message.trim() || !user) return;
 
-    setLoading(true);
+    // Optimistic UI update
+    const optimistic: DirectMessage = {
+      id: crypto.randomUUID(),
+      content: message.trim(),
+      created_at: new Date().toISOString(),
+      sender_id: user.id,
+      receiver_id: selectedUser.user_id,
+    } as any;
+    setMessages(prev => [...prev, optimistic]);
+    setMessage('');
+    scrollToBottom();
+
     try {
       const { error } = await supabase
         .from('direct_messages')
         .insert({
           sender_id: user.id,
           receiver_id: selectedUser.user_id,
-          content: message.trim(),
+          content: optimistic.content,
           group_id: groupId
         });
 
       if (error) throw error;
-
-      setMessage('');
-      scrollToBottom();
     } catch (error) {
       console.error('Error sending direct message:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EnhancedChatInput } from "./enhanced/EnhancedChatInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send } from "lucide-react";
@@ -106,18 +107,27 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
 
+    // Optimistic UI
+    const optimistic = {
+      id: crypto.randomUUID(),
+      content: newMessage.trim(),
+      created_at: new Date().toISOString(),
+      sender_id: user.id,
+    } as any;
+    setMessages(prev => [...prev, optimistic]);
+    const toSend = newMessage.trim();
+    setNewMessage('');
+
     try {
       const { error } = await supabase
         .from('group_chat_messages')
         .insert({
           group_id: groupId,
           sender_id: user.id,
-          content: newMessage.trim()
+          content: toSend
         });
 
       if (error) throw error;
-
-      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -213,20 +223,15 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
 
       <div className="p-4 border-t">
         <div className="flex gap-2">
-          <Input
+          <EnhancedChatInput
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onChange={setNewMessage}
+            onSend={sendMessage}
             placeholder="Type a message..."
-            className="flex-1"
+            disabled={false}
+            showVoiceInput={false}
+            className="w-full"
           />
-          <Button 
-            onClick={sendMessage} 
-            disabled={!newMessage.trim()}
-            size="sm"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </div>
     </div>

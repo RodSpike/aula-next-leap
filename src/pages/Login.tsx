@@ -88,10 +88,8 @@ export default function Login() {
           variant: "destructive"
         });
       } else {
-        toast({
-          title: "Login realizado!",
-          description: "Bem-vindo!"
-        });
+        // Do not show success toast here; user will be redirected by Google and
+        // onAuthStateChange will handle post-login navigation.
       }
     } catch (error) {
       console.error('Google login error:', error);

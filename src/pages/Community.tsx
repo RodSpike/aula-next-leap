@@ -124,26 +124,23 @@ export default function Community() {
     const state = location.state as any;
     if (state && groups.length > 0) {
       if (state.openGroupChat && state.groupId) {
-        // Find and select the group
         const groupToOpen = groups.find(g => g.id === state.groupId);
         if (groupToOpen) {
           setSelectedGroup(groupToOpen);
           setChatInitialTab('group');
           setChatInitialUserId(undefined);
           setIsChatOpen(true);
-          // Clear the state to prevent re-opening on refresh
-          window.history.replaceState(null, '', location.pathname);
+          // Do NOT replace history; just clear location state locally to preserve Back behavior
+          history.replaceState({ ...history.state, usr: undefined }, '');
         }
       } else if (state.openDirectMessage && state.groupId && state.partnerId) {
-        // Find and select the group, then open direct messages tab
         const groupToOpen = groups.find(g => g.id === state.groupId);
         if (groupToOpen) {
           setSelectedGroup(groupToOpen);
           setChatInitialTab('direct');
           setChatInitialUserId(state.partnerId);
           setIsChatOpen(true);
-          // Clear the state to prevent re-opening on refresh
-          window.history.replaceState(null, '', location.pathname);
+          history.replaceState({ ...history.state, usr: undefined }, '');
         }
       }
     }
