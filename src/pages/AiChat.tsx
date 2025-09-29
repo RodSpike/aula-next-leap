@@ -656,7 +656,7 @@ export default function AiChat() {
           
           {/* Messages */}
           <CardContent className="flex-1 overflow-y-auto p-0">
-            <div className="space-y-4 p-4">
+            <div className="space-y-4 p-4 pb-8">
               {messages.map((message) => (
                 <div 
                   key={message.id}
@@ -694,7 +694,7 @@ export default function AiChat() {
                             ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1" {...props} />,
                             ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1" {...props} />,
                             li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                            code: ({node, inline, ...props}) => inline ? (
+                            code: ({node, ...props}: any) => props.inline ? (
                               <code className="px-1 py-0.5 rounded bg-accent text-foreground" {...props} />
                             ) : (
                               <code className="block p-3 rounded bg-accent text-foreground overflow-auto" {...props} />

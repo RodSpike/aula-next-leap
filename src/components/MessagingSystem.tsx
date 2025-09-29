@@ -841,13 +841,13 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                />
                              ) : (
                                <>
-                                 <ScrollArea className="flex-1 p-3">
-                                   <div className="space-y-4">
-                                     {messages.length === 0 ? (
-                                       <div className="text-center text-muted-foreground py-8">
-                                         No messages yet. Start a conversation!
-                                       </div>
-                                     ) : (
+                                <ScrollArea className="flex-1 p-3">
+                                  <div className="space-y-4 pb-4">
+                                    {messages.length === 0 ? (
+                                      <div className="text-center text-muted-foreground py-8">
+                                        No messages yet. Start a conversation!
+                                      </div>
+                                    ) : (
                                        messages.map((msg) => {
                                          const isFromCurrentUser = msg.sender_id === user?.id;
                                          return (

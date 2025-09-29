@@ -158,9 +158,9 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-screen">
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               No messages yet. Start the conversation!
@@ -221,7 +221,7 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t bg-background">
         <div className="flex gap-2">
           <EnhancedChatInput
             value={newMessage}

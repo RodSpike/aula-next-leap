@@ -183,7 +183,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4">
         <ScrollArea className="flex-1 pr-4 mb-4">
-          <div className="space-y-4">
+          <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 No messages yet. Start the conversation!
@@ -240,7 +240,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           </div>
         </ScrollArea>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 bg-background border-t pt-3">
           <EnhancedChatInput
             value={newMessage}
             onChange={setNewMessage}
