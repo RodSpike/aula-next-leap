@@ -42,8 +42,11 @@ serve(async (req) => {
 
     console.log('Enhancing content:', { title, sectionType, contentLength: content?.length });
 
-    if (!openRouterApiKey) {
-      throw new Error('OpenRouter API key not configured');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+    const orKey = Deno.env.get('OPENROUTER_API_KEY') ?? openRouterApiKey ?? '';
+
+    if (!openaiApiKey && !orKey) {
+      throw new Error('AI provider not configured');
     }
 
     const systemPrompt = `You are an expert educational content designer. Your task is to enhance the visual presentation of lesson content while preserving ALL educational material.
@@ -96,36 +99,75 @@ Content: ${content}
 Make it visually appealing with proper structure, but preserve ALL the original educational content.`;
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openRouterApiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
-        'X-Title': 'English Learning App'
-      },
-      body: JSON.stringify({
-        model: 'deepseek/deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
-    });
+    // Prefer OpenAI, fallback to OpenRouter with reduced tokens and a retry if needed
+    let enhancedHtml = '';
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenRouter API error:', errorData);
-      throw new Error(`OpenRouter API error: ${response.statusText}`);
+    if (openaiApiKey) {
+      console.log('Enhance: Using OpenAI (gpt-4o-mini)');
+      const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.6,
+          max_tokens: 1200,
+        }),
+      });
+
+      if (!oaiRes.ok) {
+        const t = await oaiRes.text();
+        console.error('OpenAI error:', oaiRes.status, t);
+        throw new Error(`OpenAI API error: ${oaiRes.status}`);
+      }
+      const oaiData = await oaiRes.json();
+      enhancedHtml = oaiData.choices?.[0]?.message?.content || '';
+    } else {
+      console.log('Enhance: Using OpenRouter (deepseek)');
+      const makeOR = async (maxTokens: number) => fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${orKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
+          'X-Title': 'English Learning App'
+        },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.6,
+        }),
+      });
+
+      let orRes = await makeOR(900);
+      if (!orRes.ok) {
+        const errTxt = await orRes.text();
+        console.error('OpenRouter error:', orRes.status, errTxt);
+        if (orRes.status === 402 || errTxt.includes('402')) {
+          console.log('Retrying OpenRouter with fewer tokens');
+          orRes = await makeOR(500);
+        }
+      }
+      if (!orRes.ok) {
+        const finalErr = await orRes.text();
+        throw new Error(`OpenRouter API error: ${orRes.status} - ${finalErr}`);
+      }
+      const orData = await orRes.json();
+      enhancedHtml = orData.choices?.[0]?.message?.content || '';
     }
 
-    const data = await response.json();
-    const rawContent = data.choices[0].message.content;
-
     // Clean the enhanced content - remove markdown fences, body wrappers, scripts
-    const cleanedContent = cleanHtmlContent(rawContent);
+    const cleanedContent = cleanHtmlContent(enhancedHtml);
 
     console.log('Content enhanced successfully');
 

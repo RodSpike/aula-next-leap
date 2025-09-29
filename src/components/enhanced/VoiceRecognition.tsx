@@ -127,11 +127,7 @@ export const useVoiceRecognition = ({
 
   const startListening = () => {
     if (!isSupported) {
-      toast({
-        title: 'Not Supported',
-        description: 'Voice recognition is not supported in this browser. Please try Chrome, Edge, or Safari.',
-        variant: 'destructive',
-      });
+      // Silently no-op when unsupported to avoid toast spam in unsupported browsers
       return;
     }
 
@@ -140,11 +136,15 @@ export const useVoiceRecognition = ({
         recognitionRef.current.start();
       } catch (error) {
         console.error('Error starting recognition:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to start voice recognition. Please try again.',
-          variant: 'destructive',
-        });
+        if (!toastNotifiedRef.current) {
+          toastNotifiedRef.current = true;
+          toast({
+            title: 'Error',
+            description: 'Failed to start voice recognition. Please try again.',
+            variant: 'destructive',
+          });
+          setTimeout(() => { toastNotifiedRef.current = false; }, 1500);
+        }
       }
     }
   };

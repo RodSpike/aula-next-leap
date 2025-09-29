@@ -21,12 +21,14 @@ serve(async (req) => {
     console.log('Request parsed successfully');
     
     const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
     console.log('OpenRouter API key exists:', !!openRouterApiKey);
-    
-    if (!openRouterApiKey) {
-      console.error('OpenRouter API key not configured');
+    console.log('OpenAI API key exists:', !!openaiApiKey);
+
+    if (!openRouterApiKey && !openaiApiKey) {
+      console.error('No AI provider API key configured');
       return new Response(JSON.stringify({
-        error: 'OpenRouter API key not configured'
+        error: 'AI service temporarily unavailable. Please try again later.'
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -65,18 +67,16 @@ ANÁLISE DE ARQUIVOS:
 - Forneça feedback detalhado e educativo
 - Sugira exercícios relacionados ao conteúdo do arquivo
 - Identifique padrões de erro para foco de estudo
-
-REGRAS DE FORMATAÇÃO:
-- Use texto simples sem formatação markdown
-- NÃO use ** para texto em negrito
-- NÃO use * para ênfase
-- NÃO use # para cabeçalhos
-- Use formatação de texto simples e limpa
-- Use quebras de linha para melhor legibilidade
-- Use letras maiúsculas para ênfase quando necessário
-- Use aspas para exemplos
-
-Sempre responda de forma útil e educacional, focado no ensino de inglês com formatação limpa e legível.`
+            
+            FORMATAÇÃO (use Markdown limpo):
+            - Use títulos (#, ##, ###) curtos e claros
+            - Use **negrito** para destacar palavras-chave importantes
+            - Use listas com bullets para passos, dicas e exemplos
+            - Use blocos de código somente para trechos a repetir ou destaque
+            - Evite linhas muito longas; use quebras de linha frequentes
+            - Inclua emojis com moderação para motivação 🎯📚
+            
+            Sempre responda de forma útil e educacional, com formatação bonita e legível em Markdown.`
       }
     ];
 
@@ -104,59 +104,93 @@ Sempre responda de forma útil e educacional, focado no ensino de inglês com fo
       content: userMessage
     });
 
-console.log('Sending request to OpenRouter');
+    // Choose provider: prefer OpenAI, fallback to OpenRouter with safe token limits
+    try {
+      let aiResponse = '';
 
-    // Build request payload for OpenRouter
-    const requestPayload = {
-      model: 'deepseek/deepseek-chat',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 1000,
-      stream: false
-    };
+      if (openaiApiKey) {
+        console.log('Using OpenAI provider (gpt-4o-mini)');
+        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages,
+            temperature: 0.7,
+            max_tokens: 600,
+          }),
+        });
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openRouterApiKey}`,
-        'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
-        'X-Title': 'English Tutor Chat',
-      },
-      body: JSON.stringify(requestPayload),
-    });
+        if (!oaiRes.ok) {
+          const txt = await oaiRes.text();
+          console.error('OpenAI API error:', oaiRes.status, txt);
+          throw new Error(`OpenAI API error: ${oaiRes.status}`);
+        }
+        const oaiData = await oaiRes.json();
+        aiResponse = oaiData.choices?.[0]?.message?.content || '';
+      } else {
+        console.log('Using OpenRouter provider (deepseek)');
+        const makeOR = async (maxTokens: number) => {
+          const req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${openRouterApiKey}`,
+              'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
+              'X-Title': 'English Tutor Chat',
+            },
+            body: JSON.stringify({
+              model: 'deepseek/deepseek-chat',
+              messages,
+              temperature: 0.7,
+              max_tokens: maxTokens,
+              stream: false,
+            }),
+          });
+          return req;
+        };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText);
-      return new Response(JSON.stringify({
-        error: `OpenRouter API error: ${response.status} - ${errorText}`
-      }), {
+        let orRes = await makeOR(800);
+        if (!orRes.ok) {
+          const errTxt = await orRes.text();
+          console.error('OpenRouter API error:', orRes.status, errTxt);
+          // Retry once with smaller token limit if payment/limit error
+          if (orRes.status === 402 || errTxt.includes('402')) {
+            console.log('Retrying OpenRouter with reduced max_tokens');
+            orRes = await makeOR(400);
+          }
+        }
+        if (!orRes.ok) {
+          const finalErr = await orRes.text();
+          return new Response(JSON.stringify({ error: `OpenRouter API error: ${orRes.status} - ${finalErr}` }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const orData = await orRes.json();
+        aiResponse = orData.choices?.[0]?.message?.content || '';
+      }
+
+      if (!aiResponse) {
+        return new Response(JSON.stringify({ error: 'Empty AI response' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ response: aiResponse }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (providerError) {
+      console.error('Provider error:', providerError);
+      return new Response(JSON.stringify({ error: 'AI provider error. Please try again.' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const data = await response.json();
-    console.log('Received response from OpenRouter');
-    console.log('Full OpenRouter response:', JSON.stringify(data, null, 2));
-
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid response structure from OpenRouter:', data);
-      return new Response(JSON.stringify({ 
-        error: 'Invalid response structure from OpenRouter API' 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const aiResponse = data.choices[0].message.content;
-    console.log('AI response extracted:', aiResponse);
-
-    return new Response(JSON.stringify({ response: aiResponse }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error in english-tutor-chat function:', error);
     
