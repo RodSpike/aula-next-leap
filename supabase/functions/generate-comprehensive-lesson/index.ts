@@ -19,9 +19,9 @@ serve(async (req) => {
       throw new Error('Lesson title and course level are required');
     }
 
-    const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
-    if (!openRouterApiKey) {
-      throw new Error('OpenRouter API key not found');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('Lovable AI API key not found');
     }
 
     // Create language support instruction
@@ -82,7 +82,15 @@ ${practicalApplications?.map((item: string) => `- ${item}`).join('\n') || 'No sp
 ACTIVITIES NEEDED:
 ${activities?.map((item: string) => `- ${item}`).join('\n') || 'No specific activities provided'}
 
-Create a complete lesson with the following structure. Return your response with clear HTML sections and a JSON activities block:
+Create a complete lesson with the following structure. Return your response with clear HTML sections and a JSON activities block.
+
+**CRITICAL: You MUST create AT LEAST 12 diverse exercises**, including:
+- Multiple choice questions (at least 4)
+- Fill in the blank exercises (at least 4)
+- True/False questions (at least 2)
+- Sentence completion (at least 2)
+
+Each exercise should test different aspects of the grammar and vocabulary. Make them progressively harder.
 
 <!-- LESSON CONTENT START -->
 <section class="lesson-introduction">
@@ -156,39 +164,42 @@ Create a complete lesson with the following structure. Return your response with
 ]
 </activities>
 
-IMPORTANT: Include 5-8 exercises that specifically test the grammar and vocabulary for this lesson. Use ${languageSupport !== 'english_only' ? 'bilingual explanations (Portuguese + English)' : 'English explanations only'}.`;
+IMPORTANT: Create AT LEAST 12 exercises that specifically test the grammar and vocabulary for this lesson. Use ${languageSupport !== 'english_only' ? 'bilingual explanations (Portuguese + English)' : 'English explanations only'}.`;
 
-    console.log('Sending request to OpenRouter API...');
+    console.log('Sending request to Lovable AI Gateway (Gemini)...');
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openRouterApiKey}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://aula-click.lovable.app',
-        'X-Title': 'Aula Click - English Learning Platform'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 4000
+        stream: false,
       })
     });
 
-    console.log('OpenRouter API response status:', response.status);
+    console.log('Lovable AI response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenRouter API error:', errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      console.error('Lovable AI error:', errorText);
+      if (response.status === 429) {
+        throw new Error('Rate limits exceeded, please try again later.');
+      }
+      if (response.status === 402) {
+        throw new Error('Payment required for AI usage. Please add credits to Lovable AI workspace.');
+      }
+      throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('OpenRouter API response received successfully');
+    console.log('Lovable AI response received successfully');
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Unexpected API response structure:', data);
