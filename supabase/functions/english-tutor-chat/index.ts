@@ -108,7 +108,43 @@ ANÁLISE DE ARQUIVOS:
     try {
       let aiResponse = '';
 
-      if (openaiApiKey) {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
+
+      if (LOVABLE_API_KEY) {
+        console.log('Using Lovable AI Gateway (gemini-2.5-flash)');
+        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages,
+            stream: false,
+          }),
+        });
+
+        if (!aiRes.ok) {
+          const t = await aiRes.text();
+          console.error('Lovable AI error:', aiRes.status, t);
+          if (aiRes.status === 429) {
+            return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          if (aiRes.status === 402) {
+            return new Response(JSON.stringify({ error: 'Payment required for AI usage. Please add credits to Lovable AI workspace.' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          throw new Error(`Lovable AI gateway error: ${aiRes.status}`);
+        }
+        const data = await aiRes.json();
+        aiResponse = data.choices?.[0]?.message?.content || '';
+      } else if (openaiApiKey) {
         console.log('Using OpenAI provider (gpt-4o-mini)');
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -157,7 +193,6 @@ ANÁLISE DE ARQUIVOS:
         if (!orRes.ok) {
           const errTxt = await orRes.text();
           console.error('OpenRouter API error:', orRes.status, errTxt);
-          // Retry once with smaller token limit if payment/limit error
           if (orRes.status === 402 || errTxt.includes('402')) {
             console.log('Retrying OpenRouter with reduced max_tokens');
             orRes = await makeOR(400);

@@ -223,6 +223,13 @@ export default function AiChat() {
   };
 
   const startSpeechRecognition = () => {
+    if (!voiceRecognition.isSupported) {
+      toast({
+        title: 'Voice not supported',
+        description: 'Your browser does not support speech recognition. You can still type messages normally.',
+      });
+      return;
+    }
     voiceRecognition.startListening();
     setIsRecording(true);
     setSpeechState(prev => ({ ...prev, isListening: true, interimTranscript: '', finalTranscript: '' }));
