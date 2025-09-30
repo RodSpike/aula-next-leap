@@ -830,7 +830,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       </div>
 
                       {/* Right side: Chat Area */}
-                      <div className="flex-1 flex flex-col">
+                      <div className="flex-1 min-h-0 flex flex-col">
                         {selectedUser ? (
                            <>
                              {/* Show either private group chat or direct messages */}
@@ -900,7 +900,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                     </div>
                   </TabsContent>
 
-                   <TabsContent value="group" className="flex-1 flex flex-col mt-0">
+                   <TabsContent value="group" className="flex-1 min-h-0 flex flex-col mt-0">
                      <GroupChat 
                        groupId={groupId} 
                        groupName={groupName} 

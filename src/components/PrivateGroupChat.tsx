@@ -158,7 +158,7 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
   }
 
   return (
-    <div className="flex flex-col h-full max-h-screen">
+    <div className="flex flex-col h-full min-h-0">
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 pb-4">
           {messages.length === 0 ? (

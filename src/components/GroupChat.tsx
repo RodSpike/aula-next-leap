@@ -174,14 +174,14 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   }
 
   return (
-    <Card className="flex-1 flex flex-col">
+    <Card className="flex-1 min-h-0 flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
           {groupName} - Group Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-4">
+      <CardContent className="flex-1 min-h-0 flex flex-col p-4">
         <ScrollArea className="flex-1 pr-4 mb-4">
           <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
