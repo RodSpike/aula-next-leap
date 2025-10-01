@@ -60,39 +60,42 @@ serve(async (req) => {
 
     if (lovableKey) {
       console.log('Using Lovable AI Gateway (Gemini) for OCR');
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
-                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
-              ]
-            }
-          ]
-        }),
-      });
+      try {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
+                  { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
+                ]
+              }
+            ]
+          }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Lovable AI error:', errorData);
-        throw new Error(`Lovable AI error: ${errorData.error?.message || 'Unknown error'}`);
+        if (response.ok) {
+          const data = await response.json();
+          const extractedText = data?.choices?.[0]?.message?.content ?? '';
+
+          return new Response(
+            JSON.stringify({ text: extractedText, filename }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          const errorData = await response.json();
+          console.error('Lovable AI error, trying fallback:', errorData);
+        }
+      } catch (lovableError) {
+        console.error('Lovable AI Gateway failed, trying fallback:', lovableError);
       }
-
-      const data = await response.json();
-      const extractedText = data?.choices?.[0]?.message?.content ?? '';
-
-      return new Response(
-        JSON.stringify({ text: extractedText, filename }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     if (openaiApiKey) {

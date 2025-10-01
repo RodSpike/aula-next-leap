@@ -40,6 +40,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
         if (!roleError && roleData) {
           setUserRole({ role: 'admin' });
+          setSubscriptionStatus({ subscribed: true });
           setLoading(false);
           return; // Admins bypass subscription checks
         }
@@ -84,13 +85,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // Admins bypass subscription requirements
-  if (userRole?.role === 'admin') {
-    return <>{children}</>;
-  }
+  // Admins and users with valid subscriptions bypass
+  const hasAccess = userRole?.role === 'admin' || 
+                    subscriptionStatus?.subscribed || 
+                    subscriptionStatus?.in_trial;
 
-  // If user doesn't have active subscription or trial, redirect to subscribe page
-  if (!subscriptionStatus?.subscribed && !subscriptionStatus?.in_trial) {
+  if (!hasAccess) {
     return <Navigate to="/subscribe" replace />;
   }
 
