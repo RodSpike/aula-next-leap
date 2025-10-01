@@ -94,3 +94,12 @@ verify_jwt = true
 
 [functions.revoke-free-access]
 verify_jwt = true
+
+[functions.generate-practice-exercises]
+verify_jwt = false
+
+[functions.generate-comprehensive-lesson]
+verify_jwt = false
+
+[functions.enhance-lesson-content]
+verify_jwt = false

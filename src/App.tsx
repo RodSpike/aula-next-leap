@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { InitializeCourses } from "@/components/InitializeCourses";
 import { FloatingChatBubble } from "@/components/FloatingChatBubble";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
+import { FirstTimeUserExperience } from "@/components/FirstTimeUserExperience";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -41,6 +41,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <FloatingChatBubble />
+          <FirstTimeUserExperience />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />

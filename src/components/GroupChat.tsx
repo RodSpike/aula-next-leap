@@ -174,15 +174,15 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   }
 
   return (
-    <Card className="flex-1 min-h-0 flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
           {groupName} - Group Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 flex flex-col p-4">
-        <ScrollArea className="flex-1 pr-4 mb-4">
+      <CardContent className="flex-1 min-h-0 flex flex-col p-4 overflow-hidden">
+        <ScrollArea className="flex-1 pr-4 mb-4 min-h-0">
           <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
@@ -240,7 +240,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           </div>
         </ScrollArea>
 
-        <div className="flex gap-2 bg-background border-t pt-3">
+        <div className="flex gap-2 bg-background border-t pt-3 flex-shrink-0">
           <EnhancedChatInput
             value={newMessage}
             onChange={setNewMessage}

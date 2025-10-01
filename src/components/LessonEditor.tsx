@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Edit, Save, X, Sparkles } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { PracticeExerciseGenerator } from './PracticeExerciseGenerator';
 
 interface Exercise {
   id?: string;
@@ -692,10 +693,17 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Exercises</CardTitle>
-            <Button onClick={() => setIsAddingExercise(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Exercise
-            </Button>
+            <div className="flex gap-2">
+              <PracticeExerciseGenerator
+                lessonId={lessonId}
+                lessonTitle={lessonTitle}
+                lessonContent={lessonBody}
+              />
+              <Button onClick={() => setIsAddingExercise(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Exercise
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

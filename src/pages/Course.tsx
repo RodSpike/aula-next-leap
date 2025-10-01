@@ -381,6 +381,36 @@ export default function Course() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentLesson && (
           <div className="space-y-8">
+            {/* Lesson Navigation - Top */}
+            <div className="flex justify-between items-center pb-4 border-b">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1));
+                  setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentLessonIndex === 0}
+              >
+                ← Lição Anterior
+              </Button>
+              
+              <span className="text-sm text-muted-foreground">
+                Lição {currentLessonIndex + 1} de {lessons.length}
+              </span>
+              
+              <Button
+                onClick={() => {
+                  setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1));
+                  setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentLessonIndex === lessons.length - 1 || !canAccessNextLesson()}
+              >
+                Próxima Lição →
+              </Button>
+            </div>
+
             {/* Toggle between Introduction and Activities */}
             <div className="flex justify-center mb-6">
               <div className="inline-flex rounded-lg border p-1 bg-muted">
@@ -481,13 +511,47 @@ export default function Course() {
               </div>
             )}
             
+            {/* Lesson Navigation - Top */}
+            <div className="flex justify-between items-center pb-4 border-b">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const newIndex = Math.max(0, currentLessonIndex - 1);
+                  setCurrentLessonIndex(newIndex);
+                  setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentLessonIndex === 0}
+              >
+                ← Lição Anterior
+              </Button>
+              
+              <span className="text-sm text-muted-foreground">
+                Lição {currentLessonIndex + 1} de {lessons.length}
+              </span>
+              
+              <Button
+                onClick={() => {
+                  const newIndex = Math.min(lessons.length - 1, currentLessonIndex + 1);
+                  setCurrentLessonIndex(newIndex);
+                  setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={currentLessonIndex === lessons.length - 1 || (!isAdmin && !canAccessNextLesson())}
+              >
+                Próxima Lição →
+              </Button>
+            </div>
+
             {/* Navigation */}
             <div className="flex justify-between pt-8 border-t">
               <Button
                 variant="outline"
                 onClick={() => {
-                  setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1));
+                  const newIndex = Math.max(0, currentLessonIndex - 1);
+                  setCurrentLessonIndex(newIndex);
                   setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === 0}
               >
@@ -496,8 +560,10 @@ export default function Course() {
               
               <Button
                 onClick={() => {
-                  setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1));
+                  const newIndex = Math.min(lessons.length - 1, currentLessonIndex + 1);
+                  setCurrentLessonIndex(newIndex);
                   setShowIntroduction(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === lessons.length - 1 || (!isAdmin && !canAccessNextLesson())}
               >
