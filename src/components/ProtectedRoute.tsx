@@ -32,13 +32,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
 
       try {
-        // Check user role first
-        const { data: roleData, error: roleError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin',
-        });
+        // Check user role via table to avoid RPC issues
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id);
 
-        if (!roleError && roleData) {
+        const isAdmin = !rolesError && Array.isArray(roles) && roles.some((r: any) => r.role === 'admin');
+        if (isAdmin) {
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
@@ -53,15 +54,36 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           return;
         }
 
-        // Check subscription for regular users
+        // Check subscription for regular users via function first
         const { data, error } = await supabase.functions.invoke('check-subscription');
-        
+        let finalStatus: SubscriptionStatus = { subscribed: false };
+
         if (error) {
           console.error('Error checking subscription:', error);
-          setSubscriptionStatus({ subscribed: false });
-        } else {
-          setSubscriptionStatus(data);
+        } else if (data) {
+          finalStatus = data as SubscriptionStatus;
         }
+
+        // Fallback: read from user_subscriptions table directly
+        try {
+          const { data: subRow } = await supabase
+            .from('user_subscriptions')
+            .select('subscription_status, trial_ends_at, current_period_end')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          const now = new Date();
+          const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
+          const isActive = (subRow?.subscription_status === 'active') || (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
+
+          if (!finalStatus.subscribed && (inTrial || isActive)) {
+            finalStatus = { subscribed: true, in_trial: inTrial, trial_ends_at: subRow?.trial_ends_at ?? undefined };
+          }
+        } catch (e) {
+          console.warn('Subscription fallback check failed', e);
+        }
+
+        setSubscriptionStatus(finalStatus);
       } catch (error) {
         console.error('Error checking access:', error);
         setSubscriptionStatus({ subscribed: false });

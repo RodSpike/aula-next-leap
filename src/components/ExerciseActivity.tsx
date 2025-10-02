@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Trophy } from "lucide-react";
 
 interface Exercise {
@@ -50,7 +51,12 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
 
   const calculateScore = () => {
     return userAnswers.reduce((score, answer, index) => {
-      return answer === exercises[index].correct_answer ? score + 1 : score;
+      const correct = exercises[index].correct_answer ?? '';
+      const hasOptions = Array.isArray(exercises[index].options) && exercises[index].options.length > 0;
+      const isCorrect = hasOptions
+        ? answer === correct
+        : (answer || '').trim().toLowerCase() === correct.trim().toLowerCase();
+      return isCorrect ? score + 1 : score;
     }, 0);
   };
 
@@ -76,18 +82,26 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
               <p className="text-lg">{exercise.question}</p>
             </div>
 
-            <RadioGroup 
-              value={userAnswers[currentExercise]} 
-              onValueChange={handleAnswer}
-              className="space-y-2"
-            >
-              {exercise.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
+            {exercise.options && exercise.options.length > 0 ? (
+              <RadioGroup 
+                value={userAnswers[currentExercise]} 
+                onValueChange={handleAnswer}
+                className="space-y-2"
+              >
+                {exercise.options.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    <Label htmlFor={`option-${index}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <Input
+                value={userAnswers[currentExercise]}
+                onChange={(e) => handleAnswer(e.target.value)}
+                placeholder="Digite sua resposta"
+              />
+            )}
 
             <Button 
               onClick={nextExercise}
@@ -98,15 +112,41 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
             </Button>
           </>
         ) : (
-          <div className="text-center space-y-4">
-            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${
-              score >= exercises.length * 0.7 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-            }`}>
-              {score >= exercises.length * 0.7 ? <CheckCircle className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+          <div className="space-y-6">
+            <div className="text-center space-y-4">
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${
+                score >= exercises.length * 0.7 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}>
+                {score >= exercises.length * 0.7 ? <CheckCircle className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+              </div>
+              <h3 className="text-xl font-bold">Score: {score}/{exercises.length}</h3>
             </div>
-            <h3 className="text-xl font-bold">
-              Score: {score}/{exercises.length}
-            </h3>
+            <div className="space-y-3">
+              {exercises.map((ex, idx) => {
+                const userAns = userAnswers[idx] || '';
+                const correct = ex.correct_answer || '';
+                const hasOptions = Array.isArray(ex.options) && ex.options.length > 0;
+                const isCorrect = hasOptions
+                  ? userAns === correct
+                  : userAns.trim().toLowerCase() === correct.trim().toLowerCase();
+                return (
+                  <div key={idx} className="p-3 rounded-md border">
+                    <p className="font-medium">{idx + 1}. {ex.question}</p>
+                    <p className={`text-sm ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                      Sua resposta: {userAns || '—'} {isCorrect ? '(correta)' : '(incorreta)'}
+                    </p>
+                    {!isCorrect && (
+                      <p className="text-sm">
+                        Resposta correta: <span className="font-semibold">{correct}</span>
+                      </p>
+                    )}
+                    {ex.explanation && (
+                      <p className="text-sm text-muted-foreground">Explicação: {ex.explanation}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </CardContent>

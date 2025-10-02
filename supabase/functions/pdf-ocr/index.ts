@@ -55,8 +55,8 @@ serve(async (req) => {
 
     // Prioritize Lovable AI Gateway, then OpenAI, then Gemini
     const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPENAI') || Deno.env.get('OPENAI_KEY');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('Gemini') || Deno.env.get('GOOGLE_API_KEY');
 
     if (lovableKey) {
       console.log('Using Lovable AI Gateway (Gemini) for OCR');
