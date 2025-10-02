@@ -58,7 +58,6 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
 
   const fetchMessages = async () => {
     try {
-      // First get the messages
       const { data: messageData, error: messageError } = await supabase
         .from('group_chat_messages')
         .select('id, content, created_at, sender_id')
@@ -67,7 +66,6 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
 
       if (messageError) throw messageError;
 
-      // Then get profiles and roles separately
       const messagesWithData = await Promise.all((messageData || []).map(async (message) => {
         const { data: profileData } = await supabase
           .from('profiles')
@@ -108,7 +106,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          fetchMessages(); // Refetch to get profile data
+          fetchMessages();
         }
       )
       .subscribe();
@@ -121,7 +119,6 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
 
-    // Optimistic UI
     const optimistic = {
       id: crypto.randomUUID(),
       content: newMessage.trim(),
@@ -171,19 +168,19 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
 
   if (loading) {
     return <div className="p-4">Loading messages...</div>;
-  }
+  };
 
   return (
-    <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <CardHeader className="pb-3 flex-shrink-0">
+    <Card className="flex flex-col h-full overflow-hidden">
+      <CardHeader className="flex-shrink-0 pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
           {groupName} - Group Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 flex flex-col p-4 overflow-hidden">
-        <ScrollArea className="flex-1 pr-4 mb-4 min-h-0">
-          <div className="space-y-4 pb-4">
+      <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-4 py-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 No messages yet. Start the conversation!
@@ -240,7 +237,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           </div>
         </ScrollArea>
 
-        <div className="flex gap-2 bg-background border-t pt-3 flex-shrink-0">
+        <div className="flex-shrink-0 border-t bg-background p-4">
           <EnhancedChatInput
             value={newMessage}
             onChange={setNewMessage}

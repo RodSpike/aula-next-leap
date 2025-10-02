@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonContent } from "@/components/LessonContent";
@@ -53,6 +54,7 @@ interface LessonContentItem {
 export default function Course() {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
+  const { addXP, updateAchievement } = useGamification();
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
@@ -195,11 +197,20 @@ export default function Course() {
         description: `You scored ${score}%. Great job!`,
       });
 
+      // Gamification: Award XP and achievements
+      const xpAmount = score >= 90 ? 50 : score >= 70 ? 30 : 15;
+      await addXP(xpAmount, 'lesson_completed', `Completed lesson with ${score}% score`);
+      await updateAchievement('first_lesson');
+      await updateAchievement('dedicated_learner');
+      await updateAchievement('scholar');
+      await updateAchievement('master_learner');
+
       loadProgress();
       
       // Move to next lesson
       if (currentLessonIndex < lessons.length - 1) {
         setCurrentLessonIndex(currentLessonIndex + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
       console.error('Error saving progress:', error);

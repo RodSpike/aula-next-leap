@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FriendChat } from "@/components/FriendChat";
@@ -54,6 +55,7 @@ interface FriendRequest {
 
 export default function Friends() {
   const { user } = useAuth();
+  const { addXP, updateAchievement } = useGamification();
   const { toast } = useToast();
   const location = useLocation();
   
@@ -267,10 +269,16 @@ export default function Friends() {
 
         if (error) throw error;
 
-        toast({
-          title: "Friend Request Accepted",
-          description: "You are now friends!",
-        });
+      toast({
+        title: "Friend Request Accepted",
+        description: "You are now friends!",
+      });
+      
+      // Gamification
+      await addXP(15, 'friend_added', 'Made a new friend');
+      await updateAchievement('first_friend');
+      await updateAchievement('social_butterfly');
+      await updateAchievement('popular');
       } else {
         const { error } = await supabase
           .from('friends')

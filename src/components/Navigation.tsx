@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus } from "lucide-react";
+import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,7 @@ export const Navigation = () => {
     { name: "Comunidade", href: "/community", icon: Users },
     { name: "Amigos", href: "/friends", icon: UserPlus },
     { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
+    ...(user ? [{ name: "Conquistas", href: "/achievements", icon: Trophy }] : []),
     ...(isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
   ];
 

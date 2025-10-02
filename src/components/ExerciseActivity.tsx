@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Trophy } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 
 interface Exercise {
   type?: 'multiple_choice' | 'fill_blank';
@@ -31,6 +32,7 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
   const [currentExercise, setCurrentExercise] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>(new Array(exercises.length).fill(''));
   const [showResults, setShowResults] = useState(false);
+  const { addXP, updateAchievement } = useGamification();
 
   const handleAnswer = (answer: string) => {
     const newAnswers = [...userAnswers];
@@ -38,13 +40,25 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
     setUserAnswers(newAnswers);
   };
 
-  const nextExercise = () => {
+  const nextExercise = async () => {
     if (currentExercise < exercises.length - 1) {
       setCurrentExercise(currentExercise + 1);
     } else {
       setShowResults(true);
       const score = calculateScore();
       const totalPoints = exercises.length;
+      
+      // Gamification: Award XP based on score
+      const xpPerCorrect = 5;
+      const xpEarned = score * xpPerCorrect;
+      await addXP(xpEarned, 'exercises_completed', `Completed ${score}/${totalPoints} exercises`);
+      
+      // Check for perfect score achievement
+      if (score === totalPoints) {
+        await updateAchievement('perfect_score');
+        await updateAchievement('perfectionist');
+      }
+      
       onComplete?.(score, totalPoints);
     }
   };

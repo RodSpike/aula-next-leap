@@ -58,7 +58,6 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
 
       if (error) throw error;
 
-      // Fetch sender profiles separately
       const messagesWithProfiles = await Promise.all(
         (data || []).map(async (msg) => {
           const { data: profile } = await supabase
@@ -94,7 +93,7 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          fetchMessages(); // Refetch to get sender profile
+          fetchMessages();
         }
       )
       .subscribe();
@@ -107,7 +106,6 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
 
-    // Optimistic UI
     const optimistic = {
       id: crypto.randomUUID(),
       content: newMessage.trim(),
@@ -158,9 +156,9 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden">
-      <ScrollArea className="flex-1 p-4 min-h-0">
-        <div className="space-y-4 pb-4">
+    <div className="flex flex-col h-full overflow-hidden">
+      <ScrollArea className="flex-1 px-4">
+        <div className="space-y-4 py-4">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               No messages yet. Start the conversation!
@@ -221,18 +219,16 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t bg-background flex-shrink-0">
-        <div className="flex gap-2">
-          <EnhancedChatInput
-            value={newMessage}
-            onChange={setNewMessage}
-            onSend={sendMessage}
-            placeholder="Type a message..."
-            disabled={false}
-            showVoiceInput={false}
-            className="w-full"
-          />
-        </div>
+      <div className="flex-shrink-0 border-t bg-background p-4">
+        <EnhancedChatInput
+          value={newMessage}
+          onChange={setNewMessage}
+          onSend={sendMessage}
+          placeholder="Type a message..."
+          disabled={false}
+          showVoiceInput={false}
+          className="w-full"
+        />
       </div>
     </div>
   );

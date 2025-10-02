@@ -830,10 +830,9 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       </div>
 
                       {/* Right side: Chat Area */}
-                      <div className="flex-1 min-h-0 flex flex-col">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                         {selectedUser ? (
                            <>
-                             {/* Show either private group chat or direct messages */}
                              {selectedUser.user_id.startsWith('group_') ? (
                                <PrivateGroupChat
                                  groupId={privateGroupId!}
@@ -841,8 +840,8 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                />
                              ) : (
                                <>
-                                <ScrollArea className="flex-1 p-3">
-                                  <div className="space-y-4 pb-4">
+                                <ScrollArea className="flex-1 px-3">
+                                  <div className="space-y-4 py-4">
                                     {messages.length === 0 ? (
                                       <div className="text-center text-muted-foreground py-8">
                                         No messages yet. Start a conversation!
@@ -872,8 +871,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                    </div>
                                  </ScrollArea>
 
-                                 <div className="p-3 border-t">
-                                   <div className="flex gap-2">
+                                 <div className="flex-shrink-0 border-t bg-background p-3">
                                     <EnhancedChatInput
                                       value={message}
                                       onChange={setMessage}
@@ -883,7 +881,6 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                       showVoiceInput={false}
                                       className="w-full"
                                     />
-                                   </div>
                                  </div>
                                </>
                              )}

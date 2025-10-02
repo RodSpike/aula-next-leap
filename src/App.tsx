@@ -24,6 +24,7 @@ import Course from "./pages/Course";
 import LevelTest from "./pages/LevelTest";
 import Certificates from "./pages/Certificates";
 import NotFound from "./pages/NotFound";
+import Achievements from "./pages/Achievements";
 import ChatTest from "./pages/ChatTest";
 import Subscribe from "./pages/Subscribe";
 import Welcome from "./pages/Welcome";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/course/:courseId" element={<ProtectedRoute><Course /></ProtectedRoute>} />
             <Route path="/level-test/:fromLevel/:toLevel" element={<ProtectedRoute><LevelTest /></ProtectedRoute>} />
+            <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
             <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
             <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

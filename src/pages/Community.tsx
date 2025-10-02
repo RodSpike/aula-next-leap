@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PersonalProgress } from "@/components/PersonalProgress";
 import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -81,6 +82,7 @@ interface GroupPost {
 
 export default function Community() {
   const { user } = useAuth();
+  const { addXP, updateAchievement } = useGamification();
   const { toast } = useToast();
   const location = useLocation();
   const [groups, setGroups] = useState<CommunityGroup[]>([]);
@@ -647,6 +649,12 @@ export default function Community() {
         title: "Success",
         description: "Post created successfully!",
       });
+
+      // Gamification: Award XP and track achievements
+      await addXP(10, 'post_created', 'Created a community post');
+      await updateAchievement('first_post');
+      await updateAchievement('content_creator');
+      await updateAchievement('influencer');
     } catch (error: any) {
       console.error('Error creating post:', error);
       toast({
