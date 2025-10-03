@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClickableUserProfile } from "@/components/ClickableUserProfile";
 import { UserProfilePopup } from "@/components/UserProfilePopup";
 import { useUserProfileClick } from "@/hooks/useUserProfileClick";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 
 interface GroupMessage {
   id: string;
@@ -23,9 +24,7 @@ interface GroupMessage {
     username?: string;
     avatar_url?: string;
   };
-  user_roles?: {
-    role: string;
-  }[];
+  is_admin?: boolean;
 }
 
 interface GroupChatProps {
@@ -73,16 +72,15 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
           .eq('user_id', message.sender_id)
           .single();
 
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', message.sender_id)
-          .eq('role', 'admin');
+        const { data: isAdminData } = await supabase.rpc('has_role', {
+          _user_id: message.sender_id,
+          _role: 'admin'
+        });
         
         return {
           ...message,
           profiles: profileData,
-          user_roles: roleData || []
+          is_admin: isAdminData === true
         };
       }));
 
@@ -163,7 +161,7 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   };
 
   const isAdmin = (message: GroupMessage) => {
-    return message.user_roles?.some(role => role.role === 'admin');
+    return !!message.is_admin;
   };
 
   if (loading) {
@@ -198,10 +196,12 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
                     }}
                     onClick={openUserProfile}
                   >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={message.profiles?.avatar_url} />
-                      <AvatarFallback>{getAvatarFallback(message)}</AvatarFallback>
-                    </Avatar>
+                    <ProfileAvatar
+                      userId={message.sender_id}
+                      avatarUrl={message.profiles?.avatar_url}
+                      fallback={getAvatarFallback(message)}
+                      className="w-8 h-8"
+                    />
                   </ClickableUserProfile>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">

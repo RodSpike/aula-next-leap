@@ -32,13 +32,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
 
       try {
-        // Check user role via table to avoid RPC issues
-        const { data: roles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
+        // Check user role via secure RPC to avoid RLS issues
+        const { data: isAdminData, error: roleRpcError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
 
-        const isAdmin = !rolesError && Array.isArray(roles) && roles.some((r: any) => r.role === 'admin');
+        const isAdmin = isAdminData === true && !roleRpcError;
         if (isAdmin) {
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
@@ -104,7 +104,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Admins and users with valid subscriptions bypass

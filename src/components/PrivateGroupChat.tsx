@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 
 interface GroupMessage {
   id: string;
@@ -181,10 +182,12 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
               return (
                 <div key={message.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
                   {!isFromCurrentUser && (
-                    <Avatar className="w-8 h-8 mr-2">
-                      <AvatarImage src={message.sender?.avatar_url} />
-                      <AvatarFallback>{getAvatarFallback(message.sender)}</AvatarFallback>
-                    </Avatar>
+                    <ProfileAvatar
+                      userId={message.sender_id}
+                      avatarUrl={message.sender?.avatar_url}
+                      fallback={getAvatarFallback(message.sender)}
+                      className="w-8 h-8 mr-2"
+                    />
                   )}
                   <div className={`max-w-[70%] ${isFromCurrentUser ? 'ml-4' : 'mr-4'}`}>
                     {!isFromCurrentUser && (
@@ -206,10 +209,12 @@ export const PrivateGroupChat: React.FC<PrivateGroupChatProps> = ({ groupId, gro
                     </div>
                   </div>
                   {isFromCurrentUser && (
-                    <Avatar className="w-8 h-8 ml-2">
-                      <AvatarImage src={message.sender?.avatar_url} />
-                      <AvatarFallback>{getAvatarFallback(message.sender)}</AvatarFallback>
-                    </Avatar>
+                    <ProfileAvatar
+                      userId={message.sender_id}
+                      avatarUrl={message.sender?.avatar_url}
+                      fallback={getAvatarFallback(message.sender)}
+                      className="w-8 h-8 ml-2"
+                    />
                   )}
                 </div>
               );

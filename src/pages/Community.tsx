@@ -352,17 +352,15 @@ export default function Community() {
           .single();
 
         // Check if user is admin
-        const { data: adminData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', post.user_id)
-          .eq('role', 'admin')
-          .maybeSingle();
+        const { data: adminData } = await supabase.rpc('has_role', {
+          _user_id: post.user_id,
+          _role: 'admin'
+        });
 
         posts.push({
           ...post,
           profiles: profileData || { display_name: 'Unknown User', avatar_url: null },
-          is_admin: !!adminData
+          is_admin: adminData === true
         });
       }
 

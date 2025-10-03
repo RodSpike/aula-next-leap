@@ -111,7 +111,6 @@ export const useVoiceRecognition = ({
       recognitionRef.current = recognition;
     } else {
       setIsSupported(false);
-      console.warn('Speech recognition not supported in this browser');
       if (!unsupportedNotifiedRef.current) {
         unsupportedNotifiedRef.current = true;
         onErrorRef.current?.('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');

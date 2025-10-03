@@ -84,18 +84,36 @@ Remember:
     }
 
     const result = await response.json();
-    const content = result.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content received from AI');
-    }
+    const contentRaw = result.choices?.[0]?.message?.content;
 
     let exercises;
     try {
-      const parsed = JSON.parse(content);
-      exercises = parsed.exercises || parsed;
+      if (typeof contentRaw === 'string') {
+        let str = contentRaw.trim();
+        // Strip markdown fences if present
+        if (str.startsWith('```')) {
+          str = str.replace(/^```[a-zA-Z]*\s*/,'').replace(/```\s*$/,'');
+        }
+        // Try to isolate JSON portion
+        const firstBrace = Math.min(
+          ...[str.indexOf('{'), str.indexOf('[')].filter(i => i !== -1)
+        );
+        if (Number.isFinite(firstBrace) && firstBrace > 0) {
+          str = str.slice(firstBrace);
+        }
+        const lastBrace = Math.max(str.lastIndexOf('}'), str.lastIndexOf(']'));
+        if (lastBrace !== -1) {
+          str = str.slice(0, lastBrace + 1);
+        }
+        const parsed = JSON.parse(str);
+        exercises = parsed.exercises || parsed;
+      } else if (contentRaw && typeof contentRaw === 'object') {
+        exercises = (contentRaw as any).exercises || contentRaw;
+      } else {
+        throw new Error('No content received from AI');
+      }
     } catch (e) {
-      console.error('Failed to parse AI response:', content);
+      console.error('Failed to parse AI response:', contentRaw);
       throw new Error('Invalid JSON response from AI');
     }
 
