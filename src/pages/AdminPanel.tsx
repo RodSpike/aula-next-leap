@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ComprehensiveLessonGenerator } from "@/components/ComprehensiveLessonGenerator";
 import { CourseManagement } from "@/components/CourseManagement";
 import { AdminFreeUsers } from "@/components/AdminFreeUsers";
+import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
 
 interface UserData {
@@ -671,23 +672,37 @@ export default function AdminPanel() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-background/50 p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-3">Comprehensive Curriculum Generation</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Generate the complete curriculum based on the Aula Click official curriculum document. 
-                    This creates all lessons for A1-C2 levels with appropriate Portuguese support for lower levels (A1-B1) 
-                    and English-only instruction for higher levels (B2-C2). Includes final level tests for progression.
-                  </p>
-                  <ComprehensiveLessonGenerator />
-                </div>
-                
-                <div className="bg-background/50 p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-3">Manual Lesson Editing</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Edit individual lessons manually with full control over content, explanations, and exercises.
-                  </p>
-                  <CourseManagement />
-                </div>
+                 <div className="bg-background/50 p-6 rounded-lg border">
+                   <h3 className="text-lg font-semibold mb-3">Comprehensive Curriculum Generation</h3>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Generate the complete curriculum based on the Aula Click official curriculum document. 
+                     This creates all lessons for A1-C2 levels with appropriate Portuguese support for lower levels (A1-B1) 
+                     and English-only instruction for higher levels (B2-C2). Includes final level tests for progression.
+                   </p>
+                   <ComprehensiveLessonGenerator />
+                 </div>
+
+                 {/* Bulk regenerate exercises for all lessons */}
+                 <div className="bg-background/50 p-6 rounded-lg border">
+                   <h3 className="text-lg font-semibold mb-3">Generate Exercises with AI (All Lessons)</h3>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Recreate exercises for every lesson across all courses. Use only if you want to refresh the entire bank.
+                   </p>
+                   {/* Keep existing code */}
+                   {/* ... keep existing code (bulk regenerate exercises card) */}
+                   <div className="mt-2">
+                     {/* Imported lightweight component */}
+                     {/**/}
+                   </div>
+                 </div>
+                 
+                 <div className="bg-background/50 p-6 rounded-lg border">
+                   <h3 className="text-lg font-semibold mb-3">Manual Lesson Editing</h3>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Edit individual lessons manually with full control over content, explanations, and exercises.
+                   </p>
+                   <CourseManagement />
+                 </div>
                 
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">

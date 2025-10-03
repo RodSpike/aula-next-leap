@@ -357,63 +357,48 @@ export default function AiChat() {
 
   const playAIResponse = async (messageId: string, text: string, speed: number = 1.0) => {
     try {
-      // Stop any currently playing speech
+      // First try premium TTS (ElevenLabs). If not configured, fall back to browser TTS.
+      setAudioState(prev => ({ ...prev, isPlaying: true, isPaused: false, messageId, speed }));
+
+      try {
+        const { data, error } = await supabase.functions.invoke('text-to-speech-elevenlabs', {
+          body: { text, voiceId: 'Aria', speed }
+        });
+        if (!error && data?.audioContent) {
+          const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
+          audio.playbackRate = Math.max(0.5, Math.min(2, speed));
+          setAudioState(prev => ({ ...prev, usingSynth: false, currentAudio: audio }));
+          await audio.play();
+          audio.onended = () => setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null }));
+          return; // Done with premium TTS
+        }
+      } catch (e) {
+        // Ignore and fall back
+        console.warn('Premium TTS unavailable, falling back to Web Speech API');
+      }
+
+      // Fallback: Web Speech API
       speechSynthesis.cancel();
-      
-      setAudioState(prev => ({ 
-        ...prev, 
-        isPlaying: true, 
-        isPaused: false, 
-        messageId, 
-        speed, 
-        usingSynth: true 
-      }));
+      setAudioState(prev => ({ ...prev, usingSynth: true }));
 
       const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Find and set the selected voice
-      const selectedVoice = availableVoices.find(voice => 
-        voice.name === audioState.selectedVoice
-      );
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-      
+      const selectedVoice = availableVoices.find(v => v.name === audioState.selectedVoice);
+      if (selectedVoice) utterance.voice = selectedVoice;
       utterance.rate = speed;
       utterance.pitch = 1;
       utterance.volume = 1;
-      
+
       utterance.onend = () => {
-        setAudioState(prev => ({ 
-          ...prev, 
-          isPlaying: false, 
-          isPaused: false, 
-          currentAudio: null, 
-          messageId: null,
-          usingSynth: false
-        }));
+        setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null, usingSynth: false }));
       };
-      
-      utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event.error);
-        setAudioState(prev => ({ 
-          ...prev, 
-          isPlaying: false, 
-          isPaused: false, 
-          currentAudio: null, 
-          messageId: null,
-          usingSynth: false
-        }));
-        toast({
-          title: 'Erro',
-          description: 'Falha ao reproduzir áudio. Tente novamente.',
-          variant: 'destructive',
-        });
+      utterance.onerror = () => {
+        setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null, usingSynth: false }));
+        toast({ title: 'Erro', description: 'Falha ao reproduzir áudio. Tente novamente.', variant: 'destructive' });
       };
 
       synthUtteranceRef.current = utterance;
       speechSynthesis.speak(utterance);
-      
+
     } catch (error) {
       console.error('Error playing AI response:', error);
       setAudioState(prev => ({ 
