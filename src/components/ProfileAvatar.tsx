@@ -49,10 +49,14 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl,
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
       {frameUrl && (
-        <img
-          src={frameUrl}
-          alt="Profile frame"
-          className="pointer-events-none absolute inset-0 z-10 h-full w-full select-none"
+        <div 
+          className="pointer-events-none absolute inset-0 z-10 select-none rounded-full"
+          style={{
+            backgroundImage: `url(${frameUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
         />
       )}
     </div>

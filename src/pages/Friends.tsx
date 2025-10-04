@@ -425,18 +425,33 @@ export default function Friends() {
       <Navigation />
       
       {/* Header */}
-      <section className="bg-gradient-subtle py-12">
+      <section className="bg-gradient-hero py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             <div className="flex items-center justify-center gap-3">
-              <Users className="h-12 w-12 text-primary" />
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                Friends
-              </h1>
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
+                <Users className="h-10 w-10 text-primary" />
+              </div>
             </div>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Connect with fellow English learners, practice together, and share your progress!
+            <h1 className="text-5xl md:text-6xl font-bold text-foreground">
+              <span className="bg-gradient-primary bg-clip-text text-transparent">Connect</span> & Learn Together
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Build your learning network, practice with friends, and achieve your goals together!
             </p>
+            
+            {/* Friend stats */}
+            <div className="flex items-center justify-center gap-8 pt-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{friends.length}</div>
+                <div className="text-sm text-muted-foreground">Friends</div>
+              </div>
+              <div className="w-px h-12 bg-border"></div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-secondary">{friendRequests.length}</div>
+                <div className="text-sm text-muted-foreground">Requests</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -446,14 +461,16 @@ export default function Friends() {
           {/* Friend Management */}
           <div className="lg:col-span-2 space-y-6">
             {/* Add Friends */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
-                  Find Friends
+            <Card className="border-2 shadow-lg">
+              <CardHeader className="bg-gradient-hero">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                  </div>
+                  Discover Friends
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -461,14 +478,17 @@ export default function Friends() {
                       placeholder="Search by username or name..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-12 rounded-lg border-2"
                     />
                   </div>
                   <Button
                     variant="outline"
+                    size="lg"
                     onClick={() => setShowQRCode(!showQRCode)}
+                    className="gap-2"
                   >
                     <QrCode className="h-4 w-4" />
+                    QR Code
                   </Button>
                 </div>
 

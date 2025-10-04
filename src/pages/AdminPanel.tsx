@@ -683,18 +683,7 @@ export default function AdminPanel() {
                  </div>
 
                  {/* Bulk regenerate exercises for all lessons */}
-                 <div className="bg-background/50 p-6 rounded-lg border">
-                   <h3 className="text-lg font-semibold mb-3">Generate Exercises with AI (All Lessons)</h3>
-                   <p className="text-sm text-muted-foreground mb-4">
-                     Recreate exercises for every lesson across all courses. Use only if you want to refresh the entire bank.
-                   </p>
-                   {/* Keep existing code */}
-                   {/* ... keep existing code (bulk regenerate exercises card) */}
-                   <div className="mt-2">
-                     {/* Imported lightweight component */}
-                     {/**/}
-                   </div>
-                 </div>
+                 <BulkExerciseRegenerator />
                  
                  <div className="bg-background/50 p-6 rounded-lg border">
                    <h3 className="text-lg font-semibold mb-3">Manual Lesson Editing</h3>

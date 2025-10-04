@@ -43,6 +43,7 @@ import { Link } from "react-router-dom";
 import { ClickableUserProfile } from "@/components/ClickableUserProfile";
 import { UserProfilePopup } from "@/components/UserProfilePopup";
 import { useUserProfileClick } from "@/hooks/useUserProfileClick";
+import { EnhancedGroupCard } from "@/components/EnhancedGroupCard";
 
 interface CommunityGroup {
   id: string;
@@ -782,15 +783,41 @@ export default function Community() {
       <Navigation />
       
       {/* Header */}
-      <section className="bg-gradient-subtle py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-6">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-            Comunidade de Aprendizado
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Conecte-se com outros estudantes, pratique juntos e compartilhe seu progresso.
-            </p>
+      <section className="relative bg-gradient-hero py-24 overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-700"></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-8">
+            <div className="flex items-center justify-center">
+              <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center shadow-lg">
+                <Users className="h-12 w-12 text-primary" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-6xl font-bold text-foreground">
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Community</span> Learning
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Connect, collaborate, and grow together in your English learning journey!
+              </p>
+            </div>
+            
+            {/* Community stats */}
+            <div className="flex items-center justify-center gap-8 pt-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{groups.length}</div>
+                <div className="text-sm text-muted-foreground">Active Groups</div>
+              </div>
+              <div className="w-px h-12 bg-border"></div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-secondary">{groups.reduce((sum, g) => sum + (g.member_count || 0), 0)}</div>
+                <div className="text-sm text-muted-foreground">Members</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
