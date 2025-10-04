@@ -574,7 +574,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-2xl p-0">
+      <SheetContent className="w-full sm:max-w-2xl p-0 h-[85vh]">
         <div className="flex flex-col h-full">
           <SheetHeader className="p-4 border-b">
             <div className="flex items-center justify-between">
@@ -840,7 +840,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                />
                              ) : (
                                <>
-                                <ScrollArea className="flex-1 min-h-0 px-3">
+                                <div className="flex-1 min-h-0 px-3 overflow-y-auto">
                                   <div className="space-y-4 py-4">
                                     {messages.length === 0 ? (
                                       <div className="text-center text-muted-foreground py-8">
@@ -855,21 +855,21 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                                isFromCurrentUser 
                                                  ? 'bg-primary text-primary-foreground ml-4' 
                                                  : 'bg-muted mr-4'
-                                             }`}>
-                                               <p className="text-sm">{msg.content}</p>
-                                               <span className={`text-xs ${
-                                                 isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                                               }`}>
-                                                 {new Date(msg.created_at).toLocaleTimeString()}
-                                               </span>
-                                             </div>
-                                           </div>
-                                         );
-                                       })
-                                     )}
-                                     <div ref={messagesEndRef} />
-                                   </div>
-                                 </ScrollArea>
+                                              }`}>
+                                                <p className="text-sm">{msg.content}</p>
+                                                <span className={`text-xs ${
+                                                  isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                                }`}>
+                                                  {new Date(msg.created_at).toLocaleTimeString()}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                      <div ref={messagesEndRef} />
+                                    </div>
+                                  </div>
 
                                  <div className="flex-shrink-0 border-t bg-background p-3">
                                     <EnhancedChatInput

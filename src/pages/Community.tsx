@@ -190,6 +190,40 @@ export default function Community() {
     }
   }, [selectedGroup?.id, groups]);
 
+  // Realtime: instantly reflect new posts for the selected group
+  useEffect(() => {
+    if (!selectedGroup) return;
+    const channel = supabase
+      .channel(`group-posts-${selectedGroup.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'group_posts',
+        filter: `group_id=eq.${selectedGroup.id}`,
+      }, async (payload) => {
+        const newPost = payload.new as any;
+        // Enrich with profile quickly
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('user_id', newPost.user_id)
+          .maybeSingle();
+        setPosts(prev => {
+          // De-dup by id
+          if (prev.some(p => p.id === newPost.id)) return prev;
+          const enriched = {
+            ...newPost,
+            profiles: profileData || { display_name: 'Member', avatar_url: null },
+            is_admin: false,
+          } as any;
+          return [enriched, ...prev];
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedGroup?.id]);
+
   // Auto-select group from URL (?group=ID) or localStorage
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -630,26 +664,43 @@ export default function Community() {
         });
       }
 
-      const { error } = await supabase
+      // Optimistic UI update
+      const tempId = `optimistic_${Date.now()}`;
+      const optimisticPost: any = {
+        id: tempId,
+        content: processedContent,
+        created_at: new Date().toISOString(),
+        group_id: selectedGroup.id,
+        user_id: user.id,
+        attachments,
+        profiles: { display_name: 'You', avatar_url: undefined },
+        is_admin: false
+      };
+      setPosts(prev => [optimisticPost, ...prev]);
+
+      const { data: inserted, error } = await supabase
         .from('group_posts')
         .insert({
           group_id: selectedGroup.id,
           user_id: user.id,
           content: processedContent,
-          attachments: attachments
-        });
+          attachments
+        })
+        .select('*')
+        .single();
 
       if (error) throw error;
 
+      // Replace optimistic with real
+      if (inserted) {
+        setPosts(prev => prev.map(p => p.id === tempId ? { ...inserted, profiles: optimisticPost.profiles, is_admin: optimisticPost.is_admin } : p));
+      }
+
       setNewPost("");
       setSelectedFiles([]);
-      fetchPosts(selectedGroup.id);
-      toast({
-        title: "Success",
-        description: "Post created successfully!",
-      });
+      toast({ title: 'Success', description: 'Post created successfully!' });
 
-      // Gamification: Award XP and track achievements
+      // Gamification
       await addXP(10, 'post_created', 'Created a community post');
       await updateAchievement('first_post');
       await updateAchievement('content_creator');
@@ -657,9 +708,9 @@ export default function Community() {
     } catch (error: any) {
       console.error('Error creating post:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to create post",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to create post',
+        variant: 'destructive',
       });
     }
   };
