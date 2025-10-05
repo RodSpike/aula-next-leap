@@ -693,7 +693,12 @@ export default function Community() {
 
       // Replace optimistic with real
       if (inserted) {
-        setPosts(prev => prev.map(p => p.id === tempId ? { ...inserted, profiles: optimisticPost.profiles, is_admin: optimisticPost.is_admin } : p));
+        setPosts(prev => prev.map(p => p.id === tempId ? { 
+          ...inserted, 
+          attachments: inserted.attachments as any || [],
+          profiles: optimisticPost.profiles, 
+          is_admin: optimisticPost.is_admin 
+        } as GroupPost : p));
       }
 
       setNewPost("");
