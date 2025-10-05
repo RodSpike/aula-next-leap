@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FriendChat } from "@/components/FriendChat";
+import { SimpleChatWindow } from "@/components/SimpleChatWindow";
 import QRCode from 'react-qr-code';
 
 interface FriendProfile {
@@ -407,14 +407,18 @@ export default function Friends() {
               ← Back to Friends
             </Button>
           </div>
-          <FriendChat 
-            friend={{
-              id: friendProfile.user_id,
-              username: friendProfile.username || 'Unknown',
-              display_name: friendProfile.display_name || 'Unknown User'
-            }}
-            onBack={() => setSelectedFriend(null)}
-          />
+          <Card>
+            <CardContent className="p-8 text-center">
+              <MessageCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">Chats Have Moved!</h3>
+              <p className="text-muted-foreground mb-4">
+                Click on your friend's profile to start a conversation
+              </p>
+              <Button onClick={() => window.location.href = `/profile/${friendProfile.user_id}`}>
+                View {friendProfile.display_name || friendProfile.username}'s Profile
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

@@ -16,8 +16,7 @@ import { MessageCircle, Send, Bot, Users, UserIcon, X, Minimize2, Maximize2, Tra
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineStatus } from './OnlineStatus';
-import { GroupChat } from './GroupChat';
-import { PrivateGroupChat } from './PrivateGroupChat';
+import { SimpleChatWindow } from './SimpleChatWindow';
 import { EnhancedChatInput } from './enhanced/EnhancedChatInput';
 import { EnhancedAIChatInterface } from './enhanced/EnhancedAIChatInterface';
 import { Link } from "react-router-dom";
@@ -833,12 +832,13 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       <div className="flex-1 flex flex-col h-full">
                         {selectedUser ? (
                            <>
-                             {selectedUser.user_id.startsWith('group_') ? (
-                               <PrivateGroupChat
-                                 groupId={privateGroupId!}
-                                 groupName={privateGroupName}
-                               />
-                             ) : (
+                              {selectedUser.user_id.startsWith('group_') ? (
+                                <div className="p-4 text-center text-muted-foreground">
+                                  <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                  <p>Private group chats have been moved to a new system.</p>
+                                  <p className="text-sm mt-2">Visit user profiles to start chatting!</p>
+                                </div>
+                              ) : (
                                <div className="flex flex-col h-full">
                                 <div className="flex-1 px-3 overflow-y-auto">
                                   <div className="space-y-4 py-4">
@@ -898,10 +898,11 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                   </TabsContent>
 
                    <TabsContent value="group" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
-                     <GroupChat 
-                       groupId={groupId} 
-                       groupName={groupName} 
-                     />
+                     <div className="p-4 text-center text-muted-foreground">
+                       <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                       <p>Group chats have been moved to a new system.</p>
+                       <p className="text-sm mt-2">Visit user profiles to start chatting with friends!</p>
+                     </div>
                    </TabsContent>
                 </div>
               </Tabs>

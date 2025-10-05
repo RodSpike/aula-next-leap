@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   user_id: string;
@@ -12,7 +13,7 @@ interface ClickableUserProfileProps {
   userId: string;
   profile?: UserProfile;
   children: React.ReactNode;
-  onClick: (userId: string, profile?: UserProfile) => void;
+  onClick?: (userId: string, profile?: UserProfile) => void;
   className?: string;
 }
 
@@ -23,10 +24,19 @@ export const ClickableUserProfile: React.FC<ClickableUserProfileProps> = ({
   onClick,
   className = ''
 }) => {
+  const navigate = useNavigate();
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onClick(userId, profile);
+    
+    // If onClick is provided, use it (for backward compatibility)
+    if (onClick) {
+      onClick(userId, profile);
+    } else {
+      // Otherwise, navigate to profile page
+      navigate(`/profile/${userId}`);
+    }
   };
 
   return (

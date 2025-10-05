@@ -28,6 +28,7 @@ import Achievements from "./pages/Achievements";
 import ChatTest from "./pages/ChatTest";
 import Subscribe from "./pages/Subscribe";
 import Welcome from "./pages/Welcome";
+import Profile from "./pages/Profile";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
             <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
             <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
+            <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

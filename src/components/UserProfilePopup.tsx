@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-import { MessageCircle, Copy } from "lucide-react";
+import { MessageCircle, Copy, UserPlus, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -157,55 +156,113 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
     }
   };
 
-  const handleDirectMessage = async () => {
-    const targetId = profile?.user_id || userId;
-    if (!targetId || !user) return;
+  const handleSendFriendRequest = async () => {
+    if (!profile || !user) return;
 
     try {
-      // Find a default group to create the private chat in
-      const { data: defaultGroup, error: groupError } = await supabase
-        .from('community_groups')
-        .select('id')
-        .eq('is_default', true)
-        .limit(1)
-        .single();
+      // Check if already friends or request exists
+      const { data: existing } = await supabase
+        .from('friends')
+        .select('*')
+        .or(`and(requester_id.eq.${user.id},requested_id.eq.${profile.user_id}),and(requester_id.eq.${profile.user_id},requested_id.eq.${user.id})`)
+        .maybeSingle();
 
-      if (groupError || !defaultGroup) {
+      if (existing) {
         toast({
-          title: "Error",
-          description: "Unable to find a default group for messaging",
+          title: "Friend request already sent",
+          description: "You've already sent a friend request to this user.",
           variant: "destructive",
         });
         return;
       }
 
-      // Navigate to community with direct message state
-      navigate('/community', {
-        state: {
-          openDirectMessage: true,
-          groupId: defaultGroup.id,
-          partnerId: targetId
-        }
-      });
+      // Send friend request
+      const { error } = await supabase
+        .from('friends')
+        .insert({
+          requester_id: user.id,
+          requested_id: profile.user_id,
+          status: 'pending'
+        });
 
-      onOpenChange(false);
+      if (error) throw error;
+
+      toast({
+        title: "Friend request sent",
+        description: `Friend request sent to ${profile.display_name || profile.username}`,
+      });
     } catch (error) {
-      console.error('Error opening direct message:', error);
+      console.error('Error sending friend request:', error);
       toast({
         title: "Error",
-        description: "Failed to open direct message",
+        description: "Failed to send friend request.",
         variant: "destructive",
       });
     }
   };
 
-  const copyUserId = () => {
-    const idToCopy = profile?.user_id || userId;
-    if (idToCopy) {
-      navigator.clipboard.writeText(idToCopy);
+  const handleDirectMessage = async () => {
+    if (!profile || !user) return;
+
+    try {
+      // Create or get private group for DM
+      const groupName = `DM: ${user.id}-${profile.user_id}`;
+      
+      // Check if private chat group exists
+      const { data: existingGroup } = await supabase
+        .from('community_groups')
+        .select('id')
+        .eq('is_private_chat', true)
+        .or(`name.eq.DM: ${user.id}-${profile.user_id},name.eq.DM: ${profile.user_id}-${user.id}`)
+        .maybeSingle();
+
+      let groupId;
+      
+      if (existingGroup) {
+        groupId = existingGroup.id;
+      } else {
+        // Create new private chat group
+        const { data: newGroup, error: groupError } = await supabase
+          .from('community_groups')
+          .insert({
+            name: groupName,
+            description: 'Private chat',
+            level: 'A1',
+            is_private_chat: true,
+            created_by: user.id,
+            group_type: 'private'
+          })
+          .select()
+          .single();
+
+        if (groupError) throw groupError;
+        groupId = newGroup.id;
+
+        // Add both users as members
+        const { error: memberError } = await supabase
+          .from('group_members')
+          .insert([
+            { group_id: groupId, user_id: user.id, status: 'accepted', can_post: true },
+            { group_id: groupId, user_id: profile.user_id, status: 'accepted', can_post: true }
+          ]);
+
+        if (memberError) throw memberError;
+      }
+
+      // Navigate to community with the group selected
+      navigate('/community', { 
+        state: { 
+          selectedGroupId: groupId,
+          openMessaging: true 
+        } 
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating/opening DM:', error);
       toast({
-        title: "Copied",
-        description: "User ID copied to clipboard",
+        title: "Error",
+        description: "Failed to open direct message.",
+        variant: "destructive",
       });
     }
   };
@@ -214,6 +271,15 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
     setProfile(selectedProfile);
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const copyUserId = () => {
+    if (!profile) return;
+    navigator.clipboard.writeText(profile.user_id);
+    toast({
+      title: "Copied",
+      description: "User ID copied to clipboard",
+    });
   };
 
   if (loading) {
@@ -278,11 +344,58 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
               </div>
 
               {p.user_id !== user?.id && (
-                <div className="flex justify-center">
-                  <Button onClick={handleDirectMessage} className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4" />
+                <div className="space-y-2">
+                  <Button onClick={handleSendFriendRequest} className="w-full" variant="default">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Send Friend Request
+                  </Button>
+                  <Button onClick={handleDirectMessage} className="w-full" variant="outline">
+                    <MessageCircle className="mr-2 h-4 w-4" />
                     Send Direct Message
                   </Button>
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search users (admin)"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && searchUsers()}
+                    />
+                    <Button onClick={searchUsers} size="icon" disabled={searchLoading}>
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {searchResults.length > 0 && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {searchResults.map((result) => (
+                        <div
+                          key={result.user_id}
+                          className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted cursor-pointer"
+                          onClick={() => selectUser(result)}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={result.avatar_url} />
+                            <AvatarFallback>
+                              {result.display_name?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {result.display_name || result.username}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {result.email}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
