@@ -158,9 +158,9 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="flex-shrink-0 p-4 border-b">
-        <CardTitle className="flex items-center gap-3">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 p-4 border-b bg-card">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -172,68 +172,64 @@ export function FriendChat({ friend, onBack }: FriendChatProps) {
             <p className="text-sm font-medium">{friend.display_name}</p>
             <p className="text-xs text-muted-foreground">@{friend.username}</p>
           </div>
-        </CardTitle>
-      </CardHeader>
+        </div>
+      </div>
 
-      <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
-        <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollAreaRef}>
-          <div className="py-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma mensagem ainda. Comece a conversar!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {messages.map((message) => {
-                  const isFromFriend = message.role === `friend_${friend.id}`;
-                  const isSender = message.user_id === user?.id && !isFromFriend;
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[70%] p-3 rounded-lg text-sm ${
-                          isSender
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        <p>{message.content.replace(`@${friend.username}: `, '')}</p>
-                        <p className={`text-xs mt-1 ${
-                          isSender ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
-                        }`}>
-                          {new Date(message.created_at).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {messages.length === 0 ? (
+          <div className="text-center py-8">
+            <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">
+              Nenhuma mensagem ainda. Comece a conversar!
+            </p>
           </div>
-        </ScrollArea>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => {
+              const isFromFriend = message.role === `friend_${friend.id}`;
+              const isSender = message.user_id === user?.id && !isFromFriend;
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] p-3 rounded-lg text-sm ${
+                      isSender
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    <p>{message.content.replace(`@${friend.username}: `, '')}</p>
+                    <p className={`text-xs mt-1 ${
+                      isSender ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
+                    }`}>
+                      {new Date(message.created_at).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-        <form onSubmit={sendMessage} className="flex-shrink-0 border-t bg-background p-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Digite sua mensagem..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" size="sm">
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <form onSubmit={sendMessage} className="flex-shrink-0 border-t bg-card p-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Digite sua mensagem..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="submit" size="sm">
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

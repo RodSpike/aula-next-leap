@@ -616,7 +616,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                 </TabsList>
 
                 <div className="flex-1 flex flex-col px-4">
-                <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0">
+                <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
                   <Card className="flex-1 flex flex-col">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -648,10 +648,10 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                   </Card>
                 </TabsContent>
 
-                  <TabsContent value="direct" className="flex-1 flex flex-col mt-0">
-                    <div className="flex-1 flex">
+                  <TabsContent value="direct" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
+                    <div className="flex-1 flex h-full">
                       {/* Left side: Conversations and Member selector */}
-                      <div className="w-1/3 border-r flex flex-col">
+                      <div className="w-1/3 border-r flex flex-col h-full overflow-y-auto">
                         {!selectedUser ? (
                           <div className="flex-1 flex flex-col p-3">
                             <div className="space-y-4">
@@ -830,7 +830,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                       </div>
 
                       {/* Right side: Chat Area */}
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                      <div className="flex-1 flex flex-col h-full">
                         {selectedUser ? (
                            <>
                              {selectedUser.user_id.startsWith('group_') ? (
@@ -839,8 +839,8 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                  groupName={privateGroupName}
                                />
                              ) : (
-                               <>
-                                <div className="flex-1 min-h-0 px-3 overflow-y-auto">
+                               <div className="flex flex-col h-full">
+                                <div className="flex-1 px-3 overflow-y-auto">
                                   <div className="space-y-4 py-4">
                                     {messages.length === 0 ? (
                                       <div className="text-center text-muted-foreground py-8">
@@ -871,7 +871,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                     </div>
                                   </div>
 
-                                 <div className="flex-shrink-0 border-t bg-background p-3">
+                                 <div className="flex-shrink-0 border-t bg-card p-3">
                                     <EnhancedChatInput
                                       value={message}
                                       onChange={setMessage}
@@ -882,7 +882,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                       className="w-full"
                                     />
                                  </div>
-                               </>
+                               </div>
                              )}
                            </>
                         ) : (
@@ -897,7 +897,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                     </div>
                   </TabsContent>
 
-                   <TabsContent value="group" className="flex-1 min-h-0 flex flex-col mt-0">
+                   <TabsContent value="group" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
                      <GroupChat 
                        groupId={groupId} 
                        groupName={groupName} 

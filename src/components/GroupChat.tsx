@@ -169,86 +169,85 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="flex-shrink-0 pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 border-b bg-card p-4">
+        <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
-          {groupName} - Group Chat
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
-        <ScrollArea className="flex-1 min-h-0 px-4">
-          <div className="space-y-4 py-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                No messages yet. Start the conversation!
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div key={message.id} className="flex items-start gap-3">
-                  <ClickableUserProfile
-                    userId={message.sender_id}
-                    profile={{
-                      user_id: message.sender_id,
-                      display_name: getDisplayName(message),
-                      username: message.profiles?.username,
-                      avatar_url: message.profiles?.avatar_url
-                    }}
-                    onClick={openUserProfile}
-                  >
-                    <ProfileAvatar
-                      userId={message.sender_id}
-                      avatarUrl={message.profiles?.avatar_url}
-                      fallback={getAvatarFallback(message)}
-                      className="w-8 h-8"
-                    />
-                  </ClickableUserProfile>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <ClickableUserProfile
-                        userId={message.sender_id}
-                        profile={{
-                          user_id: message.sender_id,
-                          display_name: getDisplayName(message),
-                          username: message.profiles?.username,
-                          avatar_url: message.profiles?.avatar_url
-                        }}
-                        onClick={openUserProfile}
-                      >
-                        <span className="font-semibold text-sm hover:underline">
-                          {getDisplayName(message)}
-                        </span>
-                      </ClickableUserProfile>
-                      {isAdmin(message) && (
-                        <Badge variant="secondary" className="text-xs">
-                          Admin
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(message.created_at).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <p className="text-sm">{message.content}</p>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-
-        <div className="flex-shrink-0 border-t bg-background p-4">
-          <EnhancedChatInput
-            value={newMessage}
-            onChange={setNewMessage}
-            onSend={sendMessage}
-            placeholder="Type a message..."
-            disabled={false}
-            showVoiceInput={false}
-            className="w-full"
-          />
+          <h3 className="text-lg font-semibold">{groupName} - Group Chat</h3>
         </div>
-      </CardContent>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              No messages yet. Start the conversation!
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div key={message.id} className="flex items-start gap-3">
+                <ClickableUserProfile
+                  userId={message.sender_id}
+                  profile={{
+                    user_id: message.sender_id,
+                    display_name: getDisplayName(message),
+                    username: message.profiles?.username,
+                    avatar_url: message.profiles?.avatar_url
+                  }}
+                  onClick={openUserProfile}
+                >
+                  <ProfileAvatar
+                    userId={message.sender_id}
+                    avatarUrl={message.profiles?.avatar_url}
+                    fallback={getAvatarFallback(message)}
+                    className="w-8 h-8"
+                  />
+                </ClickableUserProfile>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <ClickableUserProfile
+                      userId={message.sender_id}
+                      profile={{
+                        user_id: message.sender_id,
+                        display_name: getDisplayName(message),
+                        username: message.profiles?.username,
+                        avatar_url: message.profiles?.avatar_url
+                      }}
+                      onClick={openUserProfile}
+                    >
+                      <span className="font-semibold text-sm hover:underline">
+                        {getDisplayName(message)}
+                      </span>
+                    </ClickableUserProfile>
+                    {isAdmin(message) && (
+                      <Badge variant="secondary" className="text-xs">
+                        Admin
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="text-sm">{message.content}</p>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      <div className="flex-shrink-0 border-t bg-card p-4">
+        <EnhancedChatInput
+          value={newMessage}
+          onChange={setNewMessage}
+          onSend={sendMessage}
+          placeholder="Type a message..."
+          disabled={false}
+          showVoiceInput={false}
+          className="w-full"
+        />
+      </div>
       
       <UserProfilePopup
         isOpen={isPopupOpen}
@@ -256,6 +255,6 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, groupName }) => {
         userId={selectedUserId}
         profile={selectedProfile}
       />
-    </Card>
+    </div>
   );
 };
