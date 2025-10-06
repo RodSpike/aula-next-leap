@@ -615,7 +615,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                 </TabsList>
 
                 <div className="flex-1 flex flex-col px-4">
-                <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
+                <TabsContent value="ai-tutor" className="flex-1 flex flex-col mt-0 overflow-hidden">
                   <Card className="flex-1 flex flex-col">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -647,7 +647,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                   </Card>
                 </TabsContent>
 
-                  <TabsContent value="direct" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
+                  <TabsContent value="direct" className="flex-1 flex flex-col mt-0 overflow-hidden">
                     <div className="flex-1 flex h-full">
                       {/* Left side: Conversations and Member selector */}
                       <div className="w-1/3 border-r flex flex-col h-full overflow-y-auto">
@@ -688,7 +688,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                               {conversations.length > 0 && (
                                 <div className="flex-1">
                                   <h4 className="font-semibold text-sm mb-2">Ongoing Conversations</h4>
-                                  <ScrollArea className="h-[300px]">
+                                  <div className="flex-1 overflow-y-auto">
                                     <div className="space-y-2">
                                       {conversations.map(conv => (
                                          <div
@@ -696,12 +696,10 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                            className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer group"
                                            onClick={() => {
                                              if (conv.user_id.startsWith('group_')) {
-                                               // Handle private group selection
                                                const groupId = conv.user_id.replace('group_', '');
                                                setPrivateGroupId(groupId);
                                                setIsPrivateGroup(true);
                                                setPrivateGroupName(conv.display_name);
-                                               // Create a placeholder user for the UI
                                                setSelectedUser({
                                                  user_id: conv.user_id,
                                                  status: 'accepted',
@@ -712,7 +710,6 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                                  }
                                                });
                                              } else {
-                                               // Handle regular user selection
                                                const member = members.find(m => m.user_id === conv.user_id);
                                                if (member) {
                                                  setSelectedUser(member);
@@ -767,7 +764,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                         </div>
                                       ))}
                                     </div>
-                                  </ScrollArea>
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -779,6 +776,11 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                                 ← Back
                               </Button>
                               <div className="flex gap-1">
+                                {!selectedUser.user_id.startsWith('group_') && (
+                                  <Button asChild variant="ghost" size="sm" title="View Profile">
+                                    <Link to={`/profile/${selectedUser.user_id}`}>Profile</Link>
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -897,7 +899,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
                     </div>
                   </TabsContent>
 
-                   <TabsContent value="group" className="flex-1 flex flex-col mt-0 h-[calc(100vh-18rem)]">
+                   <TabsContent value="group" className="flex-1 flex flex-col mt-0 overflow-hidden">
                      <div className="p-4 text-center text-muted-foreground">
                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                        <p>Group chats have been moved to a new system.</p>
