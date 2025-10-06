@@ -614,6 +614,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          read_at: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_sessions: {
         Row: {
           amount: number | null
@@ -766,7 +796,13 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          favorite_song_url: string | null
+          header_bg_color: string | null
+          header_image_url: string | null
           id: string
+          intro_message: string | null
+          main_profile_post: string | null
+          main_profile_post_updated_at: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -778,7 +814,13 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          favorite_song_url?: string | null
+          header_bg_color?: string | null
+          header_image_url?: string | null
           id?: string
+          intro_message?: string | null
+          main_profile_post?: string | null
+          main_profile_post_updated_at?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -790,7 +832,13 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          favorite_song_url?: string | null
+          header_bg_color?: string | null
+          header_image_url?: string | null
           id?: string
+          intro_message?: string | null
+          main_profile_post?: string | null
+          main_profile_post_updated_at?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null

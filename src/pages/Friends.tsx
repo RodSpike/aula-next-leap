@@ -24,13 +24,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { SimpleChatWindow } from "@/components/SimpleChatWindow";
+import { DirectMessageChat } from "@/components/DirectMessageChat";
 import QRCode from 'react-qr-code';
 
 interface FriendProfile {
   user_id: string;
   username: string | null;
   display_name: string | null;
+  avatar_url?: string | null;
 }
 
 interface Friend {
@@ -77,6 +78,24 @@ export default function Friends() {
     }
   }, [user]);
 
+  // Auto-open chat if ?chat= param is present
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const chatUserId = params.get('chat');
+    
+    if (chatUserId && friends.length > 0) {
+      const friendToOpen = friends.find(friend => {
+        const friendProfile = getFriendProfile(friend);
+        return friendProfile?.user_id === chatUserId;
+      });
+
+      if (friendToOpen) {
+        setSelectedFriend(friendToOpen);
+        window.history.replaceState(null, '', location.pathname);
+      }
+    }
+  }, [location.search, friends]);
+
   useEffect(() => {
     if (searchQuery.trim().length > 2) {
       clearTimeout(searchTimeout.current);
@@ -87,24 +106,6 @@ export default function Friends() {
       setSearchResults([]);
     }
   }, [searchQuery]);
-
-  // Handle navigation state for auto-opening chat
-  useEffect(() => {
-    const state = location.state as any;
-    if (state?.openChat && state?.partnerId && friends.length > 0 && user) {
-      // Find the friend by partner ID
-      const friendToOpen = friends.find(friend => {
-        const friendProfile = getFriendProfile(friend);
-        return friendProfile?.user_id === state.partnerId;
-      });
-
-      if (friendToOpen) {
-        setSelectedFriend(friendToOpen);
-        // Clear the state to prevent re-opening on refresh
-        window.history.replaceState(null, '', location.pathname);
-      }
-    }
-  }, [friends, location.state, user]);
 
   const loadFriends = async () => {
     if (!user) return;
@@ -139,12 +140,14 @@ export default function Friends() {
             requester_profile: friendship.requester_id === user.id ? undefined : {
               user_id: profile.user_id,
               username: profile.username,
-              display_name: profile.display_name
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url
             },
             requested_profile: friendship.requested_id === user.id ? undefined : {
               user_id: profile.user_id,
               username: profile.username,
-              display_name: profile.display_name
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url
             }
           });
         }
@@ -399,26 +402,15 @@ export default function Friends() {
     if (!friendProfile) return null;
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Navigation />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <Button variant="ghost" onClick={() => setSelectedFriend(null)}>
-              ← Back to Friends
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-8 text-center">
-              <MessageCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold mb-2">Chats Have Moved!</h3>
-              <p className="text-muted-foreground mb-4">
-                Click on your friend's profile to start a conversation
-              </p>
-              <Button onClick={() => window.location.href = `/profile/${friendProfile.user_id}`}>
-                View {friendProfile.display_name || friendProfile.username}'s Profile
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="flex-1 overflow-hidden">
+          <DirectMessageChat
+            friendId={friendProfile.user_id}
+            friendName={friendProfile.display_name || friendProfile.username || 'Friend'}
+            friendAvatar={friendProfile.avatar_url}
+            onBack={() => setSelectedFriend(null)}
+          />
         </div>
       </div>
     );

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown, RotateCcw, MessageCircle } from "lucide-react";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { OngoingChats } from "@/components/OngoingChats";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -348,11 +349,12 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* My Profile Section */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <ProfileEditor 
               initialProfile={userProfile}
               onProfileUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
             />
+            <NotificationsPanel />
           </div>
           <div className="lg:col-span-2 space-y-6">
             <Card>
