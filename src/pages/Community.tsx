@@ -1501,34 +1501,8 @@ export default function Community() {
          </DialogContent>
        </Dialog>
 
-        {/* Messaging System */}
-        {selectedGroup && groupMembers && (
-          <MessagingSystem
-            isOpen={isChatOpen}
-            onClose={() => {
-              setIsChatOpen(false);
-              setChatInitialTab('direct');
-              setChatInitialUserId(undefined);
-            }}
-            groupId={selectedGroup.id}
-            groupName={selectedGroup.name}
-            groupLevel={selectedGroup.level}
-            initialTab={chatInitialTab}
-            initialSelectedUserId={chatInitialUserId}
-            members={groupMembers.map(m => {
-              console.log('Mapping member:', m); // Debug log
-              return {
-                user_id: m.user_id,
-                status: m.status || 'accepted',
-                profiles: {
-                  display_name: m.profiles?.display_name || 'Unknown',
-                  avatar_url: m.profiles?.avatar_url || '',
-                  username: m.profiles?.username || m.profiles?.display_name || 'Unknown'
-                }
-              };
-            })}
-          />
-         )}
+        {/* Messaging System disabled: Direct Messages now live under Friends page as full-page chat */}
+        {/* To chat privately, go to Friends and open a Direct Message. */}
 
          <UserProfilePopup
            isOpen={isPopupOpen}

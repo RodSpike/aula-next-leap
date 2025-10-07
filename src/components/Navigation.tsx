@@ -147,6 +147,12 @@ export const Navigation = () => {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/profile/${user?.id || ''}`}>
+                      <User className="mr-2 h-4 w-4" />
+                      Meu Perfil
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
