@@ -343,18 +343,31 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
                 </div>
               </div>
 
-              {p.user_id !== user?.id && (
-                <div className="space-y-2">
-                  <Button onClick={handleSendFriendRequest} className="w-full" variant="default">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Send Friend Request
-                  </Button>
-                  <Button onClick={handleDirectMessage} className="w-full" variant="outline">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Send Direct Message
-                  </Button>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => {
+                    navigate(`/profile/${p.user_id}`);
+                    onOpenChange(false);
+                  }} 
+                  className="w-full" 
+                  variant="secondary"
+                >
+                  Visitar Perfil
+                </Button>
+                
+                {p.user_id !== user?.id && (
+                  <>
+                    <Button onClick={handleSendFriendRequest} className="w-full" variant="default">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Send Friend Request
+                    </Button>
+                    <Button onClick={handleDirectMessage} className="w-full" variant="outline">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Send Direct Message
+                    </Button>
+                  </>
+                )}
+              </div>
 
               {isAdmin && (
                 <div className="space-y-3 pt-4 border-t">

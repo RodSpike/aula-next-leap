@@ -350,10 +350,26 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* My Profile Section */}
           <div className="lg:col-span-1 space-y-6">
-            <ProfileEditor 
-              initialProfile={userProfile}
-              onProfileUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Meu Perfil</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <ProfileEditor 
+                    initialProfile={userProfile}
+                    onProfileUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
+                  />
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={() => navigate(`/profile/${user.id}`)}
+                  >
+                    Visitar Página de Perfil
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             <NotificationsPanel />
           </div>
           <div className="lg:col-span-2 space-y-6">
