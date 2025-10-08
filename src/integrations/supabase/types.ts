@@ -149,32 +149,111 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_messages: {
+      chat_groups: {
         Row: {
-          content: string
           created_at: string
+          created_by: string
+          description: string | null
           id: string
-          role: string
+          is_direct_message: boolean
+          is_private: boolean
+          name: string | null
           updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_direct_message?: boolean
+          is_private?: boolean
+          name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_direct_message?: boolean
+          is_private?: boolean
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_members: {
+        Row: {
+          chat_id: string
+          id: string
+          joined_at: string
+          last_read_at: string | null
           user_id: string
         }
         Insert: {
-          content: string
-          created_at?: string
+          chat_id: string
           id?: string
-          role: string
-          updated_at?: string
+          joined_at?: string
+          last_read_at?: string | null
           user_id: string
         }
         Update: {
-          content?: string
-          created_at?: string
+          chat_id?: string
           id?: string
-          role?: string
-          updated_at?: string
+          joined_at?: string
+          last_read_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_members_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          attachments: Json | null
+          chat_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          sender_id: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json | null
+          chat_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          sender_id: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json | null
+          chat_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          sender_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       community_groups: {
         Row: {
@@ -362,15 +441,7 @@ export type Database = {
           points?: number | null
           question?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "exercises_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "lessons"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       friends: {
         Row: {
@@ -621,7 +692,6 @@ export type Database = {
           id: string
           read_at: string | null
           type: string
-          updated_at: string
           user_id: string
         }
         Insert: {
@@ -630,7 +700,6 @@ export type Database = {
           id?: string
           read_at?: string | null
           type: string
-          updated_at?: string
           user_id: string
         }
         Update: {
@@ -639,7 +708,6 @@ export type Database = {
           id?: string
           read_at?: string | null
           type?: string
-          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -778,15 +846,7 @@ export type Database = {
           required_achievement_id?: string | null
           required_level?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "profile_frames_required_achievement_id_fkey"
-            columns: ["required_achievement_id"]
-            isOneToOne: false
-            referencedRelation: "achievements"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -795,14 +855,13 @@ export type Database = {
           cambridge_level: string | null
           created_at: string
           display_name: string | null
-          email: string | null
+          email: string
           favorite_song_url: string | null
           header_bg_color: string | null
           header_image_url: string | null
           id: string
           intro_message: string | null
           main_profile_post: string | null
-          main_profile_post_updated_at: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -813,14 +872,13 @@ export type Database = {
           cambridge_level?: string | null
           created_at?: string
           display_name?: string | null
-          email?: string | null
+          email: string
           favorite_song_url?: string | null
           header_bg_color?: string | null
           header_image_url?: string | null
           id?: string
           intro_message?: string | null
           main_profile_post?: string | null
-          main_profile_post_updated_at?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -831,14 +889,13 @@ export type Database = {
           cambridge_level?: string | null
           created_at?: string
           display_name?: string | null
-          email?: string | null
+          email?: string
           favorite_song_url?: string | null
           header_bg_color?: string | null
           header_image_url?: string | null
           id?: string
           intro_message?: string | null
           main_profile_post?: string | null
-          main_profile_post_updated_at?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
@@ -1045,22 +1102,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_gamification_selected_badge_id_fkey"
-            columns: ["selected_badge_id"]
-            isOneToOne: false
-            referencedRelation: "achievements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_gamification_selected_frame_id_fkey"
-            columns: ["selected_frame_id"]
-            isOneToOne: false
-            referencedRelation: "profile_frames"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_lesson_progress: {
         Row: {
@@ -1145,21 +1187,18 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          promoted_by: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          promoted_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          promoted_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -1366,13 +1405,8 @@ export type Database = {
       }
     }
     Enums: {
-      achievement_category:
-        | "social"
-        | "learning"
-        | "community"
-        | "streak"
-        | "special"
-      achievement_tier: "bronze" | "silver" | "gold" | "platinum" | "diamond"
+      achievement_category: "learning" | "social" | "engagement" | "milestone"
+      achievement_tier: "bronze" | "silver" | "gold" | "platinum"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -1501,14 +1535,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      achievement_category: [
-        "social",
-        "learning",
-        "community",
-        "streak",
-        "special",
-      ],
-      achievement_tier: ["bronze", "silver", "gold", "platinum", "diamond"],
+      achievement_category: ["learning", "social", "engagement", "milestone"],
+      achievement_tier: ["bronze", "silver", "gold", "platinum"],
       app_role: ["admin", "user"],
     },
   },
