@@ -167,7 +167,7 @@ export default function AiChat() {
 
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from('ai_chat_messages')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
@@ -207,7 +207,7 @@ export default function AiChat() {
 
     try {
       await supabase
-        .from('chat_messages')
+        .from('ai_chat_messages')
         .insert({
           user_id: user.id,
           content: message.content,
