@@ -123,15 +123,33 @@ export default function Signup() {
         return;
       }
 
-      // Show success message and redirect to subscribe
+      // Grant 7-day trial to new users
+      try {
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          const trialEndsAt = new Date();
+          trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+          
+          await supabase.from('user_subscriptions').upsert({
+            user_id: newUser.id,
+            subscription_status: 'trialing',
+            trial_ends_at: trialEndsAt.toISOString(),
+            current_period_end: trialEndsAt.toISOString()
+          });
+        }
+      } catch (trialError) {
+        console.error("Error setting up trial:", trialError);
+      }
+
+      // Show success message and redirect to welcome
       toast({
         title: "Conta criada!",
-        description: "Agora complete o processo para acessar a plataforma.",
+        description: "Você ganhou 7 dias grátis! Bem-vindo à plataforma.",
       });
 
-      // Redirect to subscribe page after a short delay
+      // Redirect to welcome page after a short delay
       setTimeout(() => {
-        navigate('/subscribe');
+        navigate('/welcome');
       }, 1500);
       
     } catch (error) {
