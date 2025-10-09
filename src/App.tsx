@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
 import Friends from "./pages/Friends";
+import Messages from "./pages/Messages";
 import AiChat from "./pages/AiChat";
 import AdminPanel from "./pages/AdminPanel";
 import Login from "./pages/Login";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
             <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
             <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

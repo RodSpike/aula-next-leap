@@ -532,8 +532,7 @@ export default function AdminPanel() {
             study_hours: Math.round(studyHours * 10) / 10,
             groups_joined: groupsJoined || 0,
             certificates: certificates || 0,
-            is_admin: !!hasAdminRole,
-            promoted_by: adminRole?.promoted_by
+            is_admin: !!hasAdminRole
           };
         })
       );
