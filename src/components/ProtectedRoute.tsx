@@ -32,14 +32,19 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
 
       try {
+        console.log('[ProtectedRoute] Checking access for user:', user.id);
+        
         // Check user role via secure RPC to avoid RLS issues
         const { data: isAdminData, error: roleRpcError } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'
         });
 
+        console.log('[ProtectedRoute] Admin check result:', { isAdminData, roleRpcError });
+
         const isAdmin = isAdminData === true && !roleRpcError;
         if (isAdmin) {
+          console.log('[ProtectedRoute] User is admin, granting access');
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
@@ -47,20 +52,26 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         }
 
         // Check for free user access
-        const { data: freeUserData } = await supabase.functions.invoke('check-free-access');
+        console.log('[ProtectedRoute] Checking free access...');
+        const { data: freeUserData, error: freeAccessError } = await supabase.functions.invoke('check-free-access');
+        console.log('[ProtectedRoute] Free access result:', { freeUserData, freeAccessError });
+        
         if (freeUserData?.has_free_access) {
+          console.log('[ProtectedRoute] User has free access, granting access');
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
           return;
         }
 
         // Check subscription for regular users via function first
+        console.log('[ProtectedRoute] Checking subscription...');
         const { data, error } = await supabase.functions.invoke('check-subscription');
         let finalStatus: SubscriptionStatus = { subscribed: false };
 
         if (error) {
-          console.error('Error checking subscription:', error);
+          console.error('[ProtectedRoute] Error checking subscription:', error);
         } else if (data) {
+          console.log('[ProtectedRoute] Subscription data:', data);
           finalStatus = data as SubscriptionStatus;
         }
 

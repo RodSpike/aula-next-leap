@@ -95,6 +95,12 @@ verify_jwt = true
 [functions.revoke-free-access]
 verify_jwt = true
 
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
+
 [functions.generate-practice-exercises]
 verify_jwt = false
 

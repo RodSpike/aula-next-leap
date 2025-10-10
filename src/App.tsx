@@ -14,6 +14,7 @@ import Courses from "./pages/Courses";
 import Community from "./pages/Community";
 import Friends from "./pages/Friends";
 import Messages from "./pages/Messages";
+import Settings from "./pages/Settings";
 import AiChat from "./pages/AiChat";
 import AdminPanel from "./pages/AdminPanel";
 import Login from "./pages/Login";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
             <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
             <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

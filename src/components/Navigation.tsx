@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle } from "lucide-react";
+import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -152,6 +152,12 @@ export const Navigation = () => {
                     <Link to={`/profile/${user?.id || ''}`}>
                       <User className="mr-2 h-4 w-4" />
                       Meu Perfil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configurações
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
