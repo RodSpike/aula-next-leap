@@ -123,25 +123,8 @@ export default function Signup() {
         return;
       }
 
-      // Grant 7-day trial to new users
-      try {
-        const { data: { user: newUser } } = await supabase.auth.getUser();
-        if (newUser) {
-          const trialEndsAt = new Date();
-          trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-          
-          await supabase.from('user_subscriptions').upsert({
-            user_id: newUser.id,
-            subscription_status: 'trialing',
-            trial_ends_at: trialEndsAt.toISOString(),
-            current_period_end: trialEndsAt.toISOString()
-          });
-        }
-      } catch (trialError) {
-        console.error("Error setting up trial:", trialError);
-      }
-
       // Show success message and redirect to welcome
+      // Note: Trial is automatically granted by database trigger
       toast({
         title: "Conta criada!",
         description: "Você ganhou 7 dias grátis! Bem-vindo à plataforma.",
