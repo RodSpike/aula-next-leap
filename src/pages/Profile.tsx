@@ -242,7 +242,6 @@ export default function Profile() {
         .update({
           intro_message: editedIntro || null,
           main_profile_post: editedMainPost || null,
-          main_profile_post_updated_at: editedMainPost !== profile?.main_profile_post ? new Date().toISOString() : profile?.main_profile_post_updated_at,
           header_bg_color: editedHeaderBg,
           favorite_song_url: editedSongUrl || null,
         })
