@@ -73,7 +73,7 @@ export default function Dashboard() {
         .from('profiles')
         .select('*')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
       
       setUserProfile(profile);
       setHasPlacementTest(!!profile?.cambridge_level);

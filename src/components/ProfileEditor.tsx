@@ -110,11 +110,13 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
         })
         .eq('user_id', user.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
-      onProfileUpdate(data);
+      if (data) {
+        onProfileUpdate(data);
+      }
 
       toast({
         title: "Profile updated",

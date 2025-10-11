@@ -44,20 +44,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
         const isAdmin = isAdminData === true && !roleRpcError;
         if (isAdmin) {
-          console.log('[ProtectedRoute] User is admin, granting access');
+          console.log('[ProtectedRoute] User is admin, granting permanent free access');
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
-          return; // Admins bypass subscription checks
+          return; // Admins have permanent free access
         }
 
-        // Check for free user access
-        console.log('[ProtectedRoute] Checking free access...');
+        // Check for free user access granted by admin
+        console.log('[ProtectedRoute] Checking admin-granted free access...');
         const { data: freeUserData, error: freeAccessError } = await supabase.functions.invoke('check-free-access');
         console.log('[ProtectedRoute] Free access result:', { freeUserData, freeAccessError });
         
         if (freeUserData?.has_free_access) {
-          console.log('[ProtectedRoute] User has free access, granting access');
+          console.log('[ProtectedRoute] User has admin-granted free access');
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
           return;
