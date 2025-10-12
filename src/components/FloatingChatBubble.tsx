@@ -144,7 +144,7 @@ export function FloatingChatBubble() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-40">
         <Button
           onClick={() => setIsOpen(true)}
           className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
@@ -157,7 +157,7 @@ export function FloatingChatBubble() {
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 ${isMinimized ? 'w-80 h-12' : 'w-80 h-96'} transition-all duration-300`}>
+    <div className={`fixed bottom-6 right-6 z-40 ${isMinimized ? 'w-80 h-12' : 'w-80 h-96'} transition-all duration-300`}>
       <Card className="w-full h-full shadow-2xl border-2 border-primary/20 flex flex-col">
         <CardHeader className="p-3 bg-primary/5 flex-shrink-0">
           <CardTitle className="text-sm flex items-center justify-between">

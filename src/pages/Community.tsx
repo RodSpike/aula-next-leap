@@ -1501,8 +1501,19 @@ export default function Community() {
          </DialogContent>
        </Dialog>
 
-        {/* Messaging System disabled: Direct Messages now live under Friends page as full-page chat */}
-        {/* To chat privately, go to Friends and open a Direct Message. */}
+        {/* Messaging System - for group chats */}
+        {isChatOpen && selectedGroup && (
+          <MessagingSystem
+            groupId={selectedGroup.id}
+            groupName={selectedGroup.name}
+            groupLevel={selectedGroup.level}
+            members={groupMembers}
+            isOpen={isChatOpen}
+            initialTab={chatInitialTab}
+            initialSelectedUserId={chatInitialUserId}
+            onClose={() => setIsChatOpen(false)}
+          />
+        )}
 
          <UserProfilePopup
            isOpen={isPopupOpen}

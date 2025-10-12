@@ -49,23 +49,34 @@ export default function Courses() {
 
   const fetchCourses = async () => {
     try {
-      // Fetch courses with lessons count
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          lessons (count)
-        `)
-        .order('order_index');
+      // Check if user is admin
+      let isUserAdmin = false;
+      if (user) {
+        const { data: adminCheck } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+        isUserAdmin = adminCheck === true;
+      }
 
-      if (coursesError) throw coursesError;
+      // Aggregate courses by level - show ONE course per level (A1-C2)
+      const levelCourses = levelOrder.map(level => {
+        return {
+          id: level, // Use level as ID for routing
+          title: `${level} - English Course`,
+          description: `Complete ${level} level English course with comprehensive lessons and exercises`,
+          level: level,
+          order_index: levelOrder.indexOf(level),
+          isUnlocked: false,
+          lessonsCount: 0,
+          completedLessons: 0,
+          isCurrentLevel: false,
+        };
+      });
 
       // Get user's current level and progress if logged in
-      let userLevel = 'A1'; // Default to A1
-      let userProgress: { [key: string]: number } = {};
-
+      let userLevel = 'A1';
       if (user) {
-        // Get user profile for current level
         const { data: profile } = await supabase
           .from('profiles')
           .select('cambridge_level')
@@ -76,46 +87,53 @@ export default function Courses() {
           userLevel = profile.cambridge_level;
         }
 
-        // Get user's lesson progress for each course
+        // Count total lessons per level
+        const { data: lessonsData } = await supabase
+          .from('lessons')
+          .select('id, course_id, courses!inner(level)');
+
+        // Count completed lessons per level
         const { data: progressData } = await supabase
           .from('user_lesson_progress')
-          .select('lesson_id, completed, lessons!inner(course_id)')
+          .select('lesson_id, completed, lessons!inner(course_id, courses!inner(level))')
           .eq('user_id', user.id)
           .eq('completed', true);
 
-        if (progressData) {
-          progressData.forEach((progress: any) => {
-            const courseId = progress.lessons.course_id;
-            userProgress[courseId] = (userProgress[courseId] || 0) + 1;
-          });
-        }
+        // Aggregate by level
+        const levelStats: { [key: string]: { total: number; completed: number } } = {};
+        
+        lessonsData?.forEach((lesson: any) => {
+          const level = lesson.courses.level;
+          if (!levelStats[level]) levelStats[level] = { total: 0, completed: 0 };
+          levelStats[level].total++;
+        });
+
+        progressData?.forEach((progress: any) => {
+          const level = progress.lessons.courses.level;
+          if (levelStats[level]) {
+            levelStats[level].completed++;
+          }
+        });
+
+        // Update level courses with stats
+        levelCourses.forEach((course) => {
+          const stats = levelStats[course.level] || { total: 0, completed: 0 };
+          course.lessonsCount = stats.total;
+          course.completedLessons = stats.completed;
+          
+          const userLevelIndex = levelOrder.indexOf(userLevel);
+          const courseLevelIndex = levelOrder.indexOf(course.level);
+          
+          // Admins have all courses unlocked
+          course.isUnlocked = isUserAdmin || courseLevelIndex <= userLevelIndex;
+          course.isCurrentLevel = course.level === userLevel;
+        });
+      } else {
+        // For non-logged in users, only show A1 as unlocked
+        levelCourses[0].isUnlocked = true;
       }
 
-      // Transform courses with unlock logic
-      const transformedCourses: Course[] = coursesData.map((course) => {
-        const lessonsCount = course.lessons[0]?.count || 0;
-        const completedLessons = userProgress[course.id] || 0;
-        const userLevelIndex = levelOrder.indexOf(userLevel);
-        const courseLevelIndex = levelOrder.indexOf(course.level);
-        
-        // User can access current level and all previous levels
-        const isUnlocked = courseLevelIndex <= userLevelIndex;
-        const isCurrentLevel = course.level === userLevel;
-
-        return {
-          id: course.id,
-          title: course.title,
-          description: course.description || 'Learn English at this level',
-          level: course.level,
-          order_index: course.order_index,
-          isUnlocked,
-          lessonsCount,
-          completedLessons,
-          isCurrentLevel,
-        };
-      });
-
-      setCourses(transformedCourses);
+      setCourses(levelCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast({

@@ -236,7 +236,7 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
       </div>
 
       {/* Input - fixed at bottom */}
-      <div className="flex-none bg-card border-t px-6 py-4">
+      <div className="flex-none bg-card border-t px-6 py-4 pb-6">
         <form onSubmit={sendMessage} className="flex gap-3">
           <Input
             placeholder="Type your message..."
@@ -245,7 +245,7 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
             className="flex-1 h-12"
             autoFocus
           />
-          <Button type="submit" size="lg" className="px-8">
+          <Button type="submit" size="lg" className="px-8" disabled={!newMessage.trim()}>
             <Send className="h-5 w-5" />
           </Button>
         </form>
