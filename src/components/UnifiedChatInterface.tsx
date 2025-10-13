@@ -39,11 +39,13 @@ export const UnifiedChatInterface = () => {
     if (!user) return;
 
     try {
-      // Load direct messages (private chats)
-      const { data: dmGroups } = await supabase
-        .from('community_groups')
-        .select('*')
-        .eq('is_private_chat', true);
+      // Load direct messages (only private chats where the user is a member)
+      const { data: dmMemberGroups } = await supabase
+        .from('group_members')
+        .select('group_id, community_groups!inner(*)')
+        .eq('user_id', user.id)
+        .eq('status', 'accepted')
+        .eq('community_groups.is_private_chat', true);
 
       // Load group chats where user is a member
       const { data: memberGroups } = await supabase
@@ -54,9 +56,12 @@ export const UnifiedChatInterface = () => {
 
       const allConversations: ChatConversation[] = [];
 
-      // Process direct messages
-      if (dmGroups) {
-        for (const group of dmGroups) {
+      // Process direct messages (using the actual private chat group the user belongs to)
+      if (dmMemberGroups) {
+        for (const member of dmMemberGroups) {
+          const group = member.community_groups;
+          if (!group) continue;
+
           const { data: members } = await supabase
             .from('group_members')
             .select('user_id')
@@ -77,7 +82,7 @@ export const UnifiedChatInterface = () => {
               .eq('group_id', group.id)
               .order('created_at', { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
 
             allConversations.push({
               id: group.id,
