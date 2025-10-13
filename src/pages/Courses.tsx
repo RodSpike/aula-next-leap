@@ -59,10 +59,28 @@ export default function Courses() {
         isUserAdmin = adminCheck === true;
       }
 
-      // Aggregate courses by level - show ONE course per level (A1-C2)
+      // Fetch all courses from database
+      const { data: allCoursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select('*')
+        .order('level')
+        .order('order_index');
+
+      if (coursesError) throw coursesError;
+
+      // Group courses by level and pick the first course for each level
+      const coursesByLevel: { [key: string]: any } = {};
+      allCoursesData?.forEach(course => {
+        if (!coursesByLevel[course.level]) {
+          coursesByLevel[course.level] = course;
+        }
+      });
+
+      // Create level courses array
       const levelCourses = levelOrder.map(level => {
+        const firstCourse = coursesByLevel[level];
         return {
-          id: level, // Use level as ID for routing
+          id: firstCourse?.id || level, // Use actual course ID if exists, otherwise level
           title: `${level} - English Course`,
           description: `Complete ${level} level English course with comprehensive lessons and exercises`,
           level: level,

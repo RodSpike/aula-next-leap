@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, MessageCircle, Users, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { DirectMessageChat } from "./DirectMessageChat";
 import { SimpleChatWindow } from "./SimpleChatWindow";
 
 interface ChatConversation {
@@ -158,26 +157,13 @@ export const UnifiedChatInterface = () => {
   );
 
   if (selectedChat) {
-    if (selectedChat.type === 'direct' && selectedChat.participantId) {
-      return (
-        <div className="h-screen flex flex-col">
-          <DirectMessageChat
-            friendId={selectedChat.participantId}
-            friendName={selectedChat.name}
-            friendAvatar={selectedChat.avatar}
-            onBack={() => setSelectedChat(null)}
-          />
-        </div>
-      );
-    } else {
-      return (
-        <SimpleChatWindow
-          groupId={selectedChat.id}
-          groupName={selectedChat.name}
-          onClose={() => setSelectedChat(null)}
-        />
-      );
-    }
+    return (
+      <SimpleChatWindow
+        groupId={selectedChat.id}
+        groupName={selectedChat.name}
+        onClose={() => setSelectedChat(null)}
+      />
+    );
   }
 
   return (
