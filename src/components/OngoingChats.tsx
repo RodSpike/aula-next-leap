@@ -173,24 +173,8 @@ export const OngoingChats: React.FC = () => {
   };
 
   const handleConversationClick = (conversation: ConversationItem) => {
-    if (conversation.type === 'direct') {
-      // All direct messages from OngoingChats are group-based, so navigate to Community
-      navigate('/community', { 
-        state: { 
-          openDirectMessage: true, 
-          partnerId: conversation.partner_id,
-          groupId: conversation.group_id 
-        } 
-      });
-    } else {
-      // Navigate to community page and open group chat
-      navigate('/community', { 
-        state: { 
-          openGroupChat: true, 
-          groupId: conversation.group_id 
-        } 
-      });
-    }
+    // Navigate to the /messages page which uses UnifiedChatInterface
+    navigate('/messages');
   };
 
   const formatTime = (timestamp?: string) => {
@@ -222,7 +206,7 @@ export const OngoingChats: React.FC = () => {
               </Badge>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/friends')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/messages')}>
             View All
           </Button>
         </CardTitle>

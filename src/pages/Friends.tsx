@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { DirectMessageChat } from "@/components/DirectMessageChat";
 import QRCode from 'react-qr-code';
 
 interface FriendProfile {
@@ -59,12 +58,12 @@ export default function Friends() {
   const { addXP, updateAchievement } = useGamification();
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [myQRCode, setMyQRCode] = useState("");
   const [loading, setLoading] = useState(true);
@@ -78,7 +77,7 @@ export default function Friends() {
     }
   }, [user]);
 
-  // Auto-open chat if ?chat= param is present
+  // Auto-open chat if ?chat= param is present - Navigate to messages
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const chatUserId = params.get('chat');
@@ -90,7 +89,10 @@ export default function Friends() {
       });
 
       if (friendToOpen) {
-        setSelectedFriend(friendToOpen);
+        const friendProfile = getFriendProfile(friendToOpen);
+        if (friendProfile) {
+          handleStartChat(friendProfile.user_id);
+        }
         window.history.replaceState(null, '', location.pathname);
       }
     }
@@ -375,6 +377,81 @@ export default function Friends() {
     return null;
   };
 
+  const handleStartChat = async (friendUserId: string) => {
+    if (!user) return;
+
+    try {
+      // Check if private chat group already exists
+      const { data: existingMemberships } = await supabase
+        .from('group_members')
+        .select('group_id, community_groups!inner(id, is_private_chat)')
+        .eq('user_id', user.id)
+        .eq('status', 'accepted')
+        .eq('community_groups.is_private_chat', true);
+
+      let targetGroupId = null;
+
+      // Check each group to see if the friend is also a member
+      if (existingMemberships) {
+        for (const membership of existingMemberships) {
+          const { data: friendMembership } = await supabase
+            .from('group_members')
+            .select('user_id')
+            .eq('group_id', membership.group_id)
+            .eq('user_id', friendUserId)
+            .eq('status', 'accepted')
+            .maybeSingle();
+
+          if (friendMembership) {
+            targetGroupId = membership.group_id;
+            break;
+          }
+        }
+      }
+
+      // If no existing group, create one
+      if (!targetGroupId) {
+        const groupName = `DM: ${user.id}-${friendUserId}`;
+        
+        const { data: newGroup, error: groupError } = await supabase
+          .from('community_groups')
+          .insert({
+            name: groupName,
+            description: 'Private chat',
+            level: 'A1',
+            is_private_chat: true,
+            created_by: user.id,
+            group_type: 'private'
+          })
+          .select()
+          .single();
+
+        if (groupError) throw groupError;
+        targetGroupId = newGroup.id;
+
+        // Add both users as members
+        const { error: memberError } = await supabase
+          .from('group_members')
+          .insert([
+            { group_id: targetGroupId, user_id: user.id, status: 'accepted', can_post: true },
+            { group_id: targetGroupId, user_id: friendUserId, status: 'accepted', can_post: true }
+          ]);
+
+        if (memberError) throw memberError;
+      }
+
+      // Navigate to messages page
+      navigate('/messages');
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start chat",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -397,24 +474,6 @@ export default function Friends() {
     );
   }
 
-  if (selectedFriend) {
-    const friendProfile = getFriendProfile(selectedFriend);
-    if (!friendProfile) return null;
-
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navigation />
-        <div className="flex-1 overflow-hidden">
-          <DirectMessageChat
-            friendId={friendProfile.user_id}
-            friendName={friendProfile.display_name || friendProfile.username || 'Friend'}
-            friendAvatar={friendProfile.avatar_url}
-            onBack={() => setSelectedFriend(null)}
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -625,7 +684,7 @@ export default function Friends() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setSelectedFriend(friend)}
+                            onClick={() => handleStartChat(friendProfile.user_id)}
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
                             Chat

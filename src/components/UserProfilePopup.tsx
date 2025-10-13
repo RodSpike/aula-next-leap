@@ -205,23 +205,38 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
     if (!profile || !user) return;
 
     try {
-      // Create or get private group for DM
-      const groupName = `DM: ${user.id}-${profile.user_id}`;
-      
-      // Check if private chat group exists
-      const { data: existingGroup } = await supabase
-        .from('community_groups')
-        .select('id')
-        .eq('is_private_chat', true)
-        .or(`name.eq.DM: ${user.id}-${profile.user_id},name.eq.DM: ${profile.user_id}-${user.id}`)
-        .maybeSingle();
+      // Check if private chat group already exists
+      const { data: existingMemberships } = await supabase
+        .from('group_members')
+        .select('group_id, community_groups!inner(id, is_private_chat)')
+        .eq('user_id', user.id)
+        .eq('status', 'accepted')
+        .eq('community_groups.is_private_chat', true);
 
-      let groupId;
-      
-      if (existingGroup) {
-        groupId = existingGroup.id;
-      } else {
-        // Create new private chat group
+      let targetGroupId = null;
+
+      // Check each group to see if the friend is also a member
+      if (existingMemberships) {
+        for (const membership of existingMemberships) {
+          const { data: friendMembership } = await supabase
+            .from('group_members')
+            .select('user_id')
+            .eq('group_id', membership.group_id)
+            .eq('user_id', profile.user_id)
+            .eq('status', 'accepted')
+            .maybeSingle();
+
+          if (friendMembership) {
+            targetGroupId = membership.group_id;
+            break;
+          }
+        }
+      }
+
+      // If no existing group, create one
+      if (!targetGroupId) {
+        const groupName = `DM: ${user.id}-${profile.user_id}`;
+        
         const { data: newGroup, error: groupError } = await supabase
           .from('community_groups')
           .insert({
@@ -236,32 +251,27 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
           .single();
 
         if (groupError) throw groupError;
-        groupId = newGroup.id;
+        targetGroupId = newGroup.id;
 
         // Add both users as members
         const { error: memberError } = await supabase
           .from('group_members')
           .insert([
-            { group_id: groupId, user_id: user.id, status: 'accepted', can_post: true },
-            { group_id: groupId, user_id: profile.user_id, status: 'accepted', can_post: true }
+            { group_id: targetGroupId, user_id: user.id, status: 'accepted', can_post: true },
+            { group_id: targetGroupId, user_id: profile.user_id, status: 'accepted', can_post: true }
           ]);
 
         if (memberError) throw memberError;
       }
 
-      // Navigate to community with the group selected
-      navigate('/community', { 
-        state: { 
-          selectedGroupId: groupId,
-          openMessaging: true 
-        } 
-      });
+      // Navigate to messages page
+      navigate('/messages');
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating/opening DM:', error);
       toast({
         title: "Error",
-        description: "Failed to open direct message.",
+        description: "Failed to open direct message",
         variant: "destructive",
       });
     }
