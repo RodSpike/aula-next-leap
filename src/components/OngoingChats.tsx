@@ -134,26 +134,47 @@ export const OngoingChats: React.FC = () => {
 
           conversationsList.push(...conversationMap.values());
 
-          // Handle private group chats
+          // Handle private group chats (DMs)
           if (membership.community_groups.is_private_chat) {
-            const { data: lastGroupMessage } = await supabase
-              .from('group_chat_messages')
-              .select('content, created_at, sender_id')
+            // Get the other user in this private chat
+            const { data: otherMembers } = await supabase
+              .from('group_members')
+              .select('user_id')
               .eq('group_id', groupId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .neq('user_id', user.id)
+              .limit(1);
 
-            if (lastGroupMessage) {
-              conversationsList.push({
-                id: `group-${groupId}`,
-                type: 'group',
-                name: membership.community_groups.name,
-                last_message: lastGroupMessage.content,
-                last_message_time: lastGroupMessage.created_at,
-                unread_count: 0, // Group chat read status is more complex, keeping simple for now
-                group_id: groupId
-              });
+            if (otherMembers && otherMembers.length > 0) {
+              const otherUserId = otherMembers[0].user_id;
+
+              // Get the other user's profile
+              const { data: otherUserProfile } = await supabase
+                .from('profiles')
+                .select('display_name, username, avatar_url')
+                .eq('user_id', otherUserId)
+                .single();
+
+              const { data: lastGroupMessage } = await supabase
+                .from('group_chat_messages')
+                .select('content, created_at, sender_id')
+                .eq('group_id', groupId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (lastGroupMessage && otherUserProfile) {
+                conversationsList.push({
+                  id: `group-${groupId}`,
+                  type: 'direct',
+                  name: otherUserProfile.display_name || otherUserProfile.username || 'Anonymous',
+                  avatar_url: otherUserProfile.avatar_url,
+                  last_message: lastGroupMessage.content,
+                  last_message_time: lastGroupMessage.created_at,
+                  unread_count: 0, // Group chat read status is more complex, keeping simple for now
+                  group_id: groupId,
+                  partner_id: otherUserId
+                });
+              }
             }
           }
         }
