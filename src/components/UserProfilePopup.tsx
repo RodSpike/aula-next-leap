@@ -244,8 +244,7 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
             description: 'Private chat',
             level: 'A1',
             is_private_chat: true,
-            created_by: user.id,
-            group_type: 'private'
+            created_by: user.id
           })
           .select()
           .single();
