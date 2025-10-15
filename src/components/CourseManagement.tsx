@@ -54,26 +54,57 @@ export const CourseManagement = () => {
 
   const fetchCourses = async () => {
     try {
+      // Force fresh data by disabling cache
       const { data, error } = await supabase
         .from('courses')
         .select(`
           *,
-          lessons (
+          lessons!inner (
             id,
             title,
-            order_index
+            order_index,
+            content,
+            created_at,
+            updated_at
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('level', { ascending: true })
+        .order('order_index', { ascending: true });
 
       if (error) throw error;
 
-      const coursesWithCount = data.map(course => ({
+      // Remove duplicates - group by course ID and only keep unique courses
+      const uniqueCourses = new Map();
+      
+      data?.forEach(course => {
+        if (!uniqueCourses.has(course.id)) {
+          uniqueCourses.set(course.id, {
+            ...course,
+            lessons: []
+          });
+        }
+        
+        // Add lessons to the course
+        if (course.lessons) {
+          const existingCourse = uniqueCourses.get(course.id);
+          const lessonArray = Array.isArray(course.lessons) ? course.lessons : [course.lessons];
+          
+          lessonArray.forEach(lesson => {
+            if (!existingCourse.lessons.some((l: any) => l.id === lesson.id)) {
+              existingCourse.lessons.push(lesson);
+            }
+          });
+        }
+      });
+
+      const coursesArray = Array.from(uniqueCourses.values()).map(course => ({
         ...course,
-        lessons_count: course.lessons?.length || 0
+        lessons_count: course.lessons?.length || 0,
+        // Sort lessons by order_index
+        lessons: course.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) || []
       }));
 
-      setCourses(coursesWithCount);
+      setCourses(coursesArray);
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast({
@@ -374,14 +405,33 @@ export const CourseManagement = () => {
       {/* Lesson Editor Dialog */}
       <Dialog 
         open={!!selectedCourseForLessons} 
-        onOpenChange={() => {
-          setSelectedCourseForLessons(null);
-          setSelectedLessonId(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCourseForLessons(null);
+            setSelectedLessonId(null);
+            // Refresh courses when closing to show latest content
+            fetchCourses();
+          }
         }}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Manage Lessons - {selectedCourseForLessons?.title}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Manage Lessons - {selectedCourseForLessons?.title}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  fetchCourses();
+                  toast({
+                    title: "Refreshed",
+                    description: "Course content reloaded",
+                  });
+                }}
+              >
+                Refresh
+              </Button>
+            </DialogTitle>
             <DialogDescription>
               Create and edit lesson content and exercises for this course.
             </DialogDescription>
@@ -391,8 +441,15 @@ export const CourseManagement = () => {
               {/* Lesson Selection */}
               {selectedCourseForLessons.lessons && selectedCourseForLessons.lessons.length > 0 && (
                 <div>
-                  <Label>Select Lesson to Edit:</Label>
-                  <Select value={selectedLessonId || ""} onValueChange={setSelectedLessonId}>
+                  <Label>Select Lesson to Edit ({selectedCourseForLessons.lessons.length} lessons):</Label>
+                  <Select 
+                    value={selectedLessonId || ""} 
+                    onValueChange={(value) => {
+                      setSelectedLessonId(value);
+                      // Refresh to get latest data when switching lessons
+                      fetchCourses();
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a lesson" />
                     </SelectTrigger>
@@ -401,7 +458,7 @@ export const CourseManagement = () => {
                         .sort((a, b) => a.order_index - b.order_index)
                         .map((lesson) => (
                           <SelectItem key={lesson.id} value={lesson.id}>
-                            {lesson.title}
+                            Lesson {lesson.order_index + 1}: {lesson.title}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -411,6 +468,7 @@ export const CourseManagement = () => {
               
               {selectedLessonId && (
                 <LessonEditor
+                  key={selectedLessonId}
                   lessonId={selectedLessonId}
                   lessonTitle={selectedCourseForLessons.lessons?.find(l => l.id === selectedLessonId)?.title || "Lesson"}
                   onClose={() => {

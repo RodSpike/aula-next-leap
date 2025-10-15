@@ -207,9 +207,10 @@ export default function Course() {
 
       loadProgress();
       
-      // Move to next lesson
+      // Move to next lesson and reset to introduction view
       if (currentLessonIndex < lessons.length - 1) {
         setCurrentLessonIndex(currentLessonIndex + 1);
+        setShowIntroduction(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
@@ -488,6 +489,7 @@ export default function Course() {
               <div className="space-y-6">
                 {currentLessonExercises.length > 0 ? (
                   <ExerciseActivity
+                    key={currentLesson.id}
                     exercises={currentLessonExercises.map(ex => ({
                       ...ex,
                       exercise_type: 'multiple_choice' as const,
