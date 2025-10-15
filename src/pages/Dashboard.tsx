@@ -164,11 +164,46 @@ export default function Dashboard() {
             name,
             level,
             is_default,
-            group_type
+            group_type,
+            is_private_chat
           )
         `, { count: 'exact' })
         .eq('user_id', user!.id)
         .eq('status', 'accepted');
+
+      // Process groups and get partner names for private chats
+      const processedGroups = await Promise.all(
+        (groupMemberships || []).map(async (membership) => {
+          const group = membership.community_groups;
+          
+          // If it's a private chat, get the other user's name
+          if (group.is_private_chat) {
+            const { data: otherMembers } = await supabase
+              .from('group_members')
+              .select('user_id')
+              .eq('group_id', group.id)
+              .neq('user_id', user!.id)
+              .limit(1);
+
+            if (otherMembers && otherMembers.length > 0) {
+              const { data: otherUserProfile } = await supabase
+                .from('profiles')
+                .select('display_name, username')
+                .eq('user_id', otherMembers[0].user_id)
+                .single();
+
+              if (otherUserProfile) {
+                return {
+                  ...group,
+                  name: otherUserProfile.display_name || otherUserProfile.username || 'Anonymous'
+                };
+              }
+            }
+          }
+          
+          return group;
+        })
+      );
 
       // Get certificates count
       const { count: certificatesCount } = await supabase
@@ -185,7 +220,7 @@ export default function Dashboard() {
         hoursLastWeek: Math.round(hoursLastWeek * 10) / 10,
         groupsCount: groupsCount || 0,
         certificatesCount: certificatesCount || 0,
-        joinedGroups: groupMemberships?.map(membership => membership.community_groups) || [],
+        joinedGroups: processedGroups,
         courses: coursesForUserLevel
       });
     } catch (error) {
