@@ -11,7 +11,7 @@ interface ProfileAvatarProps {
 }
 
 export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl, fallback = 'U', className }) => {
-  const [frameUrl, setFrameUrl] = useState<string | null>(null);
+  const [frameKey, setFrameKey] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,12 +27,12 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl,
         if (frameId) {
           const { data: frame } = await supabase
             .from('profile_frames')
-            .select('image_url')
+            .select('key')
             .eq('id', frameId)
             .maybeSingle();
-          if (isMounted) setFrameUrl(frame?.image_url || null);
+          if (isMounted) setFrameKey(frame?.key || null);
         } else {
-          if (isMounted) setFrameUrl(null);
+          if (isMounted) setFrameKey(null);
         }
       } catch (e) {
         console.warn('Failed to load profile frame', e);
@@ -42,23 +42,30 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl,
     return () => { isMounted = false; };
   }, [userId]);
 
-  // Get frame color based on frameUrl
-  const getFrameColor = () => {
-    if (!frameUrl) return null;
-    if (frameUrl.includes('bronze')) return 'border-amber-600';
-    if (frameUrl.includes('silver')) return 'border-gray-300';
-    if (frameUrl.includes('gold')) return 'border-yellow-400';
-    if (frameUrl.includes('platinum')) return 'border-gray-400';
-    if (frameUrl.includes('diamond')) return 'border-cyan-400';
-    if (frameUrl.includes('rainbow')) return 'border-transparent bg-gradient-to-r from-red-500 via-purple-500 to-blue-500';
-    return 'border-primary';
+  const getFrameBorderClass = (key: string | null) => {
+    if (!key || key === 'default') return '';
+    
+    switch (key) {
+      case 'diamond':
+        return 'ring-4 ring-cyan-400 ring-offset-2 ring-offset-background';
+      case 'platinum':
+        return 'ring-4 ring-gray-400 ring-offset-2 ring-offset-background';
+      case 'gold':
+        return 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-background';
+      case 'silver':
+        return 'ring-4 ring-gray-300 ring-offset-2 ring-offset-background';
+      case 'bronze':
+        return 'ring-4 ring-amber-600 ring-offset-2 ring-offset-background';
+      case 'rainbow':
+        return 'ring-4 ring-purple-500 ring-offset-2 ring-offset-background animate-pulse';
+      default:
+        return 'ring-4 ring-primary ring-offset-2 ring-offset-background';
+    }
   };
-
-  const frameColor = getFrameColor();
 
   return (
     <div className={cn('relative inline-block', className)}>
-      <Avatar className={cn('h-full w-full', frameColor && `ring-4 ${frameColor} ring-offset-2 ring-offset-background`)}>
+      <Avatar className={cn('h-full w-full', getFrameBorderClass(frameKey))}>
         <AvatarImage src={avatarUrl || undefined} alt="User avatar" />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
