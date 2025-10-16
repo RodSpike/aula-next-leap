@@ -134,6 +134,7 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
                 {score >= exercises.length * 0.7 ? <CheckCircle className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
               </div>
               <h3 className="text-xl font-bold">Score: {score}/{exercises.length}</h3>
+              <p className="text-muted-foreground">Review your answers below</p>
             </div>
             <div className="space-y-3">
               {exercises.map((ex, idx) => {

@@ -207,12 +207,8 @@ export default function Course() {
 
       loadProgress();
       
-      // Move to next lesson and reset to introduction view
-      if (currentLessonIndex < lessons.length - 1) {
-        setCurrentLessonIndex(currentLessonIndex + 1);
-        setShowIntroduction(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      // Don't automatically move to next lesson - user will click button
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Error saving progress:', error);
       toast({

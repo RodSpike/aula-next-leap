@@ -64,11 +64,9 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl,
   };
 
   return (
-    <div className={cn('relative inline-block', className)}>
-      <Avatar className={cn('h-full w-full', getFrameBorderClass(frameKey))}>
-        <AvatarImage src={avatarUrl || undefined} alt="User avatar" />
-        <AvatarFallback>{fallback}</AvatarFallback>
-      </Avatar>
-    </div>
+    <Avatar className={cn('h-full w-full border-0', getFrameBorderClass(frameKey), className)}>
+      <AvatarImage src={avatarUrl || undefined} alt="User avatar" />
+      <AvatarFallback>{fallback}</AvatarFallback>
+    </Avatar>
   );
 };

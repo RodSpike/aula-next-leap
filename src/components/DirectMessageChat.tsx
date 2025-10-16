@@ -6,6 +6,8 @@ import { Send, ArrowLeft, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { OnlineStatus } from "@/components/OnlineStatus";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -33,6 +35,7 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
   onBack
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -58,7 +61,17 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
             table: 'group_chat_messages',
             filter: `group_id=eq.${groupId}`,
           },
-          () => fetchMessages()
+          (payload) => {
+            fetchMessages();
+            // Show toast notification if message is from the other user
+            const newMsg = payload.new as any;
+            if (newMsg.sender_id !== user?.id) {
+              toast({
+                title: `New message from ${friendName}`,
+                description: newMsg.content.substring(0, 50) + (newMsg.content.length > 50 ? '...' : ''),
+              });
+            }
+          }
         )
         .subscribe();
 
@@ -66,7 +79,7 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
         supabase.removeChannel(channel);
       };
     }
-  }, [groupId]);
+  }, [groupId, user, friendName, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -167,7 +180,10 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
               <AvatarFallback>{friendName.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="font-semibold text-lg">{friendName}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-lg">{friendName}</h2>
+                {groupId && <OnlineStatus userId={friendId} groupId={groupId} showBadge={false} />}
+              </div>
               <p className="text-sm text-muted-foreground">Direct Message</p>
             </div>
           </div>
