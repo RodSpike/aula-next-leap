@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, UserPlus, Users, Camera, Save, Music, Palette } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -338,12 +338,12 @@ export default function Profile() {
           <Card>
             <CardContent className="pt-16">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <Avatar className="w-32 h-32 border-4 border-background -mt-28">
-                  <AvatarImage src={profile.avatar_url} />
-                  <AvatarFallback className="text-3xl">
-                    {profile.display_name?.charAt(0) || profile.username?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+                <ProfileAvatar
+                  userId={profile.user_id}
+                  avatarUrl={profile.avatar_url}
+                  fallback={profile.display_name?.charAt(0) || profile.username?.charAt(0) || 'U'}
+                  className="w-32 h-32 border-4 border-background -mt-28"
+                />
                 
                 <div className="text-center">
                   <h1 className="text-3xl font-bold mb-1">
@@ -497,12 +497,12 @@ export default function Profile() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {friendsInCommon.map((friend) => (
                     <div key={friend.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <Avatar>
-                        <AvatarImage src={friend.avatar_url} />
-                        <AvatarFallback>
-                          {friend.display_name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ProfileAvatar
+                        userId={friend.user_id}
+                        avatarUrl={friend.avatar_url}
+                        fallback={friend.display_name?.charAt(0) || 'U'}
+                        className="w-10 h-10"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
                           {friend.display_name || friend.username}
@@ -530,12 +530,12 @@ export default function Profile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {friends.map((friend) => (
                     <div key={friend.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <Avatar>
-                        <AvatarImage src={friend.avatar_url} />
-                        <AvatarFallback>
-                          {friend.display_name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ProfileAvatar
+                        userId={friend.user_id}
+                        avatarUrl={friend.avatar_url}
+                        fallback={friend.display_name?.charAt(0) || 'U'}
+                        className="w-10 h-10"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
                           {friend.display_name || friend.username}

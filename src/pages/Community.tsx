@@ -5,7 +5,7 @@ import { PostInteractions } from "@/components/PostInteractions";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { OnlineStatus } from "@/components/OnlineStatus";
 import { MessagingSystem } from "@/components/MessagingSystem";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1206,12 +1206,12 @@ export default function Community() {
                                 onClick={openUserProfile}
                               >
                                 <div className="flex items-center gap-2">
-                                  <Avatar className="w-6 h-6">
-                                    <AvatarImage src={member.profiles?.avatar_url} />
-                                    <AvatarFallback className="text-xs">
-                                      {member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  <ProfileAvatar
+                                    userId={member.user_id}
+                                    avatarUrl={member.profiles?.avatar_url}
+                                    fallback={member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                    className="w-6 h-6"
+                                  />
                                   <OnlineStatus 
                                     userId={member.user_id} 
                                     groupId={selectedGroup.id}
@@ -1333,12 +1333,12 @@ export default function Community() {
                                 }}
                                 onClick={openUserProfile}
                               >
-                                <Avatar className="w-8 h-8">
-                                  <AvatarImage src={post.profiles?.avatar_url} />
-                                  <AvatarFallback>
-                                    {post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <ProfileAvatar
+                                  userId={post.user_id}
+                                  avatarUrl={post.profiles?.avatar_url}
+                                  fallback={post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                  className="w-8 h-8"
+                                />
                               </ClickableUserProfile>
                               <div>
                                 <div className="flex items-center gap-2">

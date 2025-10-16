@@ -42,23 +42,26 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ userId, avatarUrl,
     return () => { isMounted = false; };
   }, [userId]);
 
+  // Get frame color based on frameUrl
+  const getFrameColor = () => {
+    if (!frameUrl) return null;
+    if (frameUrl.includes('bronze')) return 'border-amber-600';
+    if (frameUrl.includes('silver')) return 'border-gray-300';
+    if (frameUrl.includes('gold')) return 'border-yellow-400';
+    if (frameUrl.includes('platinum')) return 'border-gray-400';
+    if (frameUrl.includes('diamond')) return 'border-cyan-400';
+    if (frameUrl.includes('rainbow')) return 'border-transparent bg-gradient-to-r from-red-500 via-purple-500 to-blue-500';
+    return 'border-primary';
+  };
+
+  const frameColor = getFrameColor();
+
   return (
     <div className={cn('relative inline-block', className)}>
-      <Avatar className={cn('h-full w-full')}>
+      <Avatar className={cn('h-full w-full', frameColor && `ring-4 ${frameColor} ring-offset-2 ring-offset-background`)}>
         <AvatarImage src={avatarUrl || undefined} alt="User avatar" />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
-      {frameUrl && (
-        <div 
-          className="pointer-events-none absolute inset-0 z-10 select-none rounded-full"
-          style={{
-            backgroundImage: `url(${frameUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        />
-      )}
     </div>
   );
 };

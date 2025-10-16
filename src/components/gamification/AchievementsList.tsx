@@ -61,13 +61,12 @@ export const AchievementsList: React.FC = () => {
     }
   };
 
-  const categories = ['social', 'learning', 'community', 'streak', 'special'];
+  const categories = ['learning', 'social', 'engagement', 'milestone'];
   const categoryNames = {
-    social: 'Social',
     learning: 'Aprendizado',
-    community: 'Comunidade',
-    streak: 'Sequências',
-    special: 'Especial'
+    social: 'Social',
+    engagement: 'Engajamento',
+    milestone: 'Marcos'
   };
 
   const renderAchievement = (achievement: Achievement) => {
