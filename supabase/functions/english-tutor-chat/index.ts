@@ -104,7 +104,8 @@ ANÁLISE DE ARQUIVOS:
       content: userMessage
     });
 
-      // Choose provider: prefer OpenRouter (DeepSeek), fallback to Lovable AI, then OpenAI
+    // Choose provider: prefer OpenRouter (DeepSeek), fallback to Lovable AI, then OpenAI
+    try {
       let aiResponse = '';
 
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
