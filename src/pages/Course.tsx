@@ -203,6 +203,8 @@ export default function Course() {
           completed: true,
           score: score,
           completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,lesson_id'
         });
 
       if (error) throw error;

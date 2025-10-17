@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, BookOpen, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
+import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
 
 interface Course {
   id: string;
@@ -310,6 +311,11 @@ export default function CourseManagement() {
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>{course.lessons_count} lessons</span>
                       </div>
+
+                      <CourseLessonEnhancer 
+                        courseId={course.id} 
+                        courseName={course.title}
+                      />
 
                       <div className="flex gap-2">
                         <Button
