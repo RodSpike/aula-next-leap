@@ -118,12 +118,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  // Admins, users with valid subscriptions/trial, or anyone on onboarding page
+  // Admins, users with valid subscriptions/trial, or anyone on onboarding/placement-test page
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   const hasAccess = userRole?.role === 'admin' || 
                     subscriptionStatus?.subscribed || 
                     subscriptionStatus?.in_trial ||
-                    path === '/onboarding';
+                    path === '/onboarding' ||
+                    path === '/placement-test' ||
+                    path === '/settings';
 
   if (!hasAccess) {
     return <Navigate to="/subscribe" replace />;

@@ -104,71 +104,13 @@ ANÁLISE DE ARQUIVOS:
       content: userMessage
     });
 
-    // Choose provider: prefer OpenAI, fallback to OpenRouter with safe token limits
-    try {
+      // Choose provider: prefer OpenRouter (DeepSeek), fallback to Lovable AI, then OpenAI
       let aiResponse = '';
 
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
-      if (LOVABLE_API_KEY) {
-        console.log('Using Lovable AI Gateway (gemini-2.5-flash)');
-        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages,
-            stream: false,
-          }),
-        });
-
-        if (!aiRes.ok) {
-          const t = await aiRes.text();
-          console.error('Lovable AI error:', aiRes.status, t);
-          if (aiRes.status === 429) {
-            return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          if (aiRes.status === 402) {
-            return new Response(JSON.stringify({ error: 'Payment required for AI usage. Please add credits to Lovable AI workspace.' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          throw new Error(`Lovable AI gateway error: ${aiRes.status}`);
-        }
-        const data = await aiRes.json();
-        aiResponse = data.choices?.[0]?.message?.content || '';
-      } else if (openaiApiKey) {
-        console.log('Using OpenAI provider (gpt-4o-mini)');
-        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages,
-            temperature: 0.7,
-            max_tokens: 600,
-          }),
-        });
-
-        if (!oaiRes.ok) {
-          const txt = await oaiRes.text();
-          console.error('OpenAI API error:', oaiRes.status, txt);
-          throw new Error(`OpenAI API error: ${oaiRes.status}`);
-        }
-        const oaiData = await oaiRes.json();
-        aiResponse = oaiData.choices?.[0]?.message?.content || '';
-      } else {
-        console.log('Using OpenRouter provider (deepseek)');
+      if (openRouterApiKey) {
+        console.log('Using OpenRouter provider (deepseek) as primary');
         const makeOR = async (maxTokens: number) => {
           const req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -207,6 +149,63 @@ ANÁLISE DE ARQUIVOS:
         }
         const orData = await orRes.json();
         aiResponse = orData.choices?.[0]?.message?.content || '';
+      } else if (LOVABLE_API_KEY) {
+        console.log('Using Lovable AI Gateway (gemini-2.5-flash) as fallback');
+        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages,
+            stream: false,
+          }),
+        });
+
+        if (!aiRes.ok) {
+          const t = await aiRes.text();
+          console.error('Lovable AI error:', aiRes.status, t);
+          if (aiRes.status === 429) {
+            return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          if (aiRes.status === 402) {
+            return new Response(JSON.stringify({ error: 'Payment required for AI usage. Please add credits to Lovable AI workspace.' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          throw new Error(`Lovable AI gateway error: ${aiRes.status}`);
+        }
+        const data = await aiRes.json();
+        aiResponse = data.choices?.[0]?.message?.content || '';
+      } else if (openaiApiKey) {
+        console.log('Using OpenAI provider (gpt-4o-mini) as last resort');
+        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages,
+            temperature: 0.7,
+            max_tokens: 600,
+          }),
+        });
+
+        if (!oaiRes.ok) {
+          const txt = await oaiRes.text();
+          console.error('OpenAI API error:', oaiRes.status, txt);
+          throw new Error(`OpenAI API error: ${oaiRes.status}`);
+        }
+        const oaiData = await oaiRes.json();
+        aiResponse = oaiData.choices?.[0]?.message?.content || '';
       }
 
       if (!aiResponse) {

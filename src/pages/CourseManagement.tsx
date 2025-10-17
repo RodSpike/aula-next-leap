@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, BookOpen, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
 
 interface Course {
   id: string;
@@ -220,6 +221,11 @@ export default function CourseManagement() {
             <Plus className="h-4 w-4 mr-2" />
             {showCreateForm ? "Cancel" : "Create Course"}
           </Button>
+        </div>
+
+        {/* Add Bulk Lesson Enhancer at the top */}
+        <div className="mb-8">
+          <BulkLessonEnhancer />
         </div>
 
         {showCreateForm && (

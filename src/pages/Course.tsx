@@ -171,6 +171,21 @@ export default function Course() {
       const totalLessons = lessons.length;
       const progressPercent = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
       setProgress(progressPercent);
+
+      // Find the first incomplete lesson or continue from last lesson if all completed
+      if (lessons.length > 0) {
+        const firstIncompleteIndex = lessons.findIndex(lesson => {
+          const progress = data?.find(p => p.lesson_id === lesson.id);
+          return !progress?.completed;
+        });
+        
+        // If all lessons are completed, stay on last lesson; otherwise go to first incomplete
+        if (firstIncompleteIndex !== -1) {
+          setCurrentLessonIndex(firstIncompleteIndex);
+        } else if (completedLessons === totalLessons && totalLessons > 0) {
+          setCurrentLessonIndex(lessons.length - 1);
+        }
+      }
     } catch (error) {
       console.error('Error loading progress:', error);
     }
@@ -520,37 +535,6 @@ export default function Course() {
               </div>
             )}
             
-            {/* Lesson Navigation - Top */}
-            <div className="flex justify-between items-center pb-4 border-b">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const newIndex = Math.max(0, currentLessonIndex - 1);
-                  setCurrentLessonIndex(newIndex);
-                  setShowIntroduction(true);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentLessonIndex === 0}
-              >
-                ← Lição Anterior
-              </Button>
-              
-              <span className="text-sm text-muted-foreground">
-                Lição {currentLessonIndex + 1} de {lessons.length}
-              </span>
-              
-              <Button
-                onClick={() => {
-                  const newIndex = Math.min(lessons.length - 1, currentLessonIndex + 1);
-                  setCurrentLessonIndex(newIndex);
-                  setShowIntroduction(true);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                disabled={currentLessonIndex === lessons.length - 1 || (!isAdmin && !canAccessNextLesson())}
-              >
-                Próxima Lição →
-              </Button>
-            </div>
 
             {/* Navigation */}
             <div className="flex justify-between pt-8 border-t">
