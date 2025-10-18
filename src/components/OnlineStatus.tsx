@@ -50,7 +50,7 @@ export const OnlineStatus: React.FC<OnlineStatusProps> = ({
     };
   }, [userId, groupId]);
 
-  const checkOnlineStatus = async () => {
+    const checkOnlineStatus = async () => {
     try {
       const { data } = await supabase
         .from('user_online_status')
@@ -60,12 +60,12 @@ export const OnlineStatus: React.FC<OnlineStatusProps> = ({
         .maybeSingle();
 
       if (data) {
-        // Consider user online if last seen within 5 minutes
+        // Consider user online if last seen within 3 minutes (more strict)
         const lastSeen = new Date(data.last_seen_at);
         const now = new Date();
         const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
         
-        setIsOnline(data.is_online && diffMinutes < 5);
+        setIsOnline(data.is_online && diffMinutes < 3);
       }
     } catch (error) {
       console.error('Error checking online status:', error);
@@ -121,8 +121,8 @@ export const OnlineStatus: React.FC<OnlineStatusProps> = ({
     // Set initial online status
     updateOnlineStatus();
 
-    // Update every 2 minutes to keep status fresh
-    const interval = setInterval(updateOnlineStatus, 2 * 60 * 1000);
+    // Update every 90 seconds to keep status fresh and more accurate
+    const interval = setInterval(updateOnlineStatus, 90 * 1000);
 
     // Listen for page visibility changes
     document.addEventListener('visibilitychange', handleVisibilityChange);
