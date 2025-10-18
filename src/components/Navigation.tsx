@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,7 @@ export const Navigation = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const unreadCount = useUnreadMessages();
   const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
 
   useEffect(() => {
@@ -109,7 +112,7 @@ export const Navigation = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
                   isActive(item.href)
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
@@ -121,6 +124,11 @@ export const Navigation = () => {
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.name}</span>
+                {item.name === "Mensagens" && unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                )}
               </Link>
             ))}
           </div>
@@ -199,7 +207,7 @@ export const Navigation = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium relative ${
                   isActive(item.href)
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
@@ -208,6 +216,11 @@ export const Navigation = () => {
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.name}</span>
+                {item.name === "Mensagens" && unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                )}
               </Link>
             ))}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">

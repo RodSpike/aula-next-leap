@@ -373,7 +373,7 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
           table: 'direct_messages',
           filter: `group_id=eq.${groupId}`,
         },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new as DirectMessage;
           if (
             (newMessage.sender_id === user.id && newMessage.receiver_id === selectedUser.user_id) ||
@@ -381,6 +381,24 @@ export const MessagingSystem: React.FC<MessagingSystemProps> = ({
           ) {
             setMessages(prev => [...prev, newMessage]);
             scrollToBottom();
+
+            // Show notification toast if message is from other user
+            if (newMessage.sender_id === selectedUser.user_id) {
+              const { data: senderProfile } = await supabase
+                .from('profiles')
+                .select('display_name, username')
+                .eq('user_id', newMessage.sender_id)
+                .single();
+
+              const senderName = senderProfile?.display_name || senderProfile?.username || 'Someone';
+              
+              // Import toast at the top and use it here
+              const { toast } = await import('@/hooks/use-toast');
+              toast({
+                title: `New message from ${senderName}`,
+                description: newMessage.content.substring(0, 100),
+              });
+            }
           }
         }
       )

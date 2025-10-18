@@ -19,10 +19,12 @@ serve(async (req) => {
 
     console.log('Generating practice exercises for:', lessonTitle);
 
+    const openRouterKey = Deno.env.get('OPENROUTER_API_KEY');
     const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
     
-    if (!lovableKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    if (!openRouterKey && !lovableKey && !openaiKey) {
+      throw new Error('No AI provider configured');
     }
 
     const systemPrompt = `You are an expert English language teacher creating practice exercises. 
@@ -61,30 +63,92 @@ Remember:
 - Real-world applicability
 - Clear explanations`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' }
-      })
-    });
+    // Try OpenRouter (DeepSeek) first, then Lovable AI, then OpenAI
+    let result: any;
+    let contentRaw: any;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API failed: ${response.status}`);
+    if (openRouterKey) {
+      console.log('Using OpenRouter (DeepSeek) as primary provider');
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
+          'X-Title': 'English Learning App'
+        },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_tokens: 3000,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenRouter error:', response.status, errorText);
+        throw new Error(`OpenRouter API failed: ${response.status}`);
+      }
+
+      result = await response.json();
+      contentRaw = result.choices?.[0]?.message?.content;
+    } else if (lovableKey) {
+      console.log('Using Lovable AI (Gemini) as fallback');
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Lovable AI error:', response.status, errorText);
+        throw new Error(`Lovable AI failed: ${response.status}`);
+      }
+
+      result = await response.json();
+      contentRaw = result.choices?.[0]?.message?.content;
+    } else if (openaiKey) {
+      console.log('Using OpenAI as last resort');
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI error:', response.status, errorText);
+        throw new Error(`OpenAI API failed: ${response.status}`);
+      }
+
+      result = await response.json();
+      contentRaw = result.choices?.[0]?.message?.content;
     }
-
-    const result = await response.json();
-    const contentRaw = result.choices?.[0]?.message?.content;
 
     let exercises;
     try {

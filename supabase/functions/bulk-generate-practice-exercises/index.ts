@@ -84,9 +84,12 @@ serve(async (req) => {
       );
     }
 
-    if (!LOVABLE_API_KEY) {
+    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+
+    if (!OPENROUTER_KEY && !LOVABLE_API_KEY && !OPENAI_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY not configured" }),
+        JSON.stringify({ error: "No AI provider configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -145,30 +148,92 @@ Return a JSON array with this exact structure:
       try {
         const userPrompt = `Create 12-15 practice exercises for this lesson:\n\nLESSON: ${lesson.title}\n\nCONTENT:\n${(lesson.content || "").slice(0, 8000)}\n\nRemember:\n- 12-15 exercises minimum\n- Variety of question types\n- Progressive difficulty\n- Real-world applicability\n- Clear explanations`;
 
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-          }),
-        });
+        let result: any;
+        let raw: any;
 
-        if (!response.ok) {
-          const t = await response.text();
-          console.error("AI API error:", response.status, t);
-          throw new Error(`AI API failed: ${response.status}`);
+        // Try OpenRouter (DeepSeek) first
+        if (OPENROUTER_KEY) {
+          console.log(`Lesson ${lesson.id}: Using OpenRouter (DeepSeek)`);
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENROUTER_KEY}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://frbmvljizolvxcxdkefa.supabase.co",
+              "X-Title": "English Learning App"
+            },
+            body: JSON.stringify({
+              model: "deepseek/deepseek-chat",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              max_tokens: 3000,
+              temperature: 0.7
+            }),
+          });
+
+          if (!response.ok) {
+            const t = await response.text();
+            console.error("OpenRouter error:", response.status, t);
+            throw new Error(`OpenRouter failed: ${response.status}`);
+          }
+
+          result = await response.json();
+          raw = result.choices?.[0]?.message?.content;
+        } else if (LOVABLE_API_KEY) {
+          console.log(`Lesson ${lesson.id}: Using Lovable AI (Gemini) fallback`);
+          const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (!response.ok) {
+            const t = await response.text();
+            console.error("Lovable AI error:", response.status, t);
+            throw new Error(`Lovable AI failed: ${response.status}`);
+          }
+
+          result = await response.json();
+          raw = result.choices?.[0]?.message?.content;
+        } else if (OPENAI_KEY) {
+          console.log(`Lesson ${lesson.id}: Using OpenAI as last resort`);
+          const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENAI_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (!response.ok) {
+            const t = await response.text();
+            console.error("OpenAI error:", response.status, t);
+            throw new Error(`OpenAI failed: ${response.status}`);
+          }
+
+          result = await response.json();
+          raw = result.choices?.[0]?.message?.content;
         }
-
-        const result = await response.json();
-        const raw = result.choices?.[0]?.message?.content;
         const exercises = parseAIJson(raw);
         if (!Array.isArray(exercises)) throw new Error("Exercises must be an array");
 
