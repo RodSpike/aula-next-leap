@@ -39,88 +39,103 @@ export const UnifiedChatInterface = () => {
     if (!user) return;
 
     try {
-      // Load direct messages (only private chats where the user is a member)
-      const { data: dmMemberGroups } = await supabase
-        .from('group_members')
-        .select('group_id, community_groups!inner(*)')
-        .eq('user_id', user.id)
-        .eq('status', 'accepted')
-        .eq('community_groups.is_private_chat', true);
-
-      // Load group chats where user is a member
-      const { data: memberGroups } = await supabase
-        .from('group_members')
-        .select('group_id, community_groups(*)')
-        .eq('user_id', user.id)
-        .eq('status', 'accepted');
+      // Optimized: Load all data in parallel with proper joins
+      const [dmMemberGroupsResult, memberGroupsResult] = await Promise.all([
+        // Load direct messages with joined data
+        supabase
+          .from('group_members')
+          .select(`
+            group_id,
+            community_groups!inner(id, name, is_private_chat),
+            profiles!group_members_user_id_fkey(user_id)
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'accepted')
+          .eq('community_groups.is_private_chat', true),
+        
+        // Load group chats with joined data
+        supabase
+          .from('group_members')
+          .select(`
+            group_id,
+            community_groups(id, name, is_private_chat)
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'accepted')
+      ]);
 
       const allConversations: ChatConversation[] = [];
 
-      // Process direct messages (using the actual private chat group the user belongs to)
-      if (dmMemberGroups) {
-        for (const member of dmMemberGroups) {
-          const group = member.community_groups;
+      // Process direct messages
+      if (dmMemberGroupsResult.data) {
+        for (const member of dmMemberGroupsResult.data) {
+          const group = (member as any).community_groups;
           if (!group) continue;
 
-          const { data: members } = await supabase
-            .from('group_members')
-            .select('user_id')
-            .eq('group_id', group.id)
-            .neq('user_id', user.id);
-
-          if (members && members.length > 0) {
-            const otherId = members[0].user_id;
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('display_name, username, avatar_url')
-              .eq('user_id', otherId)
-              .single();
-
-            const { data: lastMsg } = await supabase
+          // Get other members and last message in parallel
+          const [membersResult, lastMsgResult] = await Promise.all([
+            supabase
+              .from('group_members')
+              .select('user_id, profiles!group_members_user_id_fkey(display_name, username, avatar_url)')
+              .eq('group_id', group.id)
+              .neq('user_id', user.id)
+              .limit(1)
+              .single(),
+            
+            supabase
               .from('group_chat_messages')
               .select('content, created_at')
               .eq('group_id', group.id)
               .order('created_at', { ascending: false })
               .limit(1)
-              .maybeSingle();
+              .maybeSingle()
+          ]);
 
+          if (membersResult.data) {
+            const profile = (membersResult.data as any).profiles;
             allConversations.push({
               id: group.id,
               name: profile?.display_name || profile?.username || 'Unknown',
               type: 'direct',
               avatar: profile?.avatar_url,
-              lastMessage: lastMsg?.content,
-              lastMessageTime: lastMsg?.created_at,
+              lastMessage: lastMsgResult.data?.content,
+              lastMessageTime: lastMsgResult.data?.created_at,
               unreadCount: 0,
-              participantId: otherId
+              participantId: membersResult.data.user_id
             });
           }
         }
       }
 
       // Process group chats
-      if (memberGroups) {
-        for (const member of memberGroups) {
-          const group = member.community_groups;
-          if (group && !group.is_private_chat) {
-            const { data: lastMsg } = await supabase
+      if (memberGroupsResult.data) {
+        const groupChats = memberGroupsResult.data
+          .map(m => (m as any).community_groups)
+          .filter(g => g && !g.is_private_chat);
+
+        // Fetch last messages for all groups in parallel
+        const lastMessages = await Promise.all(
+          groupChats.map(group =>
+            supabase
               .from('group_chat_messages')
               .select('content, created_at')
               .eq('group_id', group.id)
               .order('created_at', { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle()
+          )
+        );
 
-            allConversations.push({
-              id: group.id,
-              name: group.name,
-              type: 'group',
-              lastMessage: lastMsg?.content,
-              lastMessageTime: lastMsg?.created_at,
-              unreadCount: 0
-            });
-          }
-        }
+        groupChats.forEach((group, index) => {
+          allConversations.push({
+            id: group.id,
+            name: group.name,
+            type: 'group',
+            lastMessage: lastMessages[index].data?.content,
+            lastMessageTime: lastMessages[index].data?.created_at,
+            unreadCount: 0
+          });
+        });
       }
 
       // Sort by last message time

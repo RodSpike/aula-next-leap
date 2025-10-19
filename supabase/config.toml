@@ -109,3 +109,6 @@ verify_jwt = false
 
 [functions.enhance-lesson-content]
 verify_jwt = false
+
+[functions.text-to-speech-multilingual]
+verify_jwt = false

@@ -13,10 +13,14 @@ import {
 import { Link } from "react-router-dom";
 import { PricingSection } from "@/components/PricingSection";
 import { FeaturedCourses } from "@/components/FeaturedCourses";
+import { StudentTestimonials } from "@/components/StudentTestimonials";
+import { useOnlineCounter } from "@/hooks/useOnlineCounter";
 
 const Index = () => {
+  const onlineCount = useOnlineCounter();
+  
   const stats = [
-    { icon: Users, label: "Estudantes Ativo", value: "10.000+" },
+    { icon: Users, label: "Estudantes Online", value: `${onlineCount}` },
     { icon: BookOpen, label: "Cursos de Inglês", value: "50+" },
     { icon: Star, label: "Avaliação Média", value: "4.9/5" },
     { icon: MessageSquare, label: "Grupos da Comunidade", value: "100+" },
@@ -102,6 +106,9 @@ const Index = () => {
 
       {/* Featured Courses */}
       <FeaturedCourses />
+
+      {/* Student Testimonials */}
+      <StudentTestimonials />
 
       {/* Placement Test Section */}
       <section className="py-20 bg-card">

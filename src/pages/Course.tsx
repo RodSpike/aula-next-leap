@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonContent } from "@/components/LessonContent";
 import { ExerciseActivity } from "@/components/ExerciseActivity";
+import { LessonAudioPlayer } from "@/components/LessonAudioPlayer";
 import { BookOpen, Trophy, Clock, ArrowLeft } from "lucide-react";
 
 interface Course {
@@ -461,6 +462,14 @@ export default function Course() {
             {showIntroduction ? (
               // Introduction/Explanation Content
               <div className="space-y-6">
+                {/* Audio Player for Lesson */}
+                <div className="flex justify-center pb-4">
+                  <LessonAudioPlayer 
+                    lessonContent={lessonHtml}
+                    lessonTitle={currentLesson?.title || ''}
+                  />
+                </div>
+                
                 {lessonHtml ? (
                   // Enhanced lesson content with proper educational styling
                   <div className="lesson-container">

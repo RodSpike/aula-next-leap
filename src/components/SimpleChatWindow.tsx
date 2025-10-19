@@ -61,24 +61,26 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
   }, [messages]);
 
   const fetchMessages = async () => {
+    // Optimized query: fetch messages with profiles in a single query
     const { data } = await supabase
       .from('group_chat_messages')
-      .select('id, content, created_at, sender_id, is_system_message')
+      .select(`
+        id, 
+        content, 
+        created_at, 
+        sender_id, 
+        is_system_message,
+        profiles!group_chat_messages_sender_id_fkey(display_name, username, avatar_url)
+      `)
       .eq('group_id', groupId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(100); // Limit to last 100 messages for performance
 
     if (data) {
-      const messagesWithProfiles = await Promise.all(
-        data.map(async (msg) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username, avatar_url')
-            .eq('user_id', msg.sender_id)
-            .single();
-
-          return { ...msg, sender: profile };
-        })
-      );
+      const messagesWithProfiles = data.map(msg => ({
+        ...msg,
+        sender: (msg as any).profiles
+      }));
       setMessages(messagesWithProfiles);
     }
   };
