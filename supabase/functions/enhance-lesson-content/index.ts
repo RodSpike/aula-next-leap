@@ -10,6 +10,12 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+// Restrict and echo allowed origins per request (preview + production)
+const allowedOrigins = [
+  'https://preview--aula-next-leap.lovable.app',
+  'https://aula-click-production-domain.com'
+] as const;
+
 // Helper function to clean HTML content
 function cleanHtmlContent(content: string): string {
   if (!content) return '';
@@ -35,10 +41,14 @@ function cleanHtmlContent(content: string): string {
 }
 
 serve(async (req) => {
+  // Determine allowed origin for this request
+  const origin = req.headers.get('origin') || '';
+  const allowOrigin = (allowedOrigins as readonly string[]).includes(origin) ? origin : '*';
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { 
       status: 200,
-      headers: corsHeaders 
+      headers: { ...corsHeaders, 'Access-Control-Allow-Origin': allowOrigin }
     });
   }
 
@@ -107,7 +117,6 @@ Make it visually appealing with proper structure, but preserve ALL the original 
     // Prefer OpenRouter (DeepSeek), then Lovable AI (Gemini), then OpenAI
     let enhancedHtml = '';
 
-    const orKey = Deno.env.get('OPENROUTER_API_KEY') ?? openRouterApiKey ?? '';
     const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
     if (orKey) {
@@ -146,8 +155,34 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
       const orData = await orRes.json();
       enhancedHtml = orData.choices?.[0]?.message?.content || '';
+    } else if (openaiApiKey) {
+      console.log('Enhance: Using OpenAI (gpt-4o-mini) as fallback');
+      const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.6,
+          max_tokens: 1200,
+        }),
+      });
+
+      if (!oaiRes.ok) {
+        const t = await oaiRes.text();
+        console.error('OpenAI error:', oaiRes.status, t);
+        throw new Error(`OpenAI API error: ${oaiRes.status}`);
+      }
+      const oaiData = await oaiRes.json();
+      enhancedHtml = oaiData.choices?.[0]?.message?.content || '';
     } else if (lovableKey) {
-      console.log('Enhance: Using Lovable AI Gateway (gemini-2.5-flash) as fallback');
+      console.log('Enhance: Using Lovable AI Gateway (gemini-2.5-flash) as last resort');
       const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -177,32 +212,6 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
       const data = await aiRes.json();
       enhancedHtml = data.choices?.[0]?.message?.content || '';
-    } else if (openaiApiKey) {
-      console.log('Enhance: Using OpenAI (gpt-4o-mini) as last resort');
-      const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.6,
-          max_tokens: 1200,
-        }),
-      });
-
-      if (!oaiRes.ok) {
-        const t = await oaiRes.text();
-        console.error('OpenAI error:', oaiRes.status, t);
-        throw new Error(`OpenAI API error: ${oaiRes.status}`);
-      }
-      const oaiData = await oaiRes.json();
-      enhancedHtml = oaiData.choices?.[0]?.message?.content || '';
     }
 
     // Clean the enhanced content - remove markdown fences, body wrappers, scripts
@@ -210,14 +219,14 @@ Make it visually appealing with proper structure, but preserve ALL the original 
 
     console.log('Content enhanced successfully');
 
-    return new Response(JSON.stringify({ enhancedContent: cleanedContent }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error: any) {
-    console.error('Error in enhance-lesson-content function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+return new Response(JSON.stringify({ enhancedContent: cleanedContent }), {
+  headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': allowOrigin },
+});
+} catch (error: any) {
+  console.error('Error in enhance-lesson-content function:', error);
+  return new Response(JSON.stringify({ error: error.message }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': allowOrigin },
+  });
+}
 });
