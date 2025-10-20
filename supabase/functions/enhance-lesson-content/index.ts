@@ -59,8 +59,9 @@ serve(async (req) => {
 
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
     const openRouterKey = Deno.env.get('OPENROUTER_API_KEY') ?? openRouterApiKey ?? '';
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
     
-    if (!openaiApiKey && !openRouterKey) {
+    if (!openaiApiKey && !openRouterKey && !lovableKey) {
       throw new Error('AI provider not configured');
     }
 
@@ -114,104 +115,128 @@ Content: ${content}
 Make it visually appealing with proper structure, but preserve ALL the original educational content.`;
     }
 
-    // Prefer OpenRouter (DeepSeek), then Lovable AI (Gemini), then OpenAI
+    // Provider priority: OpenRouter (DeepSeek) -> OpenAI -> Lovable AI
     let enhancedHtml = '';
+    const providerErrors: Array<{ provider: string; status?: number; message: string }> = [];
+    let lastStatus: number | undefined;
 
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
+    if (openRouterKey && !enhancedHtml) {
+      try {
+        console.log('Enhance: Trying OpenRouter (DeepSeek)');
+        const makeOR = async (maxTokens: number) => fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openRouterKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
+            'X-Title': 'English Learning App'
+          },
+          body: JSON.stringify({
+            model: 'deepseek/deepseek-chat',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            max_tokens: maxTokens,
+            temperature: 0.6,
+          }),
+        });
 
-    if (openRouterKey) {
-      console.log('Enhance: Using OpenRouter (deepseek) as primary');
-      const makeOR = async (maxTokens: number) => fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openRouterKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
-          'X-Title': 'English Learning App'
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: maxTokens,
-          temperature: 0.6,
-        }),
-      });
-
-      let orRes = await makeOR(900);
-      if (!orRes.ok) {
-        const errTxt = await orRes.text();
-        console.error('OpenRouter error:', orRes.status, errTxt);
-        if (orRes.status === 402 || errTxt.includes('402')) {
-          console.log('Retrying OpenRouter with fewer tokens');
-          orRes = await makeOR(500);
+        let orRes = await makeOR(900);
+        if (!orRes.ok) {
+          const errTxt = await orRes.text();
+          console.error('OpenRouter error:', orRes.status, errTxt);
+          if (orRes.status === 402 || errTxt.includes('402')) {
+            console.log('Retrying OpenRouter with fewer tokens');
+            orRes = await makeOR(500);
+          }
         }
-      }
-      if (!orRes.ok) {
-        const finalErr = await orRes.text();
-        throw new Error(`OpenRouter API error: ${orRes.status} - ${finalErr}`);
-      }
-      const orData = await orRes.json();
-      enhancedHtml = orData.choices?.[0]?.message?.content || '';
-    } else if (openaiApiKey) {
-      console.log('Enhance: Using OpenAI (gpt-4o-mini) as fallback');
-      const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.6,
-          max_tokens: 1200,
-        }),
-      });
-
-      if (!oaiRes.ok) {
-        const t = await oaiRes.text();
-        console.error('OpenAI error:', oaiRes.status, t);
-        throw new Error(`OpenAI API error: ${oaiRes.status}`);
-      }
-      const oaiData = await oaiRes.json();
-      enhancedHtml = oaiData.choices?.[0]?.message?.content || '';
-    } else if (lovableKey) {
-      console.log('Enhance: Using Lovable AI Gateway (gemini-2.5-flash) as last resort');
-      const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          stream: false,
-        }),
-      });
-
-      if (!aiRes.ok) {
-        const t = await aiRes.text();
-        console.error('Lovable AI error:', aiRes.status, t);
-        if (aiRes.status === 429) {
-          throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+        if (!orRes.ok) {
+          const finalErr = await orRes.text();
+          lastStatus = orRes.status;
+          providerErrors.push({ provider: 'OpenRouter/DeepSeek', status: orRes.status, message: finalErr });
+        } else {
+          const orData = await orRes.json();
+          enhancedHtml = orData.choices?.[0]?.message?.content || '';
         }
-        if (aiRes.status === 402) {
-          throw new Error('AI credits required. Please top up your Lovable AI workspace.');
-        }
-        throw new Error(`Lovable AI gateway error: ${aiRes.status}`);
+      } catch (e: any) {
+        providerErrors.push({ provider: 'OpenRouter/DeepSeek', message: e?.message ?? 'Unknown OpenRouter error' });
       }
-      const data = await aiRes.json();
-      enhancedHtml = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (openaiApiKey && !enhancedHtml) {
+      try {
+        console.log('Enhance: Trying OpenAI (gpt-4o-mini) fallback');
+        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.6,
+            max_tokens: 1200,
+          }),
+        });
+
+        if (!oaiRes.ok) {
+          const t = await oaiRes.text();
+          console.error('OpenAI error:', oaiRes.status, t);
+          lastStatus = oaiRes.status;
+          providerErrors.push({ provider: 'OpenAI', status: oaiRes.status, message: t });
+        } else {
+          const oaiData = await oaiRes.json();
+          enhancedHtml = oaiData.choices?.[0]?.message?.content || '';
+        }
+      } catch (e: any) {
+        providerErrors.push({ provider: 'OpenAI', message: e?.message ?? 'Unknown OpenAI error' });
+      }
+    }
+
+    if (lovableKey && !enhancedHtml) {
+      try {
+        console.log('Enhance: Trying Lovable AI Gateway (gemini-2.5-flash) fallback');
+        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            stream: false,
+          }),
+        });
+
+        if (!aiRes.ok) {
+          const t = await aiRes.text();
+          console.error('Lovable AI error:', aiRes.status, t);
+          lastStatus = aiRes.status;
+          providerErrors.push({ provider: 'Lovable AI', status: aiRes.status, message: t });
+        } else {
+          const data = await aiRes.json();
+          enhancedHtml = data.choices?.[0]?.message?.content || '';
+        }
+      } catch (e: any) {
+        providerErrors.push({ provider: 'Lovable AI', message: e?.message ?? 'Unknown Lovable AI error' });
+      }
+    }
+
+    if (!enhancedHtml) {
+      const status = lastStatus && (lastStatus === 402 || lastStatus === 429) ? lastStatus : 500;
+      return new Response(
+        JSON.stringify({ error: 'All AI providers failed', details: providerErrors }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': allowOrigin } }
+      );
     }
 
     // Clean the enhanced content - remove markdown fences, body wrappers, scripts
