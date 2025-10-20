@@ -58,9 +58,9 @@ serve(async (req) => {
     console.log('Enhancing content:', { title, sectionType, contentLength: content?.length });
 
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
-    const orKey = Deno.env.get('OPENROUTER_API_KEY') ?? openRouterApiKey ?? '';
-
-    if (!openaiApiKey && !orKey) {
+    const openRouterKey = Deno.env.get('OPENROUTER_API_KEY') ?? openRouterApiKey ?? '';
+    
+    if (!openaiApiKey && !openRouterKey) {
       throw new Error('AI provider not configured');
     }
 
@@ -119,12 +119,12 @@ Make it visually appealing with proper structure, but preserve ALL the original 
 
     const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
-    if (orKey) {
+    if (openRouterKey) {
       console.log('Enhance: Using OpenRouter (deepseek) as primary');
       const makeOR = async (maxTokens: number) => fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${orKey}`,
+          'Authorization': `Bearer ${openRouterKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://frbmvljizolvxcxdkefa.supabase.co',
           'X-Title': 'English Learning App'
