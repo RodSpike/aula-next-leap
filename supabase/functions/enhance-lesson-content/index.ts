@@ -232,9 +232,12 @@ Make it visually appealing with proper structure, but preserve ALL the original 
     }
 
     if (!enhancedHtml) {
-      const status = lastStatus && (lastStatus === 402 || lastStatus === 429) ? lastStatus : 500;
+      const has402 = providerErrors.some(e => e.status === 402 || (e.message || '').includes('402'));
+      const has429 = providerErrors.some(e => e.status === 429 || (e.message || '').includes('429') || (e.message || '').toLowerCase().includes('rate'));
+      const status = has402 ? 402 : has429 ? 429 : 500;
+      console.error('All AI providers failed', { providerErrors, status });
       return new Response(
-        JSON.stringify({ error: 'All AI providers failed', details: providerErrors }),
+        JSON.stringify({ error: status === 402 ? 'AI credits required' : status === 429 ? 'Rate limited' : 'All AI providers failed', details: providerErrors }),
         { status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': allowOrigin } }
       );
     }
