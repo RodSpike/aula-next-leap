@@ -55,9 +55,27 @@ function cleanHtmlContent(content: string): string {
 
 // Fallback formatter when AI providers are unavailable
 function fallbackFormatter(content: string, title: string, sectionType: string): string {
-  if (!content) return '<div><p>No content available</p></div>';
+  if (!content) return '<article><p>No content available</p></article>';
   
-  // Basic HTML escaping for content
+  // Check if content already contains HTML tags (from previous enhancement)
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+  
+  if (hasHtmlTags) {
+    // Content already has HTML - just clean it and return
+    let cleaned = content.trim();
+    
+    // Remove any wrapping divs/containers that might exist
+    cleaned = cleaned.replace(/^<div[^>]*>/, '').replace(/<\/div>\s*$/, '');
+    
+    // Ensure it's wrapped in article tag
+    if (!cleaned.startsWith('<article')) {
+      cleaned = `<article>${cleaned}</article>`;
+    }
+    
+    return cleaned;
+  }
+  
+  // Content is plain text - convert to semantic HTML
   const escapeHtml = (text: string) => text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -65,12 +83,11 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
   
-  // Split content into paragraphs
   const paragraphs = content.split('\n\n').filter(p => p.trim());
   
   let formattedHtml = '<article>';
   
-  // Add title as h1 for full lessons, h2 for sections
+  // Add title
   if (sectionType === 'full_lesson') {
     formattedHtml += `<h1>${escapeHtml(title)}</h1>`;
   } else {
@@ -80,7 +97,7 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
   paragraphs.forEach(paragraph => {
     const trimmed = paragraph.trim();
     
-    // Check if it looks like a heading (short, all caps, or ends with colon)
+    // Heading detection
     if (trimmed.length < 100 && (
       trimmed.toUpperCase() === trimmed || 
       trimmed.endsWith(':') ||
@@ -88,7 +105,7 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
     )) {
       formattedHtml += `<h3>${escapeHtml(trimmed.replace(/:$/, ''))}</h3>`;
     } 
-    // Check if it looks like a list (starts with bullet or dash)
+    // Bullet list detection
     else if (trimmed.match(/^[-•*]\s/)) {
       const items = trimmed.split('\n').filter(i => i.trim());
       formattedHtml += '<ul>';
@@ -98,7 +115,7 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
       });
       formattedHtml += '</ul>';
     }
-    // Check if it looks like a numbered list
+    // Numbered list detection
     else if (trimmed.match(/^\d+[\.)]\s/)) {
       const items = trimmed.split('\n').filter(i => i.trim());
       formattedHtml += '<ol>';
@@ -108,7 +125,7 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
       });
       formattedHtml += '</ol>';
     }
-    // Check for bold emphasis patterns like **text** or __text__
+    // Bold emphasis patterns
     else if (trimmed.includes('**') || trimmed.includes('__')) {
       let processed = escapeHtml(trimmed);
       processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
