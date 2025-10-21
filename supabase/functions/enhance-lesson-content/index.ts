@@ -42,7 +42,7 @@ function cleanHtmlContent(content: string): string {
 
 // Fallback formatter when AI providers are unavailable
 function fallbackFormatter(content: string, title: string, sectionType: string): string {
-  if (!content) return '<div class="lesson-container"><p>No content available</p></div>';
+  if (!content) return '<div><p>No content available</p></div>';
   
   // Basic HTML escaping for content
   const escapeHtml = (text: string) => text
@@ -55,44 +55,60 @@ function fallbackFormatter(content: string, title: string, sectionType: string):
   // Split content into paragraphs
   const paragraphs = content.split('\n\n').filter(p => p.trim());
   
-  let formattedHtml = '<div class="lesson-container">';
+  let formattedHtml = '<article>';
   
+  // Add title as h1 for full lessons, h2 for sections
   if (sectionType === 'full_lesson') {
-    formattedHtml += `<div class="lesson-header"><h1 class="lesson-title">${escapeHtml(title)}</h1></div>`;
+    formattedHtml += `<h1>${escapeHtml(title)}</h1>`;
   } else {
-    formattedHtml += `<div class="lesson-section"><h2>${escapeHtml(title)}</h2></div>`;
+    formattedHtml += `<h2>${escapeHtml(title)}</h2>`;
   }
-  
-  formattedHtml += '<div class="lesson-content">';
   
   paragraphs.forEach(paragraph => {
     const trimmed = paragraph.trim();
     
-    // Check if it looks like a heading
+    // Check if it looks like a heading (short, all caps, or ends with colon)
     if (trimmed.length < 100 && (
       trimmed.toUpperCase() === trimmed || 
       trimmed.endsWith(':') ||
       /^[A-Z][^.!?]*$/.test(trimmed)
     )) {
-      formattedHtml += `<h3 class="section-heading">${escapeHtml(trimmed)}</h3>`;
+      formattedHtml += `<h3>${escapeHtml(trimmed.replace(/:$/, ''))}</h3>`;
     } 
-    // Check if it looks like a list item
+    // Check if it looks like a list (starts with bullet or dash)
     else if (trimmed.match(/^[-•*]\s/)) {
       const items = trimmed.split('\n').filter(i => i.trim());
-      formattedHtml += '<ul class="content-list">';
+      formattedHtml += '<ul>';
       items.forEach(item => {
         const cleaned = item.replace(/^[-•*]\s/, '').trim();
         formattedHtml += `<li>${escapeHtml(cleaned)}</li>`;
       });
       formattedHtml += '</ul>';
     }
+    // Check if it looks like a numbered list
+    else if (trimmed.match(/^\d+[\.)]\s/)) {
+      const items = trimmed.split('\n').filter(i => i.trim());
+      formattedHtml += '<ol>';
+      items.forEach(item => {
+        const cleaned = item.replace(/^\d+[\.)]\s/, '').trim();
+        formattedHtml += `<li>${escapeHtml(cleaned)}</li>`;
+      });
+      formattedHtml += '</ol>';
+    }
+    // Check for bold emphasis patterns like **text** or __text__
+    else if (trimmed.includes('**') || trimmed.includes('__')) {
+      let processed = escapeHtml(trimmed);
+      processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      processed = processed.replace(/__(.*?)__/g, '<strong>$1</strong>');
+      formattedHtml += `<p>${processed}</p>`;
+    }
     // Regular paragraph
     else {
-      formattedHtml += `<p class="lesson-paragraph">${escapeHtml(trimmed)}</p>`;
+      formattedHtml += `<p>${escapeHtml(trimmed)}</p>`;
     }
   });
   
-  formattedHtml += '</div></div>';
+  formattedHtml += '</article>';
   
   return formattedHtml;
 }
