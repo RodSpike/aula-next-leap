@@ -119,7 +119,7 @@ serve(async (req) => {
     const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
     
     if (!openaiApiKey && !openRouterKey && !lovableKey) {
-      throw new Error('AI provider not configured');
+      console.warn('No AI provider keys configured; will use non-AI fallback formatter.');
     }
 
     const systemPrompt = `You are an expert educational content designer. Your task is to enhance the visual presentation of lesson content while preserving ALL educational material.
@@ -148,6 +148,7 @@ Special handling for different content types:
 Return ONLY the raw HTML content without any markdown fences, body tags, or additional text.`;
 
     let userPrompt;
+    const isFullLesson = sectionType === 'full_lesson';
     
     if (sectionType === 'full_lesson') {
       userPrompt = `Enhance the visual presentation of this complete lesson:
@@ -221,7 +222,7 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
     }
 
-    if (openaiApiKey && !enhancedHtml) {
+    if (!isFullLesson && openaiApiKey && !enhancedHtml) {
       try {
         console.log('Enhance: Trying OpenAI (gpt-4o-mini) fallback');
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -255,7 +256,7 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
     }
 
-    if (lovableKey && !enhancedHtml) {
+    if (!isFullLesson && lovableKey && !enhancedHtml) {
       try {
         console.log('Enhance: Trying Lovable AI Gateway (gemini-2.5-flash) fallback');
         const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
