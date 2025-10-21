@@ -40,6 +40,63 @@ function cleanHtmlContent(content: string): string {
   return cleaned.trim();
 }
 
+// Fallback formatter when AI providers are unavailable
+function fallbackFormatter(content: string, title: string, sectionType: string): string {
+  if (!content) return '<div class="lesson-container"><p>No content available</p></div>';
+  
+  // Basic HTML escaping for content
+  const escapeHtml = (text: string) => text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  
+  // Split content into paragraphs
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  
+  let formattedHtml = '<div class="lesson-container">';
+  
+  if (sectionType === 'full_lesson') {
+    formattedHtml += `<div class="lesson-header"><h1 class="lesson-title">${escapeHtml(title)}</h1></div>`;
+  } else {
+    formattedHtml += `<div class="lesson-section"><h2>${escapeHtml(title)}</h2></div>`;
+  }
+  
+  formattedHtml += '<div class="lesson-content">';
+  
+  paragraphs.forEach(paragraph => {
+    const trimmed = paragraph.trim();
+    
+    // Check if it looks like a heading
+    if (trimmed.length < 100 && (
+      trimmed.toUpperCase() === trimmed || 
+      trimmed.endsWith(':') ||
+      /^[A-Z][^.!?]*$/.test(trimmed)
+    )) {
+      formattedHtml += `<h3 class="section-heading">${escapeHtml(trimmed)}</h3>`;
+    } 
+    // Check if it looks like a list item
+    else if (trimmed.match(/^[-•*]\s/)) {
+      const items = trimmed.split('\n').filter(i => i.trim());
+      formattedHtml += '<ul class="content-list">';
+      items.forEach(item => {
+        const cleaned = item.replace(/^[-•*]\s/, '').trim();
+        formattedHtml += `<li>${escapeHtml(cleaned)}</li>`;
+      });
+      formattedHtml += '</ul>';
+    }
+    // Regular paragraph
+    else {
+      formattedHtml += `<p class="lesson-paragraph">${escapeHtml(trimmed)}</p>`;
+    }
+  });
+  
+  formattedHtml += '</div></div>';
+  
+  return formattedHtml;
+}
+
 serve(async (req) => {
   // Determine allowed origin for this request
   const origin = req.headers.get('origin') || '';
@@ -232,14 +289,8 @@ Make it visually appealing with proper structure, but preserve ALL the original 
     }
 
     if (!enhancedHtml) {
-      const has402 = providerErrors.some(e => e.status === 402 || (e.message || '').includes('402'));
-      const has429 = providerErrors.some(e => e.status === 429 || (e.message || '').includes('429') || (e.message || '').toLowerCase().includes('rate'));
-      const status = has402 ? 402 : has429 ? 429 : 500;
-      console.error('All AI providers failed', { providerErrors, status });
-      return new Response(
-        JSON.stringify({ error: status === 402 ? 'AI credits required' : status === 429 ? 'Rate limited' : 'All AI providers failed', details: providerErrors }),
-        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': allowOrigin } }
-      );
+      console.log('All AI providers failed, using fallback formatter');
+      enhancedHtml = fallbackFormatter(content, title, sectionType);
     }
 
     // Clean the enhanced content - remove markdown fences, body wrappers, scripts
