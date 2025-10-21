@@ -22,15 +22,28 @@ function cleanHtmlContent(content: string): string {
   
   let cleaned = content.trim();
   
-  // Remove markdown code fences
-  if (cleaned.startsWith('```html') || cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:html)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-  }
+  // Remove all markdown code fences (backticks)
+  cleaned = cleaned.replace(/^```[\w]*\n?/gm, '').replace(/\n?```$/gm, '');
+  cleaned = cleaned.replace(/^`+|`+$/g, '');
+  
+  // Remove "html" prefix if present
+  cleaned = cleaned.replace(/^html\s*\n/i, '');
   
   // Extract content from body tags if present
   const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   if (bodyMatch) {
     cleaned = bodyMatch[1].trim();
+  }
+  
+  // Extract from html tags if present
+  const htmlMatch = cleaned.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
+  if (htmlMatch) {
+    cleaned = htmlMatch[1].trim();
+    // Try body again after removing html wrapper
+    const bodyMatch2 = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch2) {
+      cleaned = bodyMatch2[1].trim();
+    }
   }
   
   // Remove script and style tags for security
