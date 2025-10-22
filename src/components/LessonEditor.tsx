@@ -666,7 +666,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
                       </Button>
                     </div>
                   </div>
-                  <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: content.explanation || '' }} />
+                  <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.explanation || '' }} />
                 </>
               )}
             </div>
@@ -822,7 +822,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({
               <div className="border rounded-lg p-4 bg-muted/50">
                 <h4 className="font-medium mb-2">Enhanced Content:</h4>
                 <div 
-                  className="prose prose-sm max-w-none"
+                  className="lesson-container prose prose-sm max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-li:marker:text-primary"
                   dangerouslySetInnerHTML={{ __html: enhancementPreview.content }}
                 />
               </div>

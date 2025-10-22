@@ -268,7 +268,7 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
     }
 
-    if (!isFullLesson && openaiApiKey && !enhancedHtml) {
+    if (openaiApiKey && !enhancedHtml) {
       try {
         console.log('Enhance: Trying OpenAI (gpt-4o-mini) fallback');
         const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -302,7 +302,7 @@ Make it visually appealing with proper structure, but preserve ALL the original 
       }
     }
 
-    if (!isFullLesson && lovableKey && !enhancedHtml) {
+    if (lovableKey && !enhancedHtml) {
       try {
         console.log('Enhance: Trying Lovable AI Gateway (gemini-2.5-flash) fallback');
         const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

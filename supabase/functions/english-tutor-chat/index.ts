@@ -104,13 +104,14 @@ ANÁLISE DE ARQUIVOS:
       content: userMessage
     });
 
-    // Choose provider: prefer OpenRouter (DeepSeek), fallback to Lovable AI, then OpenAI
+    // Choose provider: prefer OpenRouter (DeepSeek), then OpenAI, then Lovable AI
     try {
       let aiResponse = '';
-
+      const providerErrors: Array<{ provider: string; status?: number; message: string }> = [];
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
-      if (openRouterApiKey) {
+      // 1) OpenRouter (DeepSeek) primary
+      if (openRouterApiKey && !aiResponse) {
         console.log('Using OpenRouter provider (deepseek) as primary');
         const makeOR = async (maxTokens: number) => {
           const req = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -125,92 +126,104 @@ ANÁLISE DE ARQUIVOS:
               model: 'deepseek/deepseek-chat',
               messages,
               temperature: 0.7,
-              max_tokens: maxTokens,
+              max_tokens: 800,
               stream: false,
             }),
           });
           return req;
         };
 
-        let orRes = await makeOR(800);
-        if (!orRes.ok) {
-          const errTxt = await orRes.text();
-          console.error('OpenRouter API error:', orRes.status, errTxt);
-          if (orRes.status === 402 || errTxt.includes('402')) {
-            console.log('Retrying OpenRouter with reduced max_tokens');
-            orRes = await makeOR(400);
+        try {
+          let orRes = await makeOR(800);
+          if (!orRes.ok) {
+            const errTxt = await orRes.text();
+            console.error('OpenRouter API error:', orRes.status, errTxt);
+            if (orRes.status === 402 || errTxt.includes('402')) {
+              console.log('Retrying OpenRouter with reduced max_tokens');
+              orRes = await makeOR(400);
+            }
           }
+          if (!orRes.ok) {
+            const finalErr = await orRes.text();
+            providerErrors.push({ provider: 'OpenRouter/DeepSeek', status: orRes.status, message: finalErr });
+          } else {
+            const orData = await orRes.json();
+            aiResponse = orData.choices?.[0]?.message?.content || '';
+          }
+        } catch (e: any) {
+          providerErrors.push({ provider: 'OpenRouter/DeepSeek', message: e?.message ?? 'Unknown OpenRouter error' });
         }
-        if (!orRes.ok) {
-          const finalErr = await orRes.text();
-          return new Response(JSON.stringify({ error: `OpenRouter API error: ${orRes.status} - ${finalErr}` }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+
+      // 2) OpenAI fallback
+      if (!aiResponse && openaiApiKey) {
+        console.log('Using OpenAI provider (gpt-4o-mini) fallback');
+        try {
+          const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages,
+              temperature: 0.7,
+              max_tokens: 600,
+            }),
           });
-        }
-        const orData = await orRes.json();
-        aiResponse = orData.choices?.[0]?.message?.content || '';
-      } else if (LOVABLE_API_KEY) {
-        console.log('Using Lovable AI Gateway (gemini-2.5-flash) as fallback');
-        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages,
-            stream: false,
-          }),
-        });
 
-        if (!aiRes.ok) {
-          const t = await aiRes.text();
-          console.error('Lovable AI error:', aiRes.status, t);
-          if (aiRes.status === 429) {
-            return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+          if (!oaiRes.ok) {
+            const txt = await oaiRes.text();
+            console.error('OpenAI API error:', oaiRes.status, txt);
+            providerErrors.push({ provider: 'OpenAI', status: oaiRes.status, message: txt });
+          } else {
+            const oaiData = await oaiRes.json();
+            aiResponse = oaiData.choices?.[0]?.message?.content || '';
           }
-          if (aiRes.status === 402) {
-            return new Response(JSON.stringify({ error: 'Payment required for AI usage. Please add credits to Lovable AI workspace.' }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          throw new Error(`Lovable AI gateway error: ${aiRes.status}`);
+        } catch (e: any) {
+          providerErrors.push({ provider: 'OpenAI', message: e?.message ?? 'Unknown OpenAI error' });
         }
-        const data = await aiRes.json();
-        aiResponse = data.choices?.[0]?.message?.content || '';
-      } else if (openaiApiKey) {
-        console.log('Using OpenAI provider (gpt-4o-mini) as last resort');
-        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages,
-            temperature: 0.7,
-            max_tokens: 600,
-          }),
-        });
+      }
 
-        if (!oaiRes.ok) {
-          const txt = await oaiRes.text();
-          console.error('OpenAI API error:', oaiRes.status, txt);
-          throw new Error(`OpenAI API error: ${oaiRes.status}`);
+      // 3) Lovable AI fallback
+      if (!aiResponse && LOVABLE_API_KEY) {
+        console.log('Using Lovable AI Gateway (gemini-2.5-flash) as final fallback');
+        try {
+          const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages,
+              stream: false,
+            }),
+          });
+
+          if (!aiRes.ok) {
+            const t = await aiRes.text();
+            console.error('Lovable AI error:', aiRes.status, t);
+            if (aiRes.status === 429) {
+              providerErrors.push({ provider: 'Lovable AI', status: 429, message: 'Rate limits exceeded' });
+            } else if (aiRes.status === 402) {
+              providerErrors.push({ provider: 'Lovable AI', status: 402, message: 'Payment required' });
+            } else {
+              providerErrors.push({ provider: 'Lovable AI', status: aiRes.status, message: t });
+            }
+          } else {
+            const data = await aiRes.json();
+            aiResponse = data.choices?.[0]?.message?.content || '';
+          }
+        } catch (e: any) {
+          providerErrors.push({ provider: 'Lovable AI', message: e?.message ?? 'Unknown Lovable AI error' });
         }
-        const oaiData = await oaiRes.json();
-        aiResponse = oaiData.choices?.[0]?.message?.content || '';
       }
 
       if (!aiResponse) {
-        return new Response(JSON.stringify({ error: 'Empty AI response' }), {
+        return new Response(JSON.stringify({ error: 'All AI providers failed', providers: providerErrors }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
