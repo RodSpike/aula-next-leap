@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonEditor } from "@/components/LessonEditor";
 import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
+import { CourseExerciseGenerator } from "@/components/CourseExerciseGenerator";
 
 
 interface Course {
@@ -441,15 +442,29 @@ export const CourseManagement = () => {
             <div className="space-y-4">
               {/* AI Enhancement for All Lessons */}
               {selectedCourseForLessons.lessons && selectedCourseForLessons.lessons.length > 0 && (
-                <div className="p-4 border rounded-lg bg-muted/50">
-                  <h3 className="font-semibold mb-2">AI Enhancement</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Enhance all {selectedCourseForLessons.lessons.length} lessons with improved visual formatting
-                  </p>
-                  <CourseLessonEnhancer
-                    courseId={selectedCourseForLessons.id}
-                    courseName={selectedCourseForLessons.title}
-                  />
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">AI Content Enhancement</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Enhance all {selectedCourseForLessons.lessons.length} lessons with improved visual formatting
+                    </p>
+                    <CourseLessonEnhancer
+                      courseId={selectedCourseForLessons.id}
+                      courseName={selectedCourseForLessons.title}
+                    />
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-2">AI Exercise Generation</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Generate practice exercises for all lessons in this course
+                    </p>
+                    <CourseExerciseGenerator
+                      courseId={selectedCourseForLessons.id}
+                      courseName={selectedCourseForLessons.title}
+                      lessonCount={selectedCourseForLessons.lessons.length}
+                    />
+                  </div>
                 </div>
               )}
               

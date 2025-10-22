@@ -41,11 +41,18 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
       const textContent = stripHtml(lessonContent);
       const textToSpeak = `${lessonTitle}. ${textContent.substring(0, 4000)}`; // Limit to 4000 chars
 
+      console.log('Calling text-to-speech with:', textToSpeak.length, 'characters');
+
       const { data, error } = await supabase.functions.invoke('text-to-speech-multilingual', {
         body: { text: textToSpeak }
       });
 
-      if (error) throw error;
+      console.log('TTS response:', { data, error });
+
+      if (error) {
+        console.error('TTS error:', error);
+        throw error;
+      }
 
       if (data?.audioContent) {
         const audioBlob = new Blob(
