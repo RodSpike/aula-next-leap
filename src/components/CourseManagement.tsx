@@ -11,6 +11,7 @@ import { Trash2, Plus, Edit2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LessonEditor } from "@/components/LessonEditor";
+import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
 
 
 interface Course {
@@ -438,11 +439,25 @@ export const CourseManagement = () => {
           </DialogHeader>
           {selectedCourseForLessons && (
             <div className="space-y-4">
+              {/* AI Enhancement for All Lessons */}
+              {selectedCourseForLessons.lessons && selectedCourseForLessons.lessons.length > 0 && (
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h3 className="font-semibold mb-2">AI Enhancement</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Enhance all {selectedCourseForLessons.lessons.length} lessons with improved visual formatting
+                  </p>
+                  <CourseLessonEnhancer
+                    courseId={selectedCourseForLessons.id}
+                    courseName={selectedCourseForLessons.title}
+                  />
+                </div>
+              )}
+              
               {/* Lesson Selection */}
               {selectedCourseForLessons.lessons && selectedCourseForLessons.lessons.length > 0 && (
                 <div>
                   <Label>Select Lesson to Edit ({selectedCourseForLessons.lessons.length} lessons):</Label>
-                  <Select 
+                  <Select
                     value={selectedLessonId || ""} 
                     onValueChange={(value) => {
                       setSelectedLessonId(value);
