@@ -263,8 +263,8 @@ export const UserProfilePopup: React.FC<UserProfilePopupProps> = ({
         if (memberError) throw memberError;
       }
 
-      // Navigate to messages page
-      navigate('/messages');
+      // Navigate to messages page with userId parameter
+      navigate(`/messages?userId=${profile.user_id}`);
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating/opening DM:', error);

@@ -74,8 +74,73 @@ export default function Course() {
       loadCourseData();
       loadProgress();
       checkAdminStatus();
+      trackStudySession();
     }
   }, [courseId, user]);
+
+  // Navigate to specific lesson from URL hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#lesson-') && lessons.length > 0) {
+      const lessonIndex = parseInt(hash.replace('#lesson-', ''));
+      if (!isNaN(lessonIndex) && lessonIndex >= 0 && lessonIndex < lessons.length) {
+        setCurrentLessonIndex(lessonIndex);
+        setShowIntroduction(true);
+      }
+    }
+  }, [lessons]);
+
+  // Track study time
+  const trackStudySession = async () => {
+    if (!user || !courseId) return;
+
+    const sessionStart = Date.now();
+
+    // Update study session every 5 minutes
+    const interval = setInterval(async () => {
+      const minutesStudied = (Date.now() - sessionStart) / 1000 / 60;
+      const hoursStudied = minutesStudied / 60;
+
+      if (hoursStudied >= 0.083) { // At least 5 minutes
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Upsert study session
+          const { data: existing } = await supabase
+            .from('study_sessions')
+            .select('hours_studied')
+            .eq('user_id', user.id)
+            .eq('course_id', courseId)
+            .eq('session_date', today)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase
+              .from('study_sessions')
+              .update({ 
+                hours_studied: Number(existing.hours_studied) + hoursStudied 
+              })
+              .eq('user_id', user.id)
+              .eq('course_id', courseId)
+              .eq('session_date', today);
+          } else {
+            await supabase
+              .from('study_sessions')
+              .insert({
+                user_id: user.id,
+                course_id: courseId,
+                session_date: today,
+                hours_studied: hoursStudied
+              });
+          }
+        } catch (error) {
+          console.error('Error tracking study session:', error);
+        }
+      }
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    return () => clearInterval(interval);
+  };
 
   const checkAdminStatus = async () => {
     if (!user) return;

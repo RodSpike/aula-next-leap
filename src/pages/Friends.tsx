@@ -439,8 +439,8 @@ export default function Friends() {
         if (memberError) throw memberError;
       }
 
-      // Navigate to messages page
-      navigate('/messages');
+      // Navigate to messages page with userId parameter
+      navigate(`/messages?userId=${friendUserId}`);
     } catch (error) {
       console.error('Error starting chat:', error);
       toast({

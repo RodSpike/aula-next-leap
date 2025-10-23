@@ -234,17 +234,22 @@ Return a JSON array with this exact structure:
           result = await response.json();
           raw = result.choices?.[0]?.message?.content;
         }
+        if (!raw) {
+          throw new Error("No response from AI");
+        }
+
         const exercises = parseAIJson(raw);
         if (!Array.isArray(exercises)) throw new Error("Exercises must be an array");
+        if (exercises.length === 0) throw new Error("AI returned empty exercises array");
 
         // Replace existing exercises for this lesson
         await adminClient.from("exercises").delete().eq("lesson_id", lesson.id);
 
         const toInsert = exercises.map((ex: any, index: number) => ({
           lesson_id: lesson.id,
-          question: ex.question,
+          question: ex.question || "Question missing",
           options: ex.options || [],
-          correct_answer: ex.correct_answer,
+          correct_answer: ex.correct_answer || "",
           explanation: ex.explanation || "",
           order_index: index,
         }));
@@ -252,10 +257,11 @@ Return a JSON array with this exact structure:
         const { error: insertErr } = await adminClient.from("exercises").insert(toInsert);
         if (insertErr) throw insertErr;
 
+        console.log(`✓ Lesson ${lesson.id} (${lesson.title}): Generated ${toInsert.length} exercises`);
         details.push({ lesson_id: lesson.id, lesson_title: lesson.title, generated: toInsert.length });
         successes += 1;
       } catch (e: any) {
-        console.error("Lesson generation failed:", lesson.id, e?.message || e);
+        console.error(`✗ Lesson ${lesson.id} (${lesson.title}):`, e?.message || e);
         details.push({ lesson_id: lesson.id, lesson_title: lesson.title, generated: 0, error: e?.message || String(e) });
         failures += 1;
       }

@@ -445,7 +445,34 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                           <Button 
                             size="sm" 
-                            onClick={() => navigate(`/course/${course.id}`)}
+                            onClick={async () => {
+                              // Find the first incomplete lesson for this course
+                              const { data: courseLessons } = await supabase
+                                .from('lessons')
+                                .select('id')
+                                .eq('course_id', course.id)
+                                .order('order_index');
+
+                              if (courseLessons && courseLessons.length > 0) {
+                                const { data: progress } = await supabase
+                                  .from('user_lesson_progress')
+                                  .select('lesson_id, completed')
+                                  .eq('user_id', user!.id)
+                                  .in('lesson_id', courseLessons.map(l => l.id));
+
+                                // Find first incomplete lesson
+                                const firstIncomplete = courseLessons.find(lesson => 
+                                  !progress?.some(p => p.lesson_id === lesson.id && p.completed)
+                                );
+
+                                const targetLesson = firstIncomplete || courseLessons[courseLessons.length - 1];
+                                const lessonIndex = courseLessons.findIndex(l => l.id === targetLesson.id);
+                                
+                                navigate(`/course/${course.id}#lesson-${lessonIndex}`);
+                              } else {
+                                navigate(`/course/${course.id}`);
+                              }
+                            }}
                             variant={course.status === 'completed' ? 'outline' : 'default'}
                           >
                             {course.status === 'completed' ? (
