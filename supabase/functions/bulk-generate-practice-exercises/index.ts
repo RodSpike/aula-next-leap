@@ -151,88 +151,118 @@ Return a JSON array with this exact structure:
         let result: any;
         let raw: any;
 
-        // Try OpenRouter (DeepSeek) first
+        // Try providers with cascading fallbacks so one failure doesn't stop the run
+        let raw: any = null;
+        const providerFns: Array<() => Promise<string | undefined>> = [];
+
         if (OPENROUTER_KEY) {
-          console.log(`Lesson ${lesson.id}: Using OpenRouter (DeepSeek)`);
-          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${OPENROUTER_KEY}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://frbmvljizolvxcxdkefa.supabase.co",
-              "X-Title": "English Learning App"
-            },
-            body: JSON.stringify({
-              model: "deepseek/deepseek-chat",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              max_tokens: 3000,
-              temperature: 0.7
-            }),
+          providerFns.push(async () => {
+            console.log(`Lesson ${lesson.id}: Trying OpenRouter (DeepSeek)`);
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENROUTER_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://frbmvljizolvxcxdkefa.supabase.co",
+                "X-Title": "English Learning App"
+              },
+              body: JSON.stringify({
+                model: "deepseek/deepseek-chat",
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userPrompt },
+                ],
+                max_tokens: 3000,
+                temperature: 0.7
+              }),
+            });
+
+            if (!response.ok) {
+              const t = await response.text();
+              console.error("OpenRouter error:", response.status, t);
+              throw new Error(`OpenRouter failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.choices?.[0]?.message?.content;
           });
+        }
 
-          if (!response.ok) {
-            const t = await response.text();
-            console.error("OpenRouter error:", response.status, t);
-            throw new Error(`OpenRouter failed: ${response.status}`);
-          }
+        if (LOVABLE_API_KEY) {
+          providerFns.push(async () => {
+            console.log(`Lesson ${lesson.id}: Trying Lovable AI (Gemini)`);
+            const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userPrompt },
+                ],
+                response_format: { type: "json_object" },
+              }),
+            });
 
-          result = await response.json();
-          raw = result.choices?.[0]?.message?.content;
-        } else if (LOVABLE_API_KEY) {
-          console.log(`Lesson ${lesson.id}: Using Lovable AI (Gemini) fallback`);
-          const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
-            }),
+            if (!response.ok) {
+              const t = await response.text();
+              console.error("Lovable AI error:", response.status, t);
+              throw new Error(`Lovable AI failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.choices?.[0]?.message?.content;
           });
+        }
 
-          if (!response.ok) {
-            const t = await response.text();
-            console.error("Lovable AI error:", response.status, t);
-            throw new Error(`Lovable AI failed: ${response.status}`);
-          }
+        if (OPENAI_KEY) {
+          providerFns.push(async () => {
+            console.log(`Lesson ${lesson.id}: Trying OpenAI as fallback`);
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENAI_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userPrompt },
+                ],
+                response_format: { type: "json_object" },
+              }),
+            });
 
-          result = await response.json();
-          raw = result.choices?.[0]?.message?.content;
-        } else if (OPENAI_KEY) {
-          console.log(`Lesson ${lesson.id}: Using OpenAI as last resort`);
-          const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${OPENAI_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              response_format: { type: "json_object" },
-            }),
+            if (!response.ok) {
+              const t = await response.text();
+              console.error("OpenAI error:", response.status, t);
+              throw new Error(`OpenAI failed: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.choices?.[0]?.message?.content;
           });
+        }
 
-          if (!response.ok) {
-            const t = await response.text();
-            console.error("OpenAI error:", response.status, t);
-            throw new Error(`OpenAI failed: ${response.status}`);
+        for (const tryProvider of providerFns) {
+          try {
+            const content = await tryProvider();
+            if (content) {
+              raw = content;
+              break;
+            }
+          } catch (provErr: any) {
+            console.error(`Provider attempt failed for lesson ${lesson.id}:`, provErr?.message || provErr);
+            // continue to next provider
           }
+        }
 
-          result = await response.json();
-          raw = result.choices?.[0]?.message?.content;
+        if (!raw) {
+          throw new Error("All AI providers failed or returned empty response");
         }
         if (!raw) {
           throw new Error("No response from AI");
