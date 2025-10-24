@@ -9,6 +9,7 @@ import { Search, MessageCircle, Users, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { SimpleChatWindow } from "./SimpleChatWindow";
+import { DirectMessageChat } from "./DirectMessageChat";
 
 interface ChatConversation {
   id: string;
@@ -39,60 +40,44 @@ export const UnifiedChatInterface = () => {
     if (!user) return;
 
     try {
-      // Optimized: Load all data in parallel with proper joins
-      const [dmMemberGroupsResult, memberGroupsResult] = await Promise.all([
-        // Load direct messages with joined data
-        supabase
-          .from('group_members')
-          .select(`
-            group_id,
-            community_groups!inner(id, name, is_private_chat),
-            profiles!group_members_user_id_fkey(user_id)
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'accepted')
-          .eq('community_groups.is_private_chat', true),
-        
-        // Load group chats with joined data
-        supabase
-          .from('group_members')
-          .select(`
-            group_id,
-            community_groups(id, name, is_private_chat)
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'accepted')
-      ]);
-
       const allConversations: ChatConversation[] = [];
 
-      // Process direct messages
-      if (dmMemberGroupsResult.data) {
-        for (const member of dmMemberGroupsResult.data) {
-          const group = (member as any).community_groups;
+      // Load direct messages from chat_groups (new system)
+      const { data: dmChats } = await supabase
+        .from('chat_members')
+        .select(`
+          chat_id,
+          chat_groups!inner(id, name, is_direct_message, created_by)
+        `)
+        .eq('user_id', user.id)
+        .eq('chat_groups.is_direct_message', true);
+
+      if (dmChats) {
+        for (const member of dmChats) {
+          const group = (member as any).chat_groups;
           if (!group) continue;
 
-          // Get other members and last message in parallel
-          const [membersResult, lastMsgResult] = await Promise.all([
+          // Get other member and last message
+          const [otherMemberResult, lastMsgResult] = await Promise.all([
             supabase
-              .from('group_members')
-              .select('user_id, profiles!group_members_user_id_fkey(display_name, username, avatar_url)')
-              .eq('group_id', group.id)
+              .from('chat_members')
+              .select('user_id, profiles!chat_members_user_id_fkey(display_name, username, avatar_url)')
+              .eq('chat_id', group.id)
               .neq('user_id', user.id)
               .limit(1)
-              .single(),
+              .maybeSingle(),
             
             supabase
-              .from('group_chat_messages')
+              .from('chat_messages')
               .select('content, created_at')
-              .eq('group_id', group.id)
+              .eq('chat_id', group.id)
               .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle()
           ]);
 
-          if (membersResult.data) {
-            const profile = (membersResult.data as any).profiles;
+          if (otherMemberResult.data) {
+            const profile = (otherMemberResult.data as any).profiles;
             allConversations.push({
               id: group.id,
               name: profile?.display_name || profile?.username || 'Unknown',
@@ -101,21 +86,30 @@ export const UnifiedChatInterface = () => {
               lastMessage: lastMsgResult.data?.content,
               lastMessageTime: lastMsgResult.data?.created_at,
               unreadCount: 0,
-              participantId: membersResult.data.user_id
+              participantId: otherMemberResult.data.user_id
             });
           }
         }
       }
 
-      // Process group chats
-      if (memberGroupsResult.data) {
-        const groupChats = memberGroupsResult.data
+      // Load group chats from community_groups
+      const { data: groupChats } = await supabase
+        .from('group_members')
+        .select(`
+          group_id,
+          community_groups(id, name, is_private_chat)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'accepted');
+
+      if (groupChats) {
+        const publicGroups = groupChats
           .map(m => (m as any).community_groups)
           .filter(g => g && !g.is_private_chat);
 
-        // Fetch last messages for all groups in parallel
+        // Fetch last messages for all groups
         const lastMessages = await Promise.all(
-          groupChats.map(group =>
+          publicGroups.map(group =>
             supabase
               .from('group_chat_messages')
               .select('content, created_at')
@@ -126,7 +120,7 @@ export const UnifiedChatInterface = () => {
           )
         );
 
-        groupChats.forEach((group, index) => {
+        publicGroups.forEach((group, index) => {
           allConversations.push({
             id: group.id,
             name: group.name,
@@ -161,6 +155,15 @@ export const UnifiedChatInterface = () => {
         {
           event: 'INSERT',
           schema: 'public',
+          table: 'chat_messages'
+        },
+        () => loadConversations()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
           table: 'group_chat_messages'
         },
         () => loadConversations()
@@ -177,6 +180,17 @@ export const UnifiedChatInterface = () => {
   );
 
   if (selectedChat) {
+    if (selectedChat.type === 'direct') {
+      return (
+        <DirectMessageChat
+          friendId={selectedChat.participantId!}
+          friendName={selectedChat.name}
+          friendAvatar={selectedChat.avatar}
+          onBack={() => setSelectedChat(null)}
+        />
+      );
+    }
+    
     return (
       <SimpleChatWindow
         groupId={selectedChat.id}
