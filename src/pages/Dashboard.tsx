@@ -446,7 +446,13 @@ export default function Dashboard() {
                           <Button 
                             size="sm" 
                             onClick={async () => {
-                              // Find the first incomplete lesson for this course
+                              // Check if user is admin
+                              const { data: adminCheck } = await supabase
+                                .rpc('user_has_admin_role', { user_uuid: user!.id });
+                              
+                              const isAdmin = adminCheck || false;
+                              
+                              // Find the appropriate lesson for this course
                               const { data: courseLessons } = await supabase
                                 .from('lessons')
                                 .select('id')
@@ -456,16 +462,30 @@ export default function Dashboard() {
                               if (courseLessons && courseLessons.length > 0) {
                                 const { data: progress } = await supabase
                                   .from('user_lesson_progress')
-                                  .select('lesson_id, completed')
+                                  .select('lesson_id, completed, score')
                                   .eq('user_id', user!.id)
                                   .in('lesson_id', courseLessons.map(l => l.id));
 
-                                // Find first incomplete lesson
-                                const firstIncomplete = courseLessons.find(lesson => 
-                                  !progress?.some(p => p.lesson_id === lesson.id && p.completed)
-                                );
-
-                                const targetLesson = firstIncomplete || courseLessons[courseLessons.length - 1];
+                                let targetLesson;
+                                
+                                if (isAdmin) {
+                                  // For admins: go to the most advanced lesson (last one with progress)
+                                  const lessonsWithProgress = courseLessons.filter(lesson =>
+                                    progress?.some(p => p.lesson_id === lesson.id)
+                                  );
+                                  
+                                  targetLesson = lessonsWithProgress.length > 0
+                                    ? lessonsWithProgress[lessonsWithProgress.length - 1]
+                                    : courseLessons[0];
+                                } else {
+                                  // For regular users: find first incomplete lesson
+                                  const firstIncomplete = courseLessons.find(lesson => 
+                                    !progress?.some(p => p.lesson_id === lesson.id && p.completed)
+                                  );
+                                  
+                                  targetLesson = firstIncomplete || courseLessons[courseLessons.length - 1];
+                                }
+                                
                                 const lessonIndex = courseLessons.findIndex(l => l.id === targetLesson.id);
                                 
                                 navigate(`/course/${course.id}#lesson-${lessonIndex}`);

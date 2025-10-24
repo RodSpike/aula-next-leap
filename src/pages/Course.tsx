@@ -238,8 +238,9 @@ export default function Course() {
       const progressPercent = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
       setProgress(progressPercent);
 
-      // Find the first incomplete lesson or continue from last lesson if all completed
-      if (lessons.length > 0) {
+      // Only set initial lesson on first load (when currentLessonIndex is 0 and no hash in URL)
+      // This prevents automatic navigation after completing exercises
+      if (lessons.length > 0 && currentLessonIndex === 0 && !window.location.hash) {
         const firstIncompleteIndex = lessons.findIndex(lesson => {
           const progress = data?.find(p => p.lesson_id === lesson.id);
           return !progress?.completed;
@@ -288,10 +289,9 @@ export default function Course() {
       await updateAchievement('scholar');
       await updateAchievement('master_learner');
 
-      loadProgress();
-      
-      // Don't automatically move to next lesson - user will click button
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Reload progress to update stats, but don't change current lesson
+      // This prevents automatic navigation after completing exercises
+      await loadProgress();
     } catch (error) {
       console.error('Error saving progress:', error);
       toast({
