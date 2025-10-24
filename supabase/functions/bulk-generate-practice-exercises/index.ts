@@ -62,15 +62,19 @@ serve(async (req) => {
 
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    const { courseId } = await (async () => {
+    const { courseId, offset: bodyOffset, batchSize: bodyBatchSize } = await (async () => {
       try { return await req.json(); } catch { return {}; }
     })();
 
-    // Fetch lessons (optionally filter by course)
+    const offset = Number.isFinite(bodyOffset) ? Math.max(0, Number(bodyOffset)) : 0;
+    const batchSize = Number.isFinite(bodyBatchSize) ? Math.max(1, Math.min(10, Number(bodyBatchSize))) : 3;
+
+    // Fetch lessons (optionally filter by course) in a bounded range to avoid timeouts
     let lessonsQuery = adminClient
       .from("lessons")
       .select("id, title, content")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .range(offset, offset + batchSize - 1);
 
     if (courseId) lessonsQuery = lessonsQuery.eq("course_id", courseId);
 
@@ -218,7 +222,17 @@ Return a JSON array with this exact structure:
     }
 
     return new Response(
-      JSON.stringify({ processed: lessons.length, successes, failures, details }),
+      JSON.stringify({
+        processed: lessons.length,
+        successes,
+        failures,
+        details,
+        batch: {
+          offset,
+          batchSize,
+          nextOffset: offset + (lessons?.length || 0)
+        }
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {

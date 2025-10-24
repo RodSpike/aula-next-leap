@@ -34,19 +34,48 @@ export const CourseExerciseGenerator: React.FC<CourseExerciseGeneratorProps> = (
         description: `Generating exercises for ${lessonCount} lessons...` 
       });
 
-      const { data, error } = await supabase.functions.invoke("bulk-generate-practice-exercises", { 
-        body: { courseId } 
-      });
+      const batchSize = 3;
+      let offset = 0;
+      let totalSuccesses = 0;
+      let totalFailures = 0;
+      const allDetails: any[] = [];
 
-      if (error) throw error;
+      while (offset < lessonCount) {
+        const { data, error } = await supabase.functions.invoke("bulk-generate-practice-exercises", { 
+          body: { courseId, offset, batchSize }
+        });
+        if (error) throw error;
 
-      setResult(data);
+        totalSuccesses += data?.successes ?? 0;
+        totalFailures += data?.failures ?? 0;
+        if (Array.isArray(data?.details)) allDetails.push(...data.details);
+        const processedNow = data?.processed ?? 0;
+        offset = data?.batch?.nextOffset ?? (offset + processedNow);
+
+        const completed = Math.min(offset, lessonCount);
+        setProgress(Math.round((completed / lessonCount) * 100));
+
+        // Gentle pacing between batches
+        await new Promise((r) => setTimeout(r, 300));
+
+        // Safety to avoid infinite loops
+        if (processedNow === 0) break;
+      }
+
+      const summary = {
+        processed: Math.min(offset, lessonCount),
+        successes: totalSuccesses,
+        failures: totalFailures,
+        details: allDetails,
+      };
+
+      setResult(summary);
       setProgress(100);
       
       toast({ 
         title: "Completed", 
-        description: `Successfully generated exercises for ${data.successes}/${data.processed} lessons`,
-        variant: data.failures > 0 ? "default" : "default"
+        description: `Successfully generated exercises for ${summary.successes}/${summary.processed} lessons`,
+        variant: summary.failures > 0 ? "default" : "default"
       });
     } catch (e: any) {
       console.error("Exercise generation error:", e);
