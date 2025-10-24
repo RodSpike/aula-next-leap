@@ -112,3 +112,6 @@ verify_jwt = false
 
 [functions.text-to-speech-multilingual]
 verify_jwt = false
+
+[functions.bulk-generate-practice-exercises]
+verify_jwt = false
