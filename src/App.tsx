@@ -31,6 +31,7 @@ import ChatTest from "./pages/ChatTest";
 import Subscribe from "./pages/Subscribe";
 import Welcome from "./pages/Welcome";
 import Profile from "./pages/Profile";
+import CourseManagement from "./pages/CourseManagement";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+            <Route path="/course-management" element={<ProtectedRoute><CourseManagement /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/placement-test" element={<ProtectedRoute><PlacementTest /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
