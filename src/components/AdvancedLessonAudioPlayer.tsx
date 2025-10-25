@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { 
+import { cleanTextForTTS } from "@/utils/cleanTextForTTS";
+import {
   Play, 
   Pause, 
   Square, 
@@ -68,7 +69,8 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const speakSegment = (segment: AudioSegment, startFromSegment: boolean = false) => {
-    const utterance = new SpeechSynthesisUtterance(segment.text);
+    const cleanedText = cleanTextForTTS(segment.text);
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
     const voice = findVoiceForLanguage(segment.language);
     
     if (voice) {

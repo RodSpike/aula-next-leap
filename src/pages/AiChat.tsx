@@ -15,6 +15,7 @@ import { PronunciationEvaluator } from "@/components/PronunciationEvaluator";
 import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { cleanTextForTTS } from "@/utils/cleanTextForTTS";
 
 interface Message {
   id: string;
@@ -384,7 +385,8 @@ export default function AiChat() {
         }
 
         const segment = segments[index];
-        const utterance = new SpeechSynthesisUtterance(segment.text);
+        const cleanedText = cleanTextForTTS(segment.text);
+        const utterance = new SpeechSynthesisUtterance(cleanedText);
         
         // Find appropriate voice for language
         const voices = speechSynthesis.getVoices();
