@@ -74,7 +74,6 @@ export default function Course() {
       loadCourseData();
       loadProgress();
       checkAdminStatus();
-      trackStudySession();
     }
   }, [courseId, user]);
 

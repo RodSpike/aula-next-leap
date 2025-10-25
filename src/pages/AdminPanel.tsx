@@ -874,7 +874,7 @@ export default function AdminPanel() {
                               {(currentUserEmail === 'rodspike2k8@gmail.com' || !userData.is_admin) && (
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button 
+                                     <Button 
                                       variant="destructive" 
                                       size="sm"
                                       onClick={() => setSelectedUser(userData)}
@@ -883,7 +883,7 @@ export default function AdminPanel() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setSelectedUser(user);
+                        setSelectedUser(userData);
                         setActivityDialogOpen(true);
                       }}
                     >
