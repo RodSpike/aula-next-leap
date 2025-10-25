@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Loader2 } from "lucide-react";
+import { Volume2, VolumeX, Loader2, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface LessonAudioPlayerProps {
   lessonContent: string;
@@ -13,7 +13,6 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const { toast } = useToast();
 
   const stripHtml = (html: string): string => {
     const tmp = document.createElement("DIV");
@@ -22,69 +21,72 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
   };
 
   const handlePlayPause = async () => {
-    if (audio && isPlaying) {
+    if (isPlaying && audio) {
       audio.pause();
       setIsPlaying(false);
       return;
     }
 
-    if (audio && !isPlaying) {
+    if (audio) {
       audio.play();
       setIsPlaying(true);
       return;
     }
 
+    // Generate audio with intelligent TTS
     setIsLoading(true);
-
     try {
-      // Extract text from lesson content
-      const textContent = stripHtml(lessonContent);
-      const textToSpeak = `${lessonTitle}. ${textContent.substring(0, 4000)}`; // Limit to 4000 chars
-
-      console.log('Calling text-to-speech with:', textToSpeak.length, 'characters');
-
-      const { data, error } = await supabase.functions.invoke('text-to-speech-multilingual', {
-        body: { text: textToSpeak }
+      const cleanContent = stripHtml(lessonContent);
+      const textToSpeak = `${lessonTitle}. ${cleanContent.substring(0, 4000)}`;
+      
+      toast.info('Detecting languages...', {
+        description: 'Preparing multi-language audio'
       });
 
-      console.log('TTS response:', { data, error });
+      const { data, error } = await supabase.functions.invoke('intelligent-text-to-speech', {
+        body: { 
+          text: textToSpeak,
+          options: { speed: 1.0 }
+        }
+      });
 
       if (error) {
-        console.error('TTS error:', error);
         throw error;
       }
 
-      if (data?.audioContent) {
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-          { type: 'audio/mpeg' }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const newAudio = new Audio(audioUrl);
-        
-        newAudio.onended = () => {
-          setIsPlaying(false);
-        };
-        
-        newAudio.onerror = () => {
-          toast({
-            title: "Audio Error",
-            description: "Failed to play audio",
-            variant: "destructive"
-          });
-          setIsPlaying(false);
-        };
-
-        setAudio(newAudio);
-        newAudio.play();
-        setIsPlaying(true);
+      if (!data.audioContent) {
+        throw new Error('No audio data received');
       }
+
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
+        { type: data.contentType || 'audio/mpeg' }
+      );
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const newAudio = new Audio(audioUrl);
+      
+      newAudio.onended = () => setIsPlaying(false);
+      newAudio.onerror = () => {
+        toast.error('Error playing audio');
+        setIsPlaying(false);
+      };
+
+      await newAudio.play();
+      setAudio(newAudio);
+      setIsPlaying(true);
+      
+      const segmentInfo = data.segments?.length 
+        ? `Detected ${data.segments.length} language segment(s)` 
+        : 'Audio ready';
+      
+      toast.success('Audio ready!', {
+        description: segmentInfo
+      });
     } catch (error) {
-      console.error('TTS Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate audio for this lesson",
-        variant: "destructive"
+      console.error('Error generating audio:', error);
+      toast.error('Failed to generate audio', {
+        description: 'Please try again'
       });
     } finally {
       setIsLoading(false);
@@ -92,29 +94,31 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
   };
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handlePlayPause}
-      disabled={isLoading}
-      className="gap-2"
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Carregando...
-        </>
-      ) : isPlaying ? (
-        <>
-          <VolumeX className="h-4 w-4" />
-          Pausar Áudio
-        </>
-      ) : (
-        <>
-          <Volume2 className="h-4 w-4" />
-          Ouvir Lição
-        </>
-      )}
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handlePlayPause}
+        disabled={isLoading}
+        variant="outline"
+        size="sm"
+        className="gap-2"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Carregando...
+          </>
+        ) : isPlaying ? (
+          <>
+            <Pause className="h-4 w-4" />
+            Pausar Áudio
+          </>
+        ) : (
+          <>
+            <Volume2 className="h-4 w-4" />
+            Ouvir Lição
+          </>
+        )}
+      </Button>
+    </div>
   );
 }

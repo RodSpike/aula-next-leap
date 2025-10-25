@@ -115,3 +115,9 @@ verify_jwt = false
 
 [functions.bulk-generate-practice-exercises]
 verify_jwt = false
+
+[functions.intelligent-text-to-speech]
+verify_jwt = false
+
+[functions.evaluate-pronunciation]
+verify_jwt = false

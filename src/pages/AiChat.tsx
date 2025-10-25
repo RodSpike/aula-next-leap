@@ -7,10 +7,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { detectPortuguese, hasPortugueseMixed } from "@/utils/portugueseDetection";
-import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2 } from "lucide-react";
+import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { EnhancedChatInput } from "@/components/enhanced/EnhancedChatInput";
 import { useVoiceRecognition } from "@/components/enhanced/VoiceRecognition";
+import { PronunciationEvaluator } from "@/components/PronunciationEvaluator";
+import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -54,6 +56,7 @@ export default function AiChat() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingCanceled, setRecordingCanceled] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [pronunciationMode, setPronunciationMode] = useState(false);
   const [audioState, setAudioState] = useState<AudioState>({
     isPlaying: false,
     isPaused: false,

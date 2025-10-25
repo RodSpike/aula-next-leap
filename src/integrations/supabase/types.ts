@@ -926,6 +926,71 @@ export type Database = {
         }
         Relationships: []
       }
+      pronunciation_evaluations: {
+        Row: {
+          audio_url: string | null
+          context: string | null
+          corrected_text: string | null
+          created_at: string | null
+          detected_language: string
+          expected_text: string | null
+          feedback: Json
+          fluency_score: number | null
+          grammar_score: number | null
+          id: string
+          lesson_id: string | null
+          overall_score: number | null
+          pronunciation_score: number | null
+          transcription: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          context?: string | null
+          corrected_text?: string | null
+          created_at?: string | null
+          detected_language: string
+          expected_text?: string | null
+          feedback?: Json
+          fluency_score?: number | null
+          grammar_score?: number | null
+          id?: string
+          lesson_id?: string | null
+          overall_score?: number | null
+          pronunciation_score?: number | null
+          transcription: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          context?: string | null
+          corrected_text?: string | null
+          created_at?: string | null
+          detected_language?: string
+          expected_text?: string | null
+          feedback?: Json
+          fluency_score?: number | null
+          grammar_score?: number | null
+          id?: string
+          lesson_id?: string | null
+          overall_score?: number | null
+          pronunciation_score?: number | null
+          transcription?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pronunciation_evaluations_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospects: {
         Row: {
           agreed_marketing: boolean | null
