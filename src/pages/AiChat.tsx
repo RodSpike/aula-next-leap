@@ -388,11 +388,49 @@ export default function AiChat() {
         const cleanedText = cleanTextForTTS(segment.text);
         const utterance = new SpeechSynthesisUtterance(cleanedText);
         
-        // Find appropriate voice for language
+        // Find appropriate voice for language with female preference
         const voices = speechSynthesis.getVoices();
-        const voice = segment.language === 'pt-BR'
-          ? voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR')) || voices.find(v => v.lang.startsWith('pt'))
-          : voices.find(v => v.lang.includes('en-US') || v.lang.includes('en_US')) || voices.find(v => v.lang.startsWith('en'));
+        const languageVoices = segment.language === 'pt-BR'
+          ? voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+          : voices.filter(v => v.lang.includes('en-US') || v.lang.includes('en_US') || v.lang.startsWith('en'));
+
+        let voice = null;
+
+        if (languageVoices.length > 0) {
+          // Priority 1: Premium female voices
+          voice = languageVoices.find(v => 
+            (v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes('female')) ||
+            (v.name.toLowerCase().includes('google') && (
+              v.name.includes('Luciana') || v.name.includes('Flo') ||
+              v.name.includes('Samantha') || v.name.includes('Ava')
+            )) ||
+            v.name.includes('Microsoft Maria') || v.name.includes('Microsoft Francisca') ||
+            v.name.includes('Microsoft Zira') || v.name.includes('Microsoft Jenny')
+          );
+          
+          // Priority 2: Any female voice
+          if (!voice) {
+            voice = languageVoices.find(v => 
+              !v.name.toLowerCase().includes('male') &&
+              !v.name.includes('Daniel') && !v.name.includes('David') &&
+              !v.name.includes('Alex') && !v.name.includes('Fred') &&
+              (v.name.toLowerCase().includes('female') ||
+               v.name.includes('Luciana') || v.name.includes('Samantha') ||
+               v.name.includes('Maria') || v.name.includes('Francisca') ||
+               v.name.includes('Zira') || v.name.includes('Jenny') || v.name.includes('Ava'))
+            );
+          }
+
+          // Priority 3: Google voices
+          if (!voice) {
+            voice = languageVoices.find(v => v.name.includes('Google'));
+          }
+
+          // Priority 4: First available
+          if (!voice) {
+            voice = languageVoices[0];
+          }
+        }
         
         if (voice) utterance.voice = voice;
         utterance.lang = segment.language;

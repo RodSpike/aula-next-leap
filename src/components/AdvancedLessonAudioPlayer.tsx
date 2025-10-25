@@ -51,15 +51,55 @@ export function AdvancedLessonAudioPlayer({
   const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
     const voices = speechSynthesis.getVoices();
     
-    if (language === 'pt-BR') {
-      return voices.find(v => 
-        v.lang.includes('pt-BR') || v.lang.includes('pt_BR')
-      ) || voices.find(v => v.lang.startsWith('pt')) || null;
-    } else {
-      return voices.find(v => 
-        v.lang.includes('en-US') || v.lang.includes('en_US')
-      ) || voices.find(v => v.lang.startsWith('en')) || null;
-    }
+    // Filter voices by language
+    const languageVoices = language === 'pt-BR'
+      ? voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+      : voices.filter(v => v.lang.includes('en-US') || v.lang.includes('en_US') || v.lang.startsWith('en'));
+
+    if (languageVoices.length === 0) return null;
+
+    // Priority 1: Look for premium female voices (Google/Microsoft natural voices)
+    const premiumFemale = languageVoices.find(v => 
+      (v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes('female')) ||
+      (v.name.toLowerCase().includes('google') && (
+        v.name.includes('Luciana') || // Portuguese
+        v.name.includes('Flo') ||     // Portuguese alternative
+        v.name.includes('Samantha') || // English
+        v.name.includes('Ava')         // English alternative
+      )) ||
+      v.name.includes('Microsoft Maria') ||      // Portuguese
+      v.name.includes('Microsoft Francisca') ||  // Portuguese
+      v.name.includes('Microsoft Zira') ||       // English
+      v.name.includes('Microsoft Jenny')         // English
+    );
+    
+    if (premiumFemale) return premiumFemale;
+
+    // Priority 2: Any female voice (exclude explicitly male names)
+    const femaleVoice = languageVoices.find(v => 
+      !v.name.toLowerCase().includes('male') &&
+      !v.name.includes('Daniel') &&
+      !v.name.includes('David') &&
+      !v.name.includes('Alex') &&
+      !v.name.includes('Fred') &&
+      (v.name.toLowerCase().includes('female') ||
+       v.name.includes('Luciana') ||
+       v.name.includes('Samantha') ||
+       v.name.includes('Maria') ||
+       v.name.includes('Francisca') ||
+       v.name.includes('Zira') ||
+       v.name.includes('Jenny') ||
+       v.name.includes('Ava'))
+    );
+
+    if (femaleVoice) return femaleVoice;
+
+    // Priority 3: Google voices (usually better quality)
+    const googleVoice = languageVoices.find(v => v.name.includes('Google'));
+    if (googleVoice) return googleVoice;
+
+    // Priority 4: Default to first available voice for the language
+    return languageVoices[0];
   };
 
   const getCurrentSegment = () => {
