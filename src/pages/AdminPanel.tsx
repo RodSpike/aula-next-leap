@@ -874,22 +874,13 @@ export default function AdminPanel() {
                               {(currentUserEmail === 'rodspike2k8@gmail.com' || !userData.is_admin) && (
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                     <Button 
+                                    <Button 
                                       variant="destructive" 
                                       size="sm"
                                       onClick={() => setSelectedUser(userData)}
                                     >
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedUser(userData);
-                        setActivityDialogOpen(true);
-                      }}
-                    >
-                      <History className="h-4 w-4 mr-1" />
-                      View Activity
-                    </Button>
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                      Delete User
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent>
@@ -919,6 +910,19 @@ export default function AdminPanel() {
                                   </DialogContent>
                                 </Dialog>
                               )}
+                              
+                              {/* View Activity button */}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUser(userData);
+                                  setActivityDialogOpen(true);
+                                }}
+                              >
+                                <History className="h-4 w-4 mr-1" />
+                                View Activity
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
