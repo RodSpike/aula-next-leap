@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LessonEditor } from "@/components/LessonEditor";
 import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
 import { CourseExerciseGenerator } from "@/components/CourseExerciseGenerator";
+import { BulkAudioGenerator } from "@/components/BulkAudioGenerator";
 
 
 interface Course {
@@ -300,6 +301,9 @@ export const CourseManagement = () => {
           </Dialog>
         </div>
       </div>
+
+      {/* Bulk Audio Generator */}
+      <BulkAudioGenerator />
 
       <div className="grid gap-4">
         {courses.map((course) => (
