@@ -66,6 +66,8 @@ interface AuditLogData {
   can_undo: boolean;
 }
 
+import { UserActivityDialog } from "@/components/UserActivityDialog";
+
 export default function AdminPanel() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -82,6 +84,7 @@ export default function AdminPanel() {
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   
   // Group Management States
   const [groups, setGroups] = useState<GroupData[]>([]);
@@ -876,7 +879,17 @@ export default function AdminPanel() {
                                       size="sm"
                                       onClick={() => setSelectedUser(userData)}
                                     >
-                                      <Trash2 className="h-4 w-4" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setActivityDialogOpen(true);
+                      }}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      View Activity
+                    </Button>
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent>
@@ -1391,6 +1404,19 @@ export default function AdminPanel() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* User Activity Dialog */}
+      {selectedUser && (
+        <UserActivityDialog
+          userId={selectedUser.user_id}
+          userDisplayName={selectedUser.display_name || selectedUser.username || 'Unknown'}
+          isOpen={activityDialogOpen}
+          onClose={() => {
+            setActivityDialogOpen(false);
+            setSelectedUser(null);
+          }}
+        />
+      )}
     </div>
   );
 }

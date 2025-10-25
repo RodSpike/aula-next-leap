@@ -90,57 +90,97 @@ export default function Course() {
     }
   }, [lessons]);
 
-  // Track study time
-  const trackStudySession = async () => {
+  // Track study time - accurate delta-based tracking
+  useEffect(() => {
     if (!user || !courseId) return;
 
-    const sessionStart = Date.now();
+    const lastTickRef = { current: Date.now() };
+    const pendingMsRef = { current: 0 };
+    const savedRef = { current: false };
 
-    // Update study session every 5 minutes
-    const interval = setInterval(async () => {
-      const minutesStudied = (Date.now() - sessionStart) / 1000 / 60;
-      const hoursStudied = minutesStudied / 60;
+    const persistStudyTime = async (deltaHours: number) => {
+      if (deltaHours < 0.0001 || savedRef.current) return;
+      savedRef.current = true;
 
-      if (hoursStudied >= 0.083) { // At least 5 minutes
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          
-          // Upsert study session
-          const { data: existing } = await supabase
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data: existing } = await supabase
+          .from('study_sessions')
+          .select('hours_studied')
+          .eq('user_id', user.id)
+          .eq('course_id', courseId)
+          .eq('session_date', today)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
             .from('study_sessions')
-            .select('hours_studied')
+            .update({ 
+              hours_studied: Number(existing.hours_studied) + deltaHours 
+            })
             .eq('user_id', user.id)
             .eq('course_id', courseId)
-            .eq('session_date', today)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase
-              .from('study_sessions')
-              .update({ 
-                hours_studied: Number(existing.hours_studied) + hoursStudied 
-              })
-              .eq('user_id', user.id)
-              .eq('course_id', courseId)
-              .eq('session_date', today);
-          } else {
-            await supabase
-              .from('study_sessions')
-              .insert({
-                user_id: user.id,
-                course_id: courseId,
-                session_date: today,
-                hours_studied: hoursStudied
-              });
-          }
-        } catch (error) {
-          console.error('Error tracking study session:', error);
+            .eq('session_date', today);
+        } else {
+          await supabase
+            .from('study_sessions')
+            .insert({
+              user_id: user.id,
+              course_id: courseId,
+              session_date: today,
+              hours_studied: deltaHours
+            });
         }
+      } catch (error) {
+        console.error('Error tracking study session:', error);
+      } finally {
+        savedRef.current = false;
       }
-    }, 5 * 60 * 1000); // Every 5 minutes
+    };
 
-    return () => clearInterval(interval);
-  };
+    const tick = () => {
+      const now = Date.now();
+      const deltaMs = now - lastTickRef.current;
+      lastTickRef.current = now;
+      pendingMsRef.current += deltaMs;
+
+      if (pendingMsRef.current >= 30000) {
+        const deltaHours = pendingMsRef.current / 3600000;
+        pendingMsRef.current = 0;
+        persistStudyTime(deltaHours);
+      }
+    };
+
+    const flush = () => {
+      if (pendingMsRef.current > 0) {
+        const deltaHours = pendingMsRef.current / 3600000;
+        pendingMsRef.current = 0;
+        persistStudyTime(deltaHours);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        tick();
+        flush();
+      } else {
+        lastTickRef.current = Date.now();
+      }
+    };
+
+    const interval = setInterval(tick, 60000);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      tick();
+      flush();
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user, courseId]);
 
   const checkAdminStatus = async () => {
     if (!user) return;

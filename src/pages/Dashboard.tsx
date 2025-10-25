@@ -154,7 +154,7 @@ export default function Dashboard() {
         .gte('session_date', lastWeekStart.toISOString().split('T')[0])
         .lt('session_date', lastWeekEnd.toISOString().split('T')[0]);
 
-      // Get groups count and actual groups data
+      // Get groups count and actual groups data (exclude private chats)
       const { data: groupMemberships, count: groupsCount } = await supabase
         .from('group_members')
         .select(`
@@ -169,7 +169,8 @@ export default function Dashboard() {
           )
         `, { count: 'exact' })
         .eq('user_id', user!.id)
-        .eq('status', 'accepted');
+        .eq('status', 'accepted')
+        .eq('community_groups.is_private_chat', false);
 
       // Process groups and get partner names for private chats
       const processedGroups = await Promise.all(

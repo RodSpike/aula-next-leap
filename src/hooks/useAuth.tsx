@@ -103,10 +103,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // Log login activity
+    if (!error && data.user) {
+      try {
+        await supabase.from('user_activity_logs').insert({
+          user_id: data.user.id,
+          action: 'login',
+          context: { method: 'email' }
+        });
+      } catch (logError) {
+        console.error('Failed to log login activity:', logError);
+      }
+    }
     
     return { error };
   };

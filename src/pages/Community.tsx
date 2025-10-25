@@ -710,6 +710,20 @@ export default function Community() {
       await updateAchievement('first_post');
       await updateAchievement('content_creator');
       await updateAchievement('influencer');
+      
+      // Log post creation activity
+      try {
+        await supabase.from('user_activity_logs').insert({
+          user_id: user.id,
+          action: 'group_post',
+          context: { 
+            group_id: selectedGroup.id,
+            text_snippet: newPost.slice(0, 200)
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log post activity:', logError);
+      }
     } catch (error: any) {
       console.error('Error creating post:', error);
       toast({

@@ -497,6 +497,17 @@ export default function AiChat() {
 
     // Save user message
     await saveMessage(userMessage);
+    
+    // Log AI chat activity
+    try {
+      await supabase.from('user_activity_logs').insert({
+        user_id: user.id,
+        action: 'ai_chat_question',
+        context: { text_snippet: currentInput.slice(0, 200) }
+      });
+    } catch (logError) {
+      console.error('Failed to log AI chat activity:', logError);
+    }
 
     try {
       const requestBody: any = {

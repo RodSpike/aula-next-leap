@@ -1029,6 +1029,30 @@ export type Database = {
           },
         ]
       }
+      user_activity_logs: {
+        Row: {
+          action: string
+          context: Json
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          context?: Json
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          context?: Json
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_courses: {
         Row: {
           completed_lessons: number | null
@@ -1395,10 +1419,7 @@ export type Database = {
         }
         Returns: string
       }
-      get_profile_public_fields: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
+      get_profile_public_fields: { Args: never; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1426,10 +1447,7 @@ export type Database = {
         }
         Returns: Json
       }
-      user_has_admin_role: {
-        Args: { user_uuid: string }
-        Returns: boolean
-      }
+      user_has_admin_role: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
       achievement_category: "learning" | "social" | "engagement" | "milestone"
