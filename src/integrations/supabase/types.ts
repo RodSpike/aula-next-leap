@@ -649,6 +649,10 @@ export type Database = {
       }
       lessons: {
         Row: {
+          audio_duration: number | null
+          audio_generated_at: string | null
+          audio_segments: Json | null
+          audio_url: string | null
           content: string
           course_id: string
           created_at: string
@@ -658,6 +662,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audio_duration?: number | null
+          audio_generated_at?: string | null
+          audio_segments?: Json | null
+          audio_url?: string | null
           content: string
           course_id: string
           created_at?: string
@@ -667,6 +675,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audio_duration?: number | null
+          audio_generated_at?: string | null
+          audio_segments?: Json | null
+          audio_url?: string | null
           content?: string
           course_id?: string
           created_at?: string

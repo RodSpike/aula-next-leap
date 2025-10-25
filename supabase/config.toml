@@ -121,3 +121,6 @@ verify_jwt = false
 
 [functions.evaluate-pronunciation]
 verify_jwt = false
+
+[functions.bulk-generate-lesson-audio]
+verify_jwt = true

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LessonContent } from "@/components/LessonContent";
 import { ExerciseActivity } from "@/components/ExerciseActivity";
 import { LessonAudioPlayer } from "@/components/LessonAudioPlayer";
+import { AdvancedLessonAudioPlayer } from "@/components/AdvancedLessonAudioPlayer";
 import { BookOpen, Trophy, Clock, ArrowLeft } from "lucide-react";
 
 interface Course {
@@ -29,6 +30,10 @@ interface Lesson {
   title: string;
   content: string;
   order_index: number;
+  audio_url?: string | null;
+  audio_segments?: any;
+  audio_duration?: number | null;
+  audio_generated_at?: string | null;
 }
 
 interface Exercise {
@@ -567,11 +572,23 @@ export default function Course() {
               // Introduction/Explanation Content
               <div className="space-y-6">
                 {/* Audio Player for Lesson */}
-                <div className="flex justify-center pb-4">
-                  <LessonAudioPlayer 
-                    lessonContent={lessonHtml}
-                    lessonTitle={currentLesson?.title || ''}
-                  />
+                <div className="pb-4">
+                  {currentLesson.audio_url === 'browser-tts' && currentLesson.audio_segments && currentLesson.audio_duration ? (
+                    <AdvancedLessonAudioPlayer
+                      lessonId={currentLesson.id}
+                      lessonTitle={currentLesson.title}
+                      lessonContent={currentLesson.content}
+                      segments={currentLesson.audio_segments}
+                      duration={currentLesson.audio_duration}
+                    />
+                  ) : (
+                    <div className="flex justify-center">
+                      <LessonAudioPlayer 
+                        lessonContent={lessonHtml}
+                        lessonTitle={currentLesson?.title || ''}
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 {lessonHtml ? (
@@ -586,7 +603,15 @@ export default function Course() {
                   // Fallback to old content structure if no enhanced HTML
                   <>
                     {introductionContent.length > 0 ? (
-                      <LessonContent content={introductionContent} />
+                      <LessonContent 
+                        content={introductionContent}
+                        lessonId={currentLesson.id}
+                        lessonTitle={currentLesson.title}
+                        lessonContent={currentLesson.content}
+                        audioUrl={currentLesson.audio_url}
+                        audioSegments={currentLesson.audio_segments}
+                        audioDuration={currentLesson.audio_duration}
+                      />
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-muted-foreground">
@@ -596,7 +621,15 @@ export default function Course() {
                     )}
                     
                     {practiceContent.length > 0 && (
-                      <LessonContent content={practiceContent} />
+                      <LessonContent 
+                        content={practiceContent}
+                        lessonId={currentLesson.id}
+                        lessonTitle={currentLesson.title}
+                        lessonContent={currentLesson.content}
+                        audioUrl={currentLesson.audio_url}
+                        audioSegments={currentLesson.audio_segments}
+                        audioDuration={currentLesson.audio_duration}
+                      />
                     )}
                   </>
                 )}

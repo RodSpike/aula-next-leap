@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdvancedLessonAudioPlayer } from "@/components/AdvancedLessonAudioPlayer";
 import { 
   BookOpen, 
   MessageCircle, 
@@ -31,9 +32,15 @@ interface LessonContentItem {
 
 interface LessonContentProps {
   content: LessonContentItem[];
+  lessonId: string;
+  lessonTitle: string;
+  lessonContent: string;
+  audioUrl?: string | null;
+  audioSegments?: any[] | null;
+  audioDuration?: number | null;
 }
 
-export function LessonContent({ content }: LessonContentProps) {
+export function LessonContent({ content, lessonId, lessonTitle, lessonContent, audioUrl, audioSegments, audioDuration }: LessonContentProps) {
   const getSectionIcon = (type: string) => {
     switch (type) {
       case 'introduction':
@@ -669,6 +676,17 @@ export function LessonContent({ content }: LessonContentProps) {
 
   return (
     <div className="space-y-6">
+      {/* Audio Player - Show if audio is available */}
+      {audioUrl === 'browser-tts' && audioSegments && audioDuration && (
+        <AdvancedLessonAudioPlayer
+          lessonId={lessonId}
+          lessonTitle={lessonTitle}
+          lessonContent={lessonContent}
+          segments={audioSegments}
+          duration={audioDuration}
+        />
+      )}
+
       {sortedContent.map((item) => (
         <Card key={item.id} className={`${getSectionColor(item.section_type)} transition-all hover:shadow-md`}>
           <CardHeader className="pb-4">

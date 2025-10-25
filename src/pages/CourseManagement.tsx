@@ -12,6 +12,7 @@ import { Plus, BookOpen, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
 import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
+import { BulkAudioGenerator } from "@/components/BulkAudioGenerator";
 
 interface Course {
   id: string;
@@ -224,9 +225,10 @@ export default function CourseManagement() {
           </Button>
         </div>
 
-        {/* Add Bulk Lesson Enhancer at the top */}
-        <div className="mb-8">
+        {/* Add Bulk Tools at the top */}
+        <div className="mb-8 space-y-4">
           <BulkLessonEnhancer />
+          <BulkAudioGenerator />
         </div>
 
         {showCreateForm && (
