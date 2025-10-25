@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Loader2, Pause } from "lucide-react";
+import { Volume2, Pause, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -9,10 +9,17 @@ interface LessonAudioPlayerProps {
   lessonTitle: string;
 }
 
+interface LanguageSegment {
+  text: string;
+  language: 'pt-BR' | 'en-US';
+}
+
 export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [segments, setSegments] = useState<LanguageSegment[]>([]);
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const stripHtml = (html: string): string => {
     const tmp = document.createElement("DIV");
@@ -20,33 +27,82 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
     return tmp.textContent || tmp.innerText || "";
   };
 
+  const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
+    const voices = speechSynthesis.getVoices();
+    
+    if (language === 'pt-BR') {
+      // Try to find Brazilian Portuguese voice
+      return voices.find(v => 
+        v.lang.includes('pt-BR') || v.lang.includes('pt_BR')
+      ) || voices.find(v => v.lang.startsWith('pt')) || null;
+    } else {
+      // Try to find US English voice
+      return voices.find(v => 
+        v.lang.includes('en-US') || v.lang.includes('en_US')
+      ) || voices.find(v => v.lang.startsWith('en')) || null;
+    }
+  };
+
+  const speakSegment = (segment: LanguageSegment, index: number) => {
+    const utterance = new SpeechSynthesisUtterance(segment.text);
+    const voice = findVoiceForLanguage(segment.language);
+    
+    if (voice) {
+      utterance.voice = voice;
+    }
+    utterance.lang = segment.language;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    utterance.onend = () => {
+      if (index < segments.length - 1) {
+        setCurrentSegmentIndex(index + 1);
+        speakSegment(segments[index + 1], index + 1);
+      } else {
+        setIsPlaying(false);
+        setCurrentSegmentIndex(0);
+      }
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      setIsPlaying(false);
+      toast.error('Error playing audio');
+    };
+
+    utteranceRef.current = utterance;
+    speechSynthesis.speak(utterance);
+  };
+
   const handlePlayPause = async () => {
-    if (isPlaying && audio) {
-      audio.pause();
+    if (isPlaying) {
+      // Pause
+      speechSynthesis.cancel();
       setIsPlaying(false);
       return;
     }
 
-    if (audio) {
-      audio.play();
+    if (segments.length > 0) {
+      // Resume from where we left off
       setIsPlaying(true);
+      speakSegment(segments[currentSegmentIndex], currentSegmentIndex);
       return;
     }
 
-    // Generate audio with intelligent TTS
+    // Detect language segments
     setIsLoading(true);
     try {
       const cleanContent = stripHtml(lessonContent);
       const textToSpeak = `${lessonTitle}. ${cleanContent.substring(0, 4000)}`;
       
       toast.info('Detecting languages...', {
-        description: 'Preparing multi-language audio'
+        description: 'Preparing audio'
       });
 
       const { data, error } = await supabase.functions.invoke('intelligent-text-to-speech', {
         body: { 
           text: textToSpeak,
-          options: { speed: 1.0 }
         }
       });
 
@@ -54,34 +110,26 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
         throw error;
       }
 
-      if (!data.audioContent) {
-        throw new Error('No audio data received');
+      if (!data.segments || data.segments.length === 0) {
+        throw new Error('No language segments detected');
       }
 
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-        { type: data.contentType || 'audio/mpeg' }
-      );
-
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const newAudio = new Audio(audioUrl);
-      
-      newAudio.onended = () => setIsPlaying(false);
-      newAudio.onerror = () => {
-        toast.error('Error playing audio');
-        setIsPlaying(false);
-      };
-
-      await newAudio.play();
-      setAudio(newAudio);
+      setSegments(data.segments);
+      setCurrentSegmentIndex(0);
       setIsPlaying(true);
+
+      // Load voices if not loaded
+      if (speechSynthesis.getVoices().length === 0) {
+        await new Promise(resolve => {
+          speechSynthesis.onvoiceschanged = resolve;
+        });
+      }
+
+      // Start speaking
+      speakSegment(data.segments[0], 0);
       
-      const segmentInfo = data.segments?.length 
-        ? `Detected ${data.segments.length} language segment(s)` 
-        : 'Audio ready';
-      
-      toast.success('Audio ready!', {
-        description: segmentInfo
+      toast.success('Playing audio!', {
+        description: `${data.segments.length} language segment(s) detected`
       });
     } catch (error) {
       console.error('Error generating audio:', error);

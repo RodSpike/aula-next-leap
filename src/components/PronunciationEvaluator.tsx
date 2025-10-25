@@ -131,9 +131,9 @@ export const PronunciationEvaluator: React.FC<PronunciationEvaluatorProps> = ({
         setCorrectedText(data.correctedText);
         setCorrectedAudio(data.correctedAudio);
 
-        // Auto-play corrected audio
-        if (data.correctedAudio) {
-          playCorrection(data.correctedAudio);
+        // Auto-play corrected audio using browser TTS
+        if (data.correctedText) {
+          playCorrection(data.correctedText);
         }
 
         if (onComplete) {
@@ -161,20 +161,34 @@ export const PronunciationEvaluator: React.FC<PronunciationEvaluatorProps> = ({
     }
   };
 
-  const playCorrection = (audioBase64: string) => {
-    if (!audioBase64) return;
+  const playCorrection = (text?: string) => {
+    const textToSpeak = text || correctedText;
+    if (!textToSpeak) return;
     
     setIsPlayingCorrection(true);
-    const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
-    audioRef.current = audio;
     
-    audio.onended = () => setIsPlayingCorrection(false);
-    audio.onerror = () => {
+    // Use browser TTS
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Try to use appropriate voice based on detected language
+    const voices = speechSynthesis.getVoices();
+    const voice = detectedLanguage === 'pt-BR'
+      ? voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR')) || voices.find(v => v.lang.startsWith('pt'))
+      : voices.find(v => v.lang.includes('en-US') || v.lang.includes('en_US')) || voices.find(v => v.lang.startsWith('en'));
+    
+    if (voice) utterance.voice = voice;
+    utterance.lang = detectedLanguage || 'en-US';
+    utterance.rate = 0.9; // Slightly slower for clarity
+    
+    utterance.onend = () => setIsPlayingCorrection(false);
+    utterance.onerror = () => {
       setIsPlayingCorrection(false);
       toast.error('Failed to play correction audio');
     };
     
-    audio.play();
+    audioRef.current = null; // Clear audio ref since we're using speech synthesis
+    speechSynthesis.speak(utterance);
   };
 
   const getScoreColor = (score: number) => {
@@ -250,17 +264,15 @@ export const PronunciationEvaluator: React.FC<PronunciationEvaluatorProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Corrected version:</h3>
-              {correctedAudio && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => playCorrection(correctedAudio)}
-                  disabled={isPlayingCorrection}
-                >
-                  <Volume2 className="h-4 w-4 mr-1" />
-                  {isPlayingCorrection ? 'Playing...' : 'Listen'}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => playCorrection()}
+                disabled={isPlayingCorrection}
+              >
+                <Volume2 className="h-4 w-4 mr-1" />
+                {isPlayingCorrection ? 'Playing...' : 'Listen'}
+              </Button>
             </div>
             <p className="text-sm bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
               {correctedText}

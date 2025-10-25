@@ -31,12 +31,8 @@ serve(async (req) => {
       throw new Error('Text is required');
     }
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
     if (!lovableApiKey) {
       throw new Error('Lovable API key not configured');
     }
@@ -118,61 +114,13 @@ ${cleanText}`
 
     console.log('Detected segments:', segments.length);
 
-    // Generate audio for each segment
-    const audioBuffers: Uint8Array[] = [];
-    
-    for (const segment of segments) {
-      console.log(`Generating TTS for ${segment.language}: ${segment.text.substring(0, 50)}...`);
-      
-      // Select appropriate voice for language
-      const voice = segment.language === 'pt-BR' ? 'nova' : 'onyx';
-      
-      const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'tts-1-hd',
-          input: segment.text,
-          voice: voice,
-          response_format: 'mp3',
-          speed: options.speed || 1.0,
-        }),
-      });
-
-      if (!ttsResponse.ok) {
-        const error = await ttsResponse.text();
-        throw new Error(`TTS generation failed for segment: ${error}`);
-      }
-
-      const arrayBuffer = await ttsResponse.arrayBuffer();
-      audioBuffers.push(new Uint8Array(arrayBuffer));
-    }
-
-    // Concatenate all audio buffers
-    const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.length, 0);
-    const combinedAudio = new Uint8Array(totalLength);
-    let offset = 0;
-    
-    for (const buffer of audioBuffers) {
-      combinedAudio.set(buffer, offset);
-      offset += buffer.length;
-    }
-
-    // Convert to base64
-    const base64Audio = btoa(
-      String.fromCharCode(...combinedAudio)
-    );
-
-    console.log('Audio generation complete, segments:', segments.length);
-
+    // Return segments for browser-based TTS
     return new Response(
       JSON.stringify({
-        audioContent: base64Audio,
-        contentType: 'audio/mpeg',
-        segments: segments.map(s => ({ language: s.language, length: s.text.length }))
+        segments: segments.map(s => ({ 
+          text: s.text, 
+          language: s.language 
+        }))
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

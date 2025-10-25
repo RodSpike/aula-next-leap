@@ -360,47 +360,62 @@ export default function AiChat() {
 
   const playAIResponse = async (messageId: string, text: string, speed: number = 1.0) => {
     try {
-      // First try premium TTS (ElevenLabs). If not configured, fall back to browser TTS.
-      setAudioState(prev => ({ ...prev, isPlaying: true, isPaused: false, messageId, speed }));
+      setAudioState(prev => ({ ...prev, isPlaying: true, isPaused: false, messageId, speed, usingSynth: true }));
 
-      try {
-        const { data, error } = await supabase.functions.invoke('text-to-speech-elevenlabs', {
-          body: { text, voiceId: 'Aria', speed }
-        });
-        if (!error && data?.audioContent) {
-          const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
-          audio.playbackRate = Math.max(0.5, Math.min(2, speed));
-          setAudioState(prev => ({ ...prev, usingSynth: false, currentAudio: audio }));
-          await audio.play();
-          audio.onended = () => setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null }));
-          return; // Done with premium TTS
-        }
-      } catch (e) {
-        // Ignore and fall back
-        console.warn('Premium TTS unavailable, falling back to Web Speech API');
+      // Get language segments
+      toast({ title: 'Detecting languages...', description: 'Preparing audio' });
+      
+      const { data, error } = await supabase.functions.invoke('intelligent-text-to-speech', {
+        body: { text }
+      });
+
+      if (error || !data?.segments) {
+        throw new Error('Failed to detect language segments');
       }
 
-      // Fallback: Web Speech API
+      // Cancel any ongoing speech
       speechSynthesis.cancel();
-      setAudioState(prev => ({ ...prev, usingSynth: true }));
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      const selectedVoice = availableVoices.find(v => v.name === audioState.selectedVoice);
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = speed;
-      utterance.pitch = 1;
-      utterance.volume = 1;
+      // Speak each segment with appropriate voice
+      const speakSegments = async (segments: any[], index: number = 0) => {
+        if (index >= segments.length) {
+          setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, messageId: null, usingSynth: false }));
+          return;
+        }
 
-      utterance.onend = () => {
-        setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null, usingSynth: false }));
+        const segment = segments[index];
+        const utterance = new SpeechSynthesisUtterance(segment.text);
+        
+        // Find appropriate voice for language
+        const voices = speechSynthesis.getVoices();
+        const voice = segment.language === 'pt-BR'
+          ? voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR')) || voices.find(v => v.lang.startsWith('pt'))
+          : voices.find(v => v.lang.includes('en-US') || v.lang.includes('en_US')) || voices.find(v => v.lang.startsWith('en'));
+        
+        if (voice) utterance.voice = voice;
+        utterance.lang = segment.language;
+        utterance.rate = speed;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        utterance.onend = () => speakSegments(segments, index + 1);
+        utterance.onerror = () => {
+          setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null, usingSynth: false }));
+          toast({ title: 'Erro', description: 'Falha ao reproduzir áudio.', variant: 'destructive' });
+        };
+
+        synthUtteranceRef.current = utterance;
+        speechSynthesis.speak(utterance);
       };
-      utterance.onerror = () => {
-        setAudioState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentAudio: null, messageId: null, usingSynth: false }));
-        toast({ title: 'Erro', description: 'Falha ao reproduzir áudio. Tente novamente.', variant: 'destructive' });
-      };
 
-      synthUtteranceRef.current = utterance;
-      speechSynthesis.speak(utterance);
+      // Load voices if needed
+      if (speechSynthesis.getVoices().length === 0) {
+        await new Promise(resolve => {
+          speechSynthesis.onvoiceschanged = resolve;
+        });
+      }
+
+      speakSegments(data.segments);
 
     } catch (error) {
       console.error('Error playing AI response:', error);
