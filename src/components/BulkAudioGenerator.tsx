@@ -230,7 +230,7 @@ export const BulkAudioGenerator = () => {
         >
           {generating ? (
             <span className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
               Generating Audio ({progress.current}/{progress.total})
             </span>
           ) : (
@@ -240,9 +240,9 @@ export const BulkAudioGenerator = () => {
 
         {generating && (
           <div className="space-y-2">
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-muted rounded-full h-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ 
                   width: `${(progress.current / progress.total) * 100}%` 
                 }}
