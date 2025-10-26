@@ -52,48 +52,55 @@ export function AdvancedLessonAudioPlayer({
     const voices = window.speechSynthesis.getVoices();
     
     if (language === 'pt-BR') {
-      // Priority 1: Google voices (best quality, handles English words well)
-      const googlePt = voices.find(v => 
-        v.lang.includes('pt-BR') && 
+      // Priority 1: Google Luciana (female Brazilian Portuguese, best for bilingual content)
+      const googleLuciana = voices.find(v => 
+        v.lang === 'pt-BR' && 
         v.name.includes('Google') &&
-        (v.name.includes('português') || v.name.includes('Portuguese'))
+        (v.name.includes('Luciana') || v.name.toLowerCase().includes('female'))
       );
-      if (googlePt) return googlePt;
+      if (googleLuciana) return googleLuciana;
       
-      // Priority 2: Microsoft neural voices with multilingual support
-      const microsoftNeural = voices.find(v => 
-        v.lang.includes('pt-BR') && 
-        (v.name.includes('Francisca') || v.name.includes('Raquel')) &&
-        v.name.includes('Online')
+      // Priority 2: Any Google pt-BR female voice
+      const googlePtBRFemale = voices.find(v => 
+        v.lang === 'pt-BR' && 
+        v.name.includes('Google') &&
+        !v.name.toLowerCase().includes('male')
       );
-      if (microsoftNeural) return microsoftNeural;
+      if (googlePtBRFemale) return googlePtBRFemale;
       
-      // Priority 3: Any Google Portuguese
-      const anyGoogle = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
-      if (anyGoogle) return anyGoogle;
+      // Priority 3: Any Google Portuguese (Brasil)
+      const googlePtBR = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google'));
+      if (googlePtBR) return googlePtBR;
+      
+      // Priority 4: Microsoft Francisca (female, handles some English)
+      const francisca = voices.find(v => 
+        v.lang === 'pt-BR' && 
+        v.name.includes('Francisca')
+      );
+      if (francisca) return francisca;
       
       // Fallback: Any Brazilian Portuguese
-      return voices.find(v => v.lang.includes('pt-BR')) || voices.find(v => v.lang.includes('pt')) || voices[0];
+      return voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
-      // Priority 1: Google US English (natural, handles multilingual content)
-      const googleEn = voices.find(v => 
+      // For English segments, use a natural voice
+      // Priority 1: Google US English female
+      const googleEnFemale = voices.find(v => 
         v.lang === 'en-US' && 
         v.name.includes('Google') &&
-        v.name.includes('US')
+        (v.name.toLowerCase().includes('female') || v.name.includes('US'))
       );
+      if (googleEnFemale) return googleEnFemale;
+      
+      // Priority 2: Any Google US English
+      const googleEn = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
       if (googleEn) return googleEn;
       
-      // Priority 2: Microsoft neural voices (Aria, Jenny)
-      const microsoftNeural = voices.find(v => 
+      // Priority 3: Microsoft Aria or Jenny (natural voices)
+      const microsoftNatural = voices.find(v => 
         v.lang === 'en-US' && 
-        (v.name.includes('Aria') || v.name.includes('Jenny')) &&
-        v.name.includes('Online')
+        (v.name.includes('Aria') || v.name.includes('Jenny'))
       );
-      if (microsoftNeural) return microsoftNeural;
-      
-      // Priority 3: Any Google English
-      const anyGoogle = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
-      if (anyGoogle) return anyGoogle;
+      if (microsoftNatural) return microsoftNatural;
       
       // Fallback: Any US English
       return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
@@ -174,7 +181,8 @@ export function AdvancedLessonAudioPlayer({
         });
       }
 
-      const segment = getCurrentSegment() || segments[0];
+      // Play from current segment index, respecting where user seeked to
+      const segment = segments[currentSegmentIndex];
       if (segment) {
         speakSegment(segment);
       }
@@ -231,11 +239,17 @@ export function AdvancedLessonAudioPlayer({
   const handleSeek = (value: number[]) => {
     const newTime = safeDuration > 0 ? (value[0] / 100) * safeDuration : 0;
     setCurrentTime(newTime);
-    if (isPlaying) {
-      handlePause();
-      const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
-      if (segment) {
-        setTimeout(() => speakSegment(segment), 100);
+    
+    // Find the segment at the new time
+    const targetSegment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
+    if (targetSegment) {
+      const segmentIndex = segments.findIndex(seg => seg === targetSegment);
+      setCurrentSegmentIndex(segmentIndex);
+      
+      // If currently playing, restart from new position
+      if (isPlaying) {
+        handlePause();
+        setTimeout(() => speakSegment(targetSegment), 100);
       }
     }
   };
