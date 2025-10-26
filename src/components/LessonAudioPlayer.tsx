@@ -28,28 +28,70 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
   };
 
   const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
-    const voices = speechSynthesis.getVoices();
+    const voices = window.speechSynthesis.getVoices();
     
-    if (language === 'pt-BR') {
-      // Try to find Brazilian Portuguese voice
-      return voices.find(v => 
-        v.lang.includes('pt-BR') || v.lang.includes('pt_BR')
-      ) || voices.find(v => v.lang.startsWith('pt')) || null;
+    if (language.includes('pt')) {
+      const premiumNames = ['Maria', 'Francisca', 'Luciana'];
+      const premium = voices.find(v => 
+        v.lang.includes('pt') && 
+        premiumNames.some(name => v.name.includes(name))
+      );
+      if (premium) return premium;
+      
+      const female = voices.find(v => 
+        v.lang.includes('pt') && 
+        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminino'))
+      );
+      if (female) return female;
+      
+      const google = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
+      if (google) return google;
+      
+      return voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
-      // Try to find US English voice
-      return voices.find(v => 
-        v.lang.includes('en-US') || v.lang.includes('en_US')
-      ) || voices.find(v => v.lang.startsWith('en')) || null;
+      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava'];
+      const premium = voices.find(v => 
+        v.lang.startsWith('en') && 
+        premiumNames.some(name => v.name.includes(name))
+      );
+      if (premium) return premium;
+      
+      const female = voices.find(v => 
+        v.lang.startsWith('en') && 
+        v.name.toLowerCase().includes('female')
+      );
+      if (female) return female;
+      
+      const google = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+      if (google) return google;
+      
+      return voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
   };
 
-  const speakSegment = (segment: LanguageSegment, index: number) => {
+  const speakSegment = (index: number) => {
+    if (index >= segments.length) {
+      setIsPlaying(false);
+      setCurrentSegmentIndex(0);
+      return;
+    }
+
+    let voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        speakSegment(index);
+      };
+      return;
+    }
+
+    const segment = segments[index];
     const utterance = new SpeechSynthesisUtterance(segment.text);
     const voice = findVoiceForLanguage(segment.language);
     
     if (voice) {
       utterance.voice = voice;
     }
+    
     utterance.lang = segment.language;
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
@@ -58,7 +100,7 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
     utterance.onend = () => {
       if (index < segments.length - 1) {
         setCurrentSegmentIndex(index + 1);
-        speakSegment(segments[index + 1], index + 1);
+        speakSegment(index + 1);
       } else {
         setIsPlaying(false);
         setCurrentSegmentIndex(0);
@@ -72,21 +114,19 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
     };
 
     utteranceRef.current = utterance;
-    speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handlePlayPause = async () => {
     if (isPlaying) {
-      // Pause
-      speechSynthesis.cancel();
+      window.speechSynthesis.cancel();
       setIsPlaying(false);
       return;
     }
 
     if (segments.length > 0) {
-      // Resume from where we left off
       setIsPlaying(true);
-      speakSegment(segments[currentSegmentIndex], currentSegmentIndex);
+      speakSegment(currentSegmentIndex);
       return;
     }
 
@@ -118,15 +158,13 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
       setCurrentSegmentIndex(0);
       setIsPlaying(true);
 
-      // Load voices if not loaded
-      if (speechSynthesis.getVoices().length === 0) {
+      if (window.speechSynthesis.getVoices().length === 0) {
         await new Promise(resolve => {
-          speechSynthesis.onvoiceschanged = resolve;
+          window.speechSynthesis.onvoiceschanged = resolve;
         });
       }
 
-      // Start speaking
-      speakSegment(data.segments[0], 0);
+      speakSegment(0);
       
       toast.success('Playing audio!', {
         description: `${data.segments.length} language segment(s) detected`

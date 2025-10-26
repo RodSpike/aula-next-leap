@@ -49,146 +49,124 @@ export function AdvancedLessonAudioPlayer({
   const timeUpdateInterval = useRef<number | null>(null);
 
   const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
-    const voices = speechSynthesis.getVoices();
+    const voices = window.speechSynthesis.getVoices();
     
-    // Filter voices by language
-    const languageVoices = language === 'pt-BR'
-      ? voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
-      : voices.filter(v => v.lang.includes('en-US') || v.lang.includes('en_US') || v.lang.startsWith('en'));
-
-    if (languageVoices.length === 0) return null;
-
-    // Priority 1: Look for premium female voices (Google/Microsoft natural voices)
-    const premiumFemale = languageVoices.find(v => 
-      (v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes('female')) ||
-      (v.name.toLowerCase().includes('google') && (
-        v.name.includes('Luciana') || // Portuguese
-        v.name.includes('Flo') ||     // Portuguese alternative
-        v.name.includes('Samantha') || // English
-        v.name.includes('Ava')         // English alternative
-      )) ||
-      v.name.includes('Microsoft Maria') ||      // Portuguese
-      v.name.includes('Microsoft Francisca') ||  // Portuguese
-      v.name.includes('Microsoft Zira') ||       // English
-      v.name.includes('Microsoft Jenny')         // English
-    );
-    
-    if (premiumFemale) return premiumFemale;
-
-    // Priority 2: Any female voice (exclude explicitly male names)
-    const femaleVoice = languageVoices.find(v => 
-      !v.name.toLowerCase().includes('male') &&
-      !v.name.includes('Daniel') &&
-      !v.name.includes('David') &&
-      !v.name.includes('Alex') &&
-      !v.name.includes('Fred') &&
-      (v.name.toLowerCase().includes('female') ||
-       v.name.includes('Luciana') ||
-       v.name.includes('Samantha') ||
-       v.name.includes('Maria') ||
-       v.name.includes('Francisca') ||
-       v.name.includes('Zira') ||
-       v.name.includes('Jenny') ||
-       v.name.includes('Ava'))
-    );
-
-    if (femaleVoice) return femaleVoice;
-
-    // Priority 3: Google voices (usually better quality)
-    const googleVoice = languageVoices.find(v => v.name.includes('Google'));
-    if (googleVoice) return googleVoice;
-
-    // Priority 4: Default to first available voice for the language
-    return languageVoices[0];
+    if (language === 'pt-BR') {
+      const premiumNames = ['Maria', 'Francisca', 'Luciana'];
+      const premium = voices.find(v => 
+        v.lang.includes('pt') && 
+        premiumNames.some(name => v.name.includes(name))
+      );
+      if (premium) return premium;
+      
+      const female = voices.find(v => 
+        v.lang.includes('pt') && 
+        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminino'))
+      );
+      if (female) return female;
+      
+      const google = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
+      if (google) return google;
+      
+      return voices.find(v => v.lang.includes('pt')) || voices[0];
+    } else {
+      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava'];
+      const premium = voices.find(v => 
+        v.lang.startsWith('en') && 
+        premiumNames.some(name => v.name.includes(name))
+      );
+      if (premium) return premium;
+      
+      const female = voices.find(v => 
+        v.lang.startsWith('en') && 
+        v.name.toLowerCase().includes('female')
+      );
+      if (female) return female;
+      
+      const google = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+      if (google) return google;
+      
+      return voices.find(v => v.lang.startsWith('en')) || voices[0];
+    }
   };
 
-  const getCurrentSegment = () => {
-    // Guard against invalid timestamps
-    const validSegments = segments.filter(seg => 
-      typeof seg.start_time === 'number' && 
-      typeof seg.end_time === 'number' &&
-      !isNaN(seg.start_time) && 
-      !isNaN(seg.end_time)
-    );
-    
-    return validSegments.find(seg => 
-      currentTime >= seg.start_time && currentTime < seg.end_time
-    ) || validSegments[0] || segments[0];
+  const getCurrentSegment = (): AudioSegment | null => {
+    return segments.find(seg => {
+      const start = Number(seg.start_time) || 0;
+      const end = Number(seg.end_time) || 0;
+      return currentTime >= start && currentTime < end && end > start;
+    }) || null;
   };
 
-  const speakSegment = (segment: AudioSegment, startFromSegment: boolean = false) => {
-    const cleanedText = cleanTextForTTS(segment.text);
-    const utterance = new SpeechSynthesisUtterance(cleanedText);
+  const speakSegment = (segment: AudioSegment) => {
+    if (!segment) return;
+    
+    let voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        speakSegment(segment);
+      };
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(cleanTextForTTS(segment.text));
     const voice = findVoiceForLanguage(segment.language);
     
     if (voice) {
       utterance.voice = voice;
     }
+    
     utterance.lang = segment.language;
-    utterance.rate = playbackRate;
-    utterance.pitch = 1.0;
     utterance.volume = isMuted ? 0 : volume;
-
+    utterance.rate = playbackRate;
+    
     utterance.onstart = () => {
-      if (startFromSegment) {
-        setCurrentTime(segment.start_time);
-      }
+      setIsPlaying(true);
+      setIsLoading(false);
+      setCurrentTime(segment.start_time);
+      
+      timeUpdateInterval.current = window.setInterval(() => {
+        setCurrentTime(prev => {
+          const next = prev + (0.1 * playbackRate);
+          return next < segment.end_time ? next : segment.end_time;
+        });
+      }, 100);
     };
-
+    
     utterance.onend = () => {
-      const currentIndex = segments.indexOf(segment);
+      if (timeUpdateInterval.current) {
+        clearInterval(timeUpdateInterval.current);
+      }
+      
+      const currentIndex = segments.findIndex(s => s === segment);
       if (currentIndex < segments.length - 1) {
-        const nextSegment = segments[currentIndex + 1];
         setCurrentSegmentIndex(currentIndex + 1);
-        setCurrentTime(nextSegment.start_time);
-        speakSegment(nextSegment);
+        speakSegment(segments[currentIndex + 1]);
       } else {
-        handleStop();
+        setIsPlaying(false);
+        setCurrentTime(duration);
       }
     };
-
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      handleStop();
-      toast.error('Error playing audio');
-    };
-
+    
     utteranceRef.current = utterance;
-    speechSynthesis.speak(utterance);
-
-    // Simulate time updates
-    if (timeUpdateInterval.current) {
-      clearInterval(timeUpdateInterval.current);
-    }
-    
-    const segmentDuration = segment.end_time - segment.start_time;
-    const updateFrequency = 100; // Update every 100ms
-    const timeIncrement = (segmentDuration * 1000) / updateFrequency;
-    
-    timeUpdateInterval.current = window.setInterval(() => {
-      setCurrentTime(prev => {
-        const next = prev + (timeIncrement / 1000);
-        if (next >= segment.end_time) {
-          return segment.end_time;
-        }
-        return next;
-      });
-    }, updateFrequency);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handlePlay = async () => {
     setIsLoading(true);
     try {
-      // Load voices if not loaded
-      if (speechSynthesis.getVoices().length === 0) {
+      if (window.speechSynthesis.getVoices().length === 0) {
         await new Promise(resolve => {
-          speechSynthesis.onvoiceschanged = resolve;
+          window.speechSynthesis.onvoiceschanged = resolve;
         });
       }
 
-      const segment = getCurrentSegment();
-      setIsPlaying(true);
-      speakSegment(segment, true);
+      const segment = getCurrentSegment() || segments[0];
+      if (segment) {
+        speakSegment(segment);
+      }
     } catch (error) {
       console.error('Error playing audio:', error);
       toast.error('Failed to play audio');
@@ -198,7 +176,7 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const handlePause = () => {
-    speechSynthesis.cancel();
+    window.speechSynthesis.cancel();
     setIsPlaying(false);
     if (timeUpdateInterval.current) {
       clearInterval(timeUpdateInterval.current);
@@ -206,7 +184,7 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const handleStop = () => {
-    speechSynthesis.cancel();
+    window.speechSynthesis.cancel();
     setIsPlaying(false);
     setCurrentTime(0);
     setCurrentSegmentIndex(0);
@@ -222,10 +200,7 @@ export function AdvancedLessonAudioPlayer({
       handlePause();
       const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
       if (segment) {
-        setTimeout(() => {
-          setIsPlaying(true);
-          speakSegment(segment, true);
-        }, 100);
+        setTimeout(() => speakSegment(segment), 100);
       }
     }
   };
@@ -237,10 +212,7 @@ export function AdvancedLessonAudioPlayer({
       handlePause();
       const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
       if (segment) {
-        setTimeout(() => {
-          setIsPlaying(true);
-          speakSegment(segment, true);
-        }, 100);
+        setTimeout(() => speakSegment(segment), 100);
       }
     }
   };
@@ -252,26 +224,19 @@ export function AdvancedLessonAudioPlayer({
       handlePause();
       const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
       if (segment) {
-        setTimeout(() => {
-          setIsPlaying(true);
-          speakSegment(segment, true);
-        }, 100);
+        setTimeout(() => speakSegment(segment), 100);
       }
     }
   };
 
   const handleMarkerClick = (segment: AudioSegment) => {
+    handlePause();
     setCurrentTime(segment.start_time);
-    if (isPlaying) {
-      handlePause();
-      setTimeout(() => {
-        setIsPlaying(true);
-        speakSegment(segment, true);
-      }, 100);
-    }
+    setTimeout(() => speakSegment(segment), 100);
   };
 
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number): string => {
+    if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -283,12 +248,22 @@ export function AdvancedLessonAudioPlayer({
 
   useEffect(() => {
     return () => {
-      speechSynthesis.cancel();
+      window.speechSynthesis.cancel();
       if (timeUpdateInterval.current) {
         clearInterval(timeUpdateInterval.current);
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isPlaying) {
+      handlePause();
+      const segment = getCurrentSegment() || segments[currentSegmentIndex];
+      if (segment) {
+        setTimeout(() => speakSegment(segment), 100);
+      }
+    }
+  }, [playbackRate]);
 
   const currentSegment = getCurrentSegment();
   const progress = (currentTime / duration) * 100;

@@ -17,6 +17,7 @@ export function BulkAudioGenerator() {
   const [progress, setProgress] = useState(0);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [forceRegenerate, setForceRegenerate] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     processed: 0,
@@ -53,8 +54,11 @@ export function BulkAudioGenerator() {
       // Count total lessons to process
       let countQuery = supabase
         .from('lessons')
-        .select('id', { count: 'exact', head: true })
-        .is('audio_url', null);
+        .select('id', { count: 'exact', head: true });
+      
+      if (!forceRegenerate) {
+        countQuery = countQuery.is('audio_url', null);
+      }
 
       if (selectedCourse !== "all") {
         countQuery = countQuery.eq('course_id', selectedCourse);
@@ -65,9 +69,11 @@ export function BulkAudioGenerator() {
       if (countError) throw countError;
 
       if (!count || count === 0) {
-        toast.info("No lessons to process", {
-          description: "All lessons already have audio"
-        });
+        if (!forceRegenerate) {
+          toast.info('No lessons found without audio. Try enabling "Force regenerate" to repair existing audio.');
+        } else {
+          toast.info('No lessons found to process');
+        }
         setIsGenerating(false);
         return;
       }
@@ -87,7 +93,8 @@ export function BulkAudioGenerator() {
           body: { 
             courseId: selectedCourse !== "all" ? selectedCourse : undefined,
             offset,
-            batchSize
+            batchSize,
+            force: forceRegenerate
           }
         });
 
@@ -165,11 +172,24 @@ export function BulkAudioGenerator() {
                       {course.title}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <Button 
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="force-regenerate"
+              checked={forceRegenerate}
+              onChange={(e) => setForceRegenerate(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="force-regenerate" className="text-sm text-muted-foreground">
+              Force regenerate (overwrite existing audio)
+            </label>
+          </div>
+
+          <Button
               onClick={startGeneration} 
               className="w-full"
               disabled={isGenerating}

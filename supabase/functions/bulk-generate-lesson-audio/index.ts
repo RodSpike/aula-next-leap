@@ -48,12 +48,15 @@ serve(async (req) => {
       throw new Error('Admin access required');
     }
 
-    const { courseId, offset = 0, batchSize = 5 } = await req.json();
+    const { courseId, offset = 0, batchSize = 5, force = false } = await req.json();
 
     let query = supabase
       .from('lessons')
-      .select('id, title, content, course_id, audio_url')
-      .is('audio_url', null);
+      .select('id, title, content, course_id, audio_url');
+    
+    if (!force) {
+      query = query.is('audio_url', null);
+    }
 
     if (courseId) {
       query = query.eq('course_id', courseId);
