@@ -2,11 +2,18 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
-const buildCorsHeaders = (req: Request) => ({
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') ?? 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-});
+const buildCorsHeaders = (req: Request) => {
+  const origin = req.headers.get('origin') || '*';
+  const reqHeaders = req.headers.get('access-control-request-headers') ?? 'authorization, x-client-info, apikey, content-type';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': reqHeaders,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin'
+  };
+};
 
 interface LanguageSegment {
   text: string;
@@ -18,7 +25,7 @@ interface LanguageSegment {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: buildCorsHeaders(req) });
+    return new Response(null, { status: 204, headers: buildCorsHeaders(req) });
   }
 
   try {

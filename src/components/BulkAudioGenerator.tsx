@@ -53,7 +53,9 @@ export function BulkAudioGenerator() {
         description: "Processing lessons with server-side language detection"
       });
 
-      // Authorization header will be automatically attached by supabase-js using the current session
+      // Ensure we always pass a valid Authorization header for admin check
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
       // Count total lessons to process
       let countQuery = supabase
@@ -99,7 +101,8 @@ export function BulkAudioGenerator() {
             offset,
             batchSize,
             force: forceRegenerate
-          }
+          },
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
         });
 
         if (error) throw error;
