@@ -29,62 +29,63 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
 
   const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
-    
+
+    // Prefer a bilingual Brazilian Portuguese female voice for ALL segments if available
+    const ptBrBilingual = voices.find(v =>
+      v.lang === 'pt-BR' && (
+        /Luciana|Francisca|Maria/i.test(v.name) ||
+        /natural|neural/i.test(v.name) ||
+        (v.name.includes('Google') && !/male/i.test(v.name))
+      )
+    );
+    if (ptBrBilingual) return ptBrBilingual;
+
     if (language.includes('pt')) {
-      // Priority 1: Google Luciana (female Brazilian Portuguese, best for bilingual content)
-      const googleLuciana = voices.find(v => 
-        v.lang === 'pt-BR' && 
+      // Priority 1: Google Luciana (female Brazilian Portuguese)
+      const googleLuciana = voices.find(v =>
+        v.lang === 'pt-BR' &&
         v.name.includes('Google') &&
         (v.name.includes('Luciana') || v.name.toLowerCase().includes('female'))
       );
       if (googleLuciana) return googleLuciana;
-      
+
       // Priority 2: Any Google pt-BR female voice
-      const googlePtBRFemale = voices.find(v => 
-        v.lang === 'pt-BR' && 
+      const googlePtBRFemale = voices.find(v =>
+        v.lang === 'pt-BR' &&
         v.name.includes('Google') &&
         !v.name.toLowerCase().includes('male')
       );
       if (googlePtBRFemale) return googlePtBRFemale;
-      
+
       // Priority 3: Any Google Portuguese (Brasil)
       const googlePtBR = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google'));
       if (googlePtBR) return googlePtBR;
-      
-      // Priority 4: Microsoft Francisca (female, handles some English)
-      const francisca = voices.find(v => 
-        v.lang === 'pt-BR' && 
-        v.name.includes('Francisca')
-      );
+
+      // Priority 4: Microsoft Francisca (female)
+      const francisca = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Francisca'));
       if (francisca) return francisca;
-      
+
       // Fallback: Any Brazilian Portuguese
       return voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
       // For English segments, use a natural voice
-      // Priority 1: Google US English female
-      const googleEnFemale = voices.find(v => 
-        v.lang === 'en-US' && 
+      const googleEnFemale = voices.find(v =>
+        v.lang === 'en-US' &&
         v.name.includes('Google') &&
         (v.name.toLowerCase().includes('female') || v.name.includes('US'))
       );
       if (googleEnFemale) return googleEnFemale;
-      
-      // Priority 2: Any Google US English
+
       const googleEn = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
       if (googleEn) return googleEn;
-      
-      // Priority 3: Microsoft Aria or Jenny (natural voices)
-      const microsoftNatural = voices.find(v => 
-        v.lang === 'en-US' && 
-        (v.name.includes('Aria') || v.name.includes('Jenny'))
-      );
+
+      const microsoftNatural = voices.find(v => v.lang === 'en-US' && (v.name.includes('Aria') || v.name.includes('Jenny')));
       if (microsoftNatural) return microsoftNatural;
-      
-      // Fallback: Any US English
+
       return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
   };
+
 
   const speakSegment = (index: number) => {
     if (index >= segments.length) {

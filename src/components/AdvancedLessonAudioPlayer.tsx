@@ -47,65 +47,68 @@ export function AdvancedLessonAudioPlayer({
   const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const timeUpdateInterval = useRef<number | null>(null);
+  const playbackStartTimeRef = useRef<number>(0);
+  const startedAtRef = useRef<number>(0);
 
   const findVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
-    
+
+    // Prefer a bilingual Brazilian Portuguese female voice for ALL segments if available
+    const ptBrBilingual = voices.find(v =>
+      v.lang === 'pt-BR' && (
+        /Luciana|Francisca|Maria/i.test(v.name) ||
+        /natural|neural/i.test(v.name) ||
+        (v.name.includes('Google') && !/male/i.test(v.name))
+      )
+    );
+    if (ptBrBilingual) return ptBrBilingual;
+
     if (language === 'pt-BR') {
-      // Priority 1: Google Luciana (female Brazilian Portuguese, best for bilingual content)
-      const googleLuciana = voices.find(v => 
-        v.lang === 'pt-BR' && 
+      // Priority 1: Google Luciana (female Brazilian Portuguese)
+      const googleLuciana = voices.find(v =>
+        v.lang === 'pt-BR' &&
         v.name.includes('Google') &&
         (v.name.includes('Luciana') || v.name.toLowerCase().includes('female'))
       );
       if (googleLuciana) return googleLuciana;
-      
+
       // Priority 2: Any Google pt-BR female voice
-      const googlePtBRFemale = voices.find(v => 
-        v.lang === 'pt-BR' && 
+      const googlePtBRFemale = voices.find(v =>
+        v.lang === 'pt-BR' &&
         v.name.includes('Google') &&
         !v.name.toLowerCase().includes('male')
       );
       if (googlePtBRFemale) return googlePtBRFemale;
-      
+
       // Priority 3: Any Google Portuguese (Brasil)
       const googlePtBR = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google'));
       if (googlePtBR) return googlePtBR;
-      
-      // Priority 4: Microsoft Francisca (female, handles some English)
-      const francisca = voices.find(v => 
-        v.lang === 'pt-BR' && 
-        v.name.includes('Francisca')
-      );
+
+      // Priority 4: Microsoft Francisca (female)
+      const francisca = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Francisca'));
       if (francisca) return francisca;
-      
+
       // Fallback: Any Brazilian Portuguese
       return voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
       // For English segments, use a natural voice
-      // Priority 1: Google US English female
-      const googleEnFemale = voices.find(v => 
-        v.lang === 'en-US' && 
+      const googleEnFemale = voices.find(v =>
+        v.lang === 'en-US' &&
         v.name.includes('Google') &&
         (v.name.toLowerCase().includes('female') || v.name.includes('US'))
       );
       if (googleEnFemale) return googleEnFemale;
-      
-      // Priority 2: Any Google US English
+
       const googleEn = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
       if (googleEn) return googleEn;
-      
-      // Priority 3: Microsoft Aria or Jenny (natural voices)
-      const microsoftNatural = voices.find(v => 
-        v.lang === 'en-US' && 
-        (v.name.includes('Aria') || v.name.includes('Jenny'))
-      );
+
+      const microsoftNatural = voices.find(v => v.lang === 'en-US' && (v.name.includes('Aria') || v.name.includes('Jenny')));
       if (microsoftNatural) return microsoftNatural;
-      
-      // Fallback: Any US English
+
       return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
   };
+
 
   const getCurrentSegment = (): AudioSegment | null => {
     return segments.find(seg => {
@@ -115,76 +118,110 @@ export function AdvancedLessonAudioPlayer({
     }) || null;
   };
 
-  const speakSegment = (segment: AudioSegment) => {
+  const speakSegment = (segment: AudioSegment, startAt?: number) => {
     if (!segment) return;
-    
-    let voices = window.speechSynthesis.getVoices();
+
+    const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) {
       window.speechSynthesis.onvoiceschanged = () => {
-        speakSegment(segment);
+        speakSegment(segment, startAt);
       };
       return;
     }
-    
+
+    // Stop any current speech and timers
     window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(cleanTextForTTS(segment.text));
-    const voice = findVoiceForLanguage(segment.language);
-    
-    if (voice) {
-      utterance.voice = voice;
+    if (timeUpdateInterval.current) {
+      clearInterval(timeUpdateInterval.current);
     }
-    
-    utterance.lang = segment.language;
+
+    // Calculate effective start time within the segment
+    const segStart = Number(segment.start_time) || 0;
+    const segEnd = Number(segment.end_time) || 0;
+    const segDur = Math.max(0, segEnd - segStart);
+    const effectiveStart = Math.min(segEnd, Math.max(segStart, startAt ?? currentTime));
+
+    // Slice text approximately to the offset so we don't always restart from segment start
+    const fullText = cleanTextForTTS(segment.text);
+    let textToSpeak = fullText;
+    if (segDur > 0 && effectiveStart > segStart && fullText.length > 10) {
+      const ratio = (effectiveStart - segStart) / segDur;
+      let idx = Math.floor(ratio * fullText.length);
+      // advance to next word boundary to avoid mid-word start
+      const nextSpace = fullText.indexOf(' ', idx);
+      if (nextSpace > -1 && nextSpace < fullText.length - 1) idx = nextSpace + 1;
+      textToSpeak = fullText.slice(idx).trim();
+    }
+
+    if (!textToSpeak) {
+      // Nothing meaningful left in this segment, jump to next
+      const currentIndex = segments.findIndex(s => s === segment);
+      if (currentIndex < segments.length - 1) {
+        setCurrentSegmentIndex(currentIndex + 1);
+        speakSegment(segments[currentIndex + 1], segments[currentIndex + 1].start_time);
+      } else {
+        setIsPlaying(false);
+        setCurrentTime(segEnd);
+      }
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const voice = findVoiceForLanguage(segment.language);
+    if (voice) utterance.voice = voice;
+
+    utterance.lang = voice?.lang || segment.language;
     utterance.volume = isMuted ? 0 : volume;
     utterance.rate = playbackRate;
     utterance.pitch = 1.0;
-    
+
     utterance.onstart = () => {
       setIsPlaying(true);
       setIsLoading(false);
-      setCurrentTime(segment.start_time);
-      
+      setCurrentTime(effectiveStart);
+      playbackStartTimeRef.current = effectiveStart;
+      startedAtRef.current = performance.now();
+
       timeUpdateInterval.current = window.setInterval(() => {
-        setCurrentTime(prev => {
-          const next = prev + (0.1 * playbackRate);
-          return next < segment.end_time ? next : segment.end_time;
-        });
+        const elapsed = (performance.now() - startedAtRef.current) / 1000; // seconds
+        const next = Math.min(segEnd, playbackStartTimeRef.current + elapsed * playbackRate);
+        setCurrentTime(next);
       }, 100);
     };
-    
+
     utterance.onend = () => {
       if (timeUpdateInterval.current) {
         clearInterval(timeUpdateInterval.current);
       }
-      
+
       const currentIndex = segments.findIndex(s => s === segment);
       if (currentIndex < segments.length - 1) {
         setCurrentSegmentIndex(currentIndex + 1);
-        speakSegment(segments[currentIndex + 1]);
+        speakSegment(segments[currentIndex + 1], segments[currentIndex + 1].start_time);
       } else {
         setIsPlaying(false);
         setCurrentTime(safeDuration);
       }
     };
-    
+
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   };
+
 
   const handlePlay = async () => {
     setIsLoading(true);
     try {
       if (window.speechSynthesis.getVoices().length === 0) {
         await new Promise(resolve => {
-          window.speechSynthesis.onvoiceschanged = resolve;
+          window.speechSynthesis.onvoiceschanged = resolve as () => void;
         });
       }
 
-      // Play from current segment index, respecting where user seeked to
-      const segment = segments[currentSegmentIndex];
+      // Play from the exact current time within the current segment
+      const segment = getCurrentSegment() || segments[currentSegmentIndex] || segments[0];
       if (segment) {
-        speakSegment(segment);
+        speakSegment(segment, currentTime);
       }
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -193,6 +230,7 @@ export function AdvancedLessonAudioPlayer({
       setIsLoading(false);
     }
   };
+
 
   const handlePause = () => {
     window.speechSynthesis.cancel();
@@ -215,50 +253,55 @@ export function AdvancedLessonAudioPlayer({
   const handleSkipForward = () => {
     const newTime = Math.min(currentTime + 10, safeDuration);
     setCurrentTime(newTime);
-    if (isPlaying) {
-      handlePause();
-      const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
-      if (segment) {
-        setTimeout(() => speakSegment(segment), 100);
+    const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
+    if (segment) {
+      const segmentIndex = segments.findIndex(seg => seg === segment);
+      setCurrentSegmentIndex(segmentIndex);
+      if (isPlaying) {
+        handlePause();
+        setTimeout(() => speakSegment(segment, newTime), 100);
       }
     }
   };
+
 
   const handleSkipBack = () => {
     const newTime = Math.max(currentTime - 10, 0);
     setCurrentTime(newTime);
-    if (isPlaying) {
-      handlePause();
-      const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
-      if (segment) {
-        setTimeout(() => speakSegment(segment), 100);
+    const segment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
+    if (segment) {
+      const segmentIndex = segments.findIndex(seg => seg === segment);
+      setCurrentSegmentIndex(segmentIndex);
+      if (isPlaying) {
+        handlePause();
+        setTimeout(() => speakSegment(segment, newTime), 100);
       }
     }
   };
+
 
   const handleSeek = (value: number[]) => {
     const newTime = safeDuration > 0 ? (value[0] / 100) * safeDuration : 0;
     setCurrentTime(newTime);
-    
-    // Find the segment at the new time
+
     const targetSegment = segments.find(seg => newTime >= seg.start_time && newTime < seg.end_time);
     if (targetSegment) {
       const segmentIndex = segments.findIndex(seg => seg === targetSegment);
       setCurrentSegmentIndex(segmentIndex);
-      
-      // If currently playing, restart from new position
       if (isPlaying) {
         handlePause();
-        setTimeout(() => speakSegment(targetSegment), 100);
+        setTimeout(() => speakSegment(targetSegment, newTime), 100);
       }
     }
   };
 
+
   const handleMarkerClick = (segment: AudioSegment) => {
     handlePause();
     setCurrentTime(segment.start_time);
-    setTimeout(() => speakSegment(segment), 100);
+    setTimeout(() => speakSegment(segment, segment.start_time), 100);
   };
+
 
   const formatTime = (seconds: number): string => {
     if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
@@ -285,10 +328,11 @@ export function AdvancedLessonAudioPlayer({
       handlePause();
       const segment = getCurrentSegment() || segments[currentSegmentIndex];
       if (segment) {
-        setTimeout(() => speakSegment(segment), 100);
+        setTimeout(() => speakSegment(segment, currentTime), 100);
       }
     }
   }, [playbackRate]);
+
 
   const currentSegment = getCurrentSegment();
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : (segments?.length ? Number(segments[segments.length - 1].end_time) || 0 : 0);
