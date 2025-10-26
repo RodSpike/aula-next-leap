@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { cleanTextForTTS } from "@/utils/cleanTextForTTS";
 
 interface Segment {
   text: string;
@@ -53,21 +54,59 @@ export const LanguageAwareTTS = ({ content, lessonId }: LanguageAwareTTSProps) =
     return segments;
   };
 
-  // Get appropriate voice for language
-  const getVoiceForLanguage = (language: string) => {
+  // Get appropriate premium female voice for language
+  const getVoiceForLanguage = (language: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
     
-    if (language === 'pt-BR') {
-      return voices.find(voice => 
-        voice.lang.includes('pt-BR') || 
-        (voice.lang.includes('pt') && voice.name.toLowerCase().includes('brazil'))
-      ) || voices.find(voice => voice.lang.includes('pt'));
-    } else {
-      return voices.find(voice => 
-        voice.lang.includes('en-US') || 
-        voice.lang.includes('en-GB')
-      ) || voices.find(voice => voice.lang.includes('en'));
-    }
+    // Filter voices by language
+    const languageVoices = language === 'pt-BR'
+      ? voices.filter(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR') || v.lang.startsWith('pt'))
+      : voices.filter(v => v.lang.includes('en-US') || v.lang.includes('en_US') || v.lang.startsWith('en'));
+
+    if (languageVoices.length === 0) return null;
+
+    // Priority 1: Premium female voices (Google/Microsoft natural voices)
+    const premiumFemale = languageVoices.find(v => 
+      (v.name.toLowerCase().includes('google') && v.name.toLowerCase().includes('female')) ||
+      (v.name.toLowerCase().includes('google') && (
+        v.name.includes('Luciana') || // Portuguese
+        v.name.includes('Flo') ||     // Portuguese alternative
+        v.name.includes('Samantha') || // English
+        v.name.includes('Ava')         // English alternative
+      )) ||
+      v.name.includes('Microsoft Maria') ||      // Portuguese
+      v.name.includes('Microsoft Francisca') ||  // Portuguese
+      v.name.includes('Microsoft Zira') ||       // English
+      v.name.includes('Microsoft Jenny')         // English
+    );
+    
+    if (premiumFemale) return premiumFemale;
+
+    // Priority 2: Any female voice
+    const femaleVoice = languageVoices.find(v => 
+      !v.name.toLowerCase().includes('male') &&
+      !v.name.includes('Daniel') &&
+      !v.name.includes('David') &&
+      !v.name.includes('Alex') &&
+      !v.name.includes('Fred') &&
+      (v.name.toLowerCase().includes('female') ||
+       v.name.includes('Luciana') ||
+       v.name.includes('Samantha') ||
+       v.name.includes('Maria') ||
+       v.name.includes('Francisca') ||
+       v.name.includes('Zira') ||
+       v.name.includes('Jenny') ||
+       v.name.includes('Ava'))
+    );
+
+    if (femaleVoice) return femaleVoice;
+
+    // Priority 3: Google voices (usually better quality)
+    const googleVoice = languageVoices.find(v => v.name.includes('Google'));
+    if (googleVoice) return googleVoice;
+
+    // Priority 4: Default to first available voice
+    return languageVoices[0];
   };
 
   const speakSegment = (segmentIndex: number) => {
@@ -77,7 +116,8 @@ export const LanguageAwareTTS = ({ content, lessonId }: LanguageAwareTTSProps) =
     }
 
     const segment = segments[segmentIndex];
-    const utterance = new SpeechSynthesisUtterance(segment.text);
+    const cleanedText = cleanTextForTTS(segment.text);
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
     
     utterance.lang = segment.language;
     const voice = getVoiceForLanguage(segment.language);
@@ -86,7 +126,7 @@ export const LanguageAwareTTS = ({ content, lessonId }: LanguageAwareTTSProps) =
     }
 
     utterance.rate = 0.9;
-    utterance.pitch = 1;
+    utterance.pitch = 1.0;
     utterance.volume = 1;
 
     utterance.onstart = () => {
@@ -111,7 +151,7 @@ export const LanguageAwareTTS = ({ content, lessonId }: LanguageAwareTTSProps) =
     window.speechSynthesis.speak(utterance);
   };
 
-  const startTTS = () => {
+  const startTTS = async () => {
     if (!content) {
       toast({
         title: "No content",
@@ -119,6 +159,13 @@ export const LanguageAwareTTS = ({ content, lessonId }: LanguageAwareTTSProps) =
         variant: "destructive",
       });
       return;
+    }
+
+    // Ensure voices are loaded
+    if (window.speechSynthesis.getVoices().length === 0) {
+      await new Promise(resolve => {
+        window.speechSynthesis.onvoiceschanged = resolve;
+      });
     }
 
     window.speechSynthesis.cancel();

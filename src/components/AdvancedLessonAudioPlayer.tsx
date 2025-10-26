@@ -103,9 +103,17 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const getCurrentSegment = () => {
-    return segments.find(seg => 
+    // Guard against invalid timestamps
+    const validSegments = segments.filter(seg => 
+      typeof seg.start_time === 'number' && 
+      typeof seg.end_time === 'number' &&
+      !isNaN(seg.start_time) && 
+      !isNaN(seg.end_time)
+    );
+    
+    return validSegments.find(seg => 
       currentTime >= seg.start_time && currentTime < seg.end_time
-    ) || segments[0];
+    ) || validSegments[0] || segments[0];
   };
 
   const speakSegment = (segment: AudioSegment, startFromSegment: boolean = false) => {
@@ -297,7 +305,7 @@ export function AdvancedLessonAudioPlayer({
             <Badge variant="outline">{currentSegment?.marker_label}</Badge>
           </div>
           <p className="text-sm text-muted-foreground line-clamp-2">
-            {currentSegment?.text || lessonTitle}
+            {cleanTextForTTS(currentSegment?.text || lessonTitle)}
           </p>
         </div>
       </div>
