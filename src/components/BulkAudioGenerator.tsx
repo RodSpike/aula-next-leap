@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { detectPortuguese } from "@/utils/portugueseDetection";
 
 interface Course {
   id: string;
@@ -54,7 +55,7 @@ export const BulkAudioGenerator = () => {
     setCourses(data || []);
   };
 
-  // Client-side TTS generation with language detection
+  // Client-side TTS generation with enhanced language detection
   const generateAudioForLesson = async (lesson: NonNullable<Course['lessons']>[0]): Promise<AudioResult | null> => {
     if (!lesson.content) {
       console.log(`No content for lesson: ${lesson.title}`);
@@ -62,52 +63,92 @@ export const BulkAudioGenerator = () => {
     }
 
     try {
-      // Enhanced language detection
-      const detectLanguage = (text: string): string => {
-        const englishIndicators = [
-          'the', 'and', 'is', 'are', 'to', 'of', 'in', 'that', 'it', 'with', 'for', 'on', 'as', 'was', 'be',
-          'this', 'have', 'from', 'or', 'by', 'what', 'which', 'you', 'they', 'we', 'he', 'she', 'it'
-        ];
+      // Split content into smaller segments for better language detection
+      const splitIntoSegments = (text: string): Array<{ text: string; language: string }> => {
+        const segments: Array<{ text: string; language: string }> = [];
         
-        const portugueseIndicators = [
-          'o', 'a', 'os', 'as', 'é', 'são', 'para', 'de', 'em', 'que', 'com', 'do', 'da', 'dos', 'das',
-          'um', 'uma', 'uns', 'umas', 'no', 'na', 'nos', 'nas', 'por', 'se', 'mais', 'mas', 'como',
-          'eu', 'tu', 'ele', 'ela', 'nós', 'vós', 'eles', 'elas'
-        ];
-
-        const words = text.toLowerCase().split(/\s+/);
-        let englishCount = 0;
-        let portugueseCount = 0;
-
-        words.forEach(word => {
-          if (englishIndicators.includes(word)) englishCount++;
-          if (portugueseIndicators.includes(word)) portugueseCount++;
-        });
-
-        // More sophisticated detection
-        if (portugueseCount > englishCount * 1.5) return 'pt-BR';
-        if (englishCount > portugueseCount * 1.5) return 'en-US';
+        // Split by lines first
+        const lines = text.split('\n').filter(line => line.trim());
         
-        // Default to English for mixed content
-        return 'en-US';
+        for (const line of lines) {
+          // Check for parenthetical content (often translations)
+          const parentheticalRegex = /^(.*?)\s*\((.*?)\)\s*(.*)$/;
+          const match = line.match(parentheticalRegex);
+          
+          if (match) {
+            const [, before, inside, after] = match;
+            
+            // Add text before parentheses
+            if (before.trim()) {
+              const isPortuguese = detectPortuguese(before);
+              segments.push({
+                text: before.trim(),
+                language: isPortuguese ? 'pt-BR' : 'en-US'
+              });
+            }
+            
+            // Add parenthetical content (usually opposite language)
+            if (inside.trim()) {
+              const isPortuguese = detectPortuguese(inside);
+              segments.push({
+                text: inside.trim(),
+                language: isPortuguese ? 'pt-BR' : 'en-US'
+              });
+            }
+            
+            // Add text after parentheses
+            if (after.trim()) {
+              const isPortuguese = detectPortuguese(after);
+              segments.push({
+                text: after.trim(),
+                language: isPortuguese ? 'pt-BR' : 'en-US'
+              });
+            }
+          } else {
+            // No parentheses - check for colon-separated content (like "Title: Explanation")
+            const colonMatch = line.match(/^([^:]+):\s*(.+)$/);
+            
+            if (colonMatch) {
+              const [, title, content] = colonMatch;
+              
+              // Add title
+              if (title.trim()) {
+                const isPortuguese = detectPortuguese(title);
+                segments.push({
+                  text: title.trim() + ':',
+                  language: isPortuguese ? 'pt-BR' : 'en-US'
+                });
+              }
+              
+              // Add content
+              if (content.trim()) {
+                const isPortuguese = detectPortuguese(content);
+                segments.push({
+                  text: content.trim(),
+                  language: isPortuguese ? 'pt-BR' : 'en-US'
+                });
+              }
+            } else {
+              // Simple line - detect language and add
+              const isPortuguese = detectPortuguese(line);
+              segments.push({
+                text: line.trim(),
+                language: isPortuguese ? 'pt-BR' : 'en-US'
+              });
+            }
+          }
+        }
+        
+        return segments;
       };
 
-      // Split content into segments by paragraphs
-      const paragraphs = lesson.content.split('\n').filter(p => p.trim());
-      const audioSegments: AudioSegment[] = [];
-
-      for (const paragraph of paragraphs) {
-        if (!paragraph.trim()) continue;
-
-        const language = detectLanguage(paragraph);
-        
-        audioSegments.push({
-          text: paragraph,
-          language: language,
-          duration: Math.ceil(paragraph.length / 8), // Rough duration estimate
-          order: audioSegments.length
-        });
-      }
+      const segments = splitIntoSegments(lesson.content);
+      const audioSegments: AudioSegment[] = segments.map((seg, index) => ({
+        text: seg.text,
+        language: seg.language,
+        duration: Math.ceil(seg.text.length / 8),
+        order: index
+      }));
 
       return {
         lessonId: lesson.id,
