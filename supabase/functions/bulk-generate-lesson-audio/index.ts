@@ -80,25 +80,80 @@ serve(async (req) => {
       try {
         console.log(`Generating audio for lesson: ${lesson.title}`);
 
-        // Get language segments
-        const segmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/intelligent-text-to-speech`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader,
-          },
-          body: JSON.stringify({
-            text: `${lesson.title}. ${lesson.content}`.substring(0, 4000)
-          })
-        });
+        // Get language segments for the FULL lesson by chunking the text and merging results
+        const fullText = `${lesson.title}. ${lesson.content}`;
 
-        if (!segmentResponse.ok) {
-          throw new Error(`Segment detection failed: ${segmentResponse.status}`);
+        // Helper: split into ~3500 char chunks on sentence boundaries
+        const splitIntoChunks = (text: string, maxLen = 3500): string[] => {
+          const sentences = text.split(/(?<=[.!?])\s+/);
+          const chunks: string[] = [];
+          let current = '';
+          for (const s of sentences) {
+            if ((current + (current ? ' ' : '') + s).length > maxLen) {
+              if (current) chunks.push(current);
+              current = s;
+            } else {
+              current = current ? `${current} ${s}` : s;
+            }
+          }
+          if (current) chunks.push(current);
+          return chunks;
+        };
+
+        // Helper: simple language detection using stopwords score
+        const enWords = new Set(['the','and','to','of','in','is','you','that','it','for','on','with','as','this','are','be','or','by','from','at','have','an','was','not','but','they','we','can','your','will','if','do']);
+        const ptWords = new Set(['de','que','o','a','e','do','da','em','um','para','com','não','uma','os','no','se','na','por','mais','as','dos','como','mas','foi','ao','ele','das','tem','à','seu','sua','ou','ser','quando','muito','há','nos','já','está']);
+        const detectLang = (s: string): 'en-US' | 'pt-BR' => {
+          const tokens = (s.toLowerCase().match(/[a-zà-úâêôãõáéíóúç']+/gi) || []);
+          let en=0, pt=0;
+          for (const t of tokens) {
+            if (enWords.has(t)) en++;
+            if (ptWords.has(t)) pt++;
+          }
+          // fallback heuristic: ASCII proportion
+          if (en===pt) {
+            const ascii = (s.match(/[A-Za-z]/g) || []).length;
+            const nonAscii = (s.length - ascii);
+            if (ascii > nonAscii) en++; else pt++;
+          }
+          return en>pt ? 'en-US' : 'pt-BR';
+        };
+
+        // Helper: split into sentences to allow intra-chunk language switching
+        const splitIntoSentences = (t: string) => t.split(/(?<=[.!?;:])\s+/).filter(Boolean);
+
+        // Call the segmentation function per chunk and merge
+        const chunks = splitIntoChunks(fullText);
+        let mergedSegments: { text: string; language: 'pt-BR' | 'en-US' }[] = [];
+        for (const chunk of chunks) {
+          const segmentResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/intelligent-text-to-speech`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader,
+            },
+            body: JSON.stringify({ text: chunk })
+          });
+
+          if (!segmentResponse.ok) {
+            throw new Error(`Segment detection failed: ${segmentResponse.status}`);
+          }
+          const parsed = await segmentResponse.json();
+          const chunkSegments = (parsed?.segments || []) as Array<{ text: string; language: 'pt-BR' | 'en-US' }>;
+
+          if (!chunkSegments.length) continue;
+
+          // Refine each returned segment into sentence-level segments with language detection
+          for (const seg of chunkSegments) {
+            const sentences = splitIntoSentences(seg.text);
+            for (const sentence of sentences) {
+              const lang = detectLang(sentence);
+              mergedSegments.push({ text: sentence, language: lang });
+            }
+          }
         }
 
-        const { segments } = await segmentResponse.json();
-
-        if (!segments || segments.length === 0) {
+        if (!mergedSegments.length) {
           results.skipped++;
           results.details.push({
             lessonId: lesson.id,
@@ -108,35 +163,31 @@ serve(async (req) => {
           continue;
         }
 
-        // Create enhanced segments with timestamps and markers
+        // Build enhanced segments with timestamps and markers covering the WHOLE lesson
         let currentTime = 0;
-        const avgWordsPerSecond = 2.5; // Average speech rate
-        
-        const enhancedSegments: LanguageSegment[] = segments.map((seg: any, index: number) => {
-          const wordCount = seg.text.split(/\s+/).length;
-          const duration = wordCount / avgWordsPerSecond;
+        const wpsByLang: Record<'pt-BR'|'en-US', number> = { 'pt-BR': 2.3, 'en-US': 2.7 };
+
+        const enhancedSegments: LanguageSegment[] = mergedSegments.map((seg, index) => {
+          const wordCount = (seg.text.match(/\S+/g) || []).length;
+          const duration = Math.max(wordCount / (wpsByLang[seg.language] || 2.5), 0.6);
           const startTime = currentTime;
-          const endTime = currentTime + duration;
+          const endTime = startTime + duration;
           currentTime = endTime;
 
-          // Determine marker label based on content and position
+          // Determine marker label
+          const lower = seg.text.toLowerCase();
           let markerLabel = 'Content';
-          if (index === 0) {
-            markerLabel = 'Introduction';
-          } else if (seg.text.toLowerCase().includes('example') || seg.text.toLowerCase().includes('exemplo')) {
-            markerLabel = 'Examples';
-          } else if (seg.text.toLowerCase().includes('grammar') || seg.text.toLowerCase().includes('gramática')) {
-            markerLabel = 'Grammar';
-          } else if (seg.text.toLowerCase().includes('practice') || seg.text.toLowerCase().includes('prática')) {
-            markerLabel = 'Practice';
-          }
+          if (index === 0) markerLabel = 'Introduction';
+          else if (/(example|exemplo)/.test(lower)) markerLabel = 'Examples';
+          else if (/(grammar|gramática)/.test(lower)) markerLabel = 'Grammar';
+          else if (/(practice|prática)/.test(lower)) markerLabel = 'Practice';
 
           return {
             text: seg.text,
             language: seg.language,
             start_time: startTime,
             end_time: endTime,
-            marker_label: markerLabel
+            marker_label: markerLabel,
           };
         });
 

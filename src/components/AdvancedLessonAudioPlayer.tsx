@@ -52,7 +52,7 @@ export function AdvancedLessonAudioPlayer({
     const voices = window.speechSynthesis.getVoices();
     
     if (language === 'pt-BR') {
-      const premiumNames = ['Maria', 'Francisca', 'Luciana'];
+      const premiumNames = ['Maria', 'Francisca', 'Luciana', 'Microsoft Maria', 'Microsoft Francisca'];
       const premium = voices.find(v => 
         v.lang.includes('pt') && 
         premiumNames.some(name => v.name.includes(name))
@@ -70,7 +70,7 @@ export function AdvancedLessonAudioPlayer({
       
       return voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
-      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava'];
+      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava', 'Microsoft Jenny', 'Microsoft Aria'];
       const premium = voices.find(v => 
         v.lang.startsWith('en') && 
         premiumNames.some(name => v.name.includes(name))
@@ -121,6 +121,8 @@ export function AdvancedLessonAudioPlayer({
     utterance.lang = segment.language;
     utterance.volume = isMuted ? 0 : volume;
     utterance.rate = playbackRate;
+    // Slight pitch increase to bias towards more natural (often perceived as female) tone when browser lacks explicit female voices
+    utterance.pitch = 1.05;
     
     utterance.onstart = () => {
       setIsPlaying(true);
@@ -146,7 +148,7 @@ export function AdvancedLessonAudioPlayer({
         speakSegment(segments[currentIndex + 1]);
       } else {
         setIsPlaying(false);
-        setCurrentTime(duration);
+        setCurrentTime(safeDuration);
       }
     };
     
@@ -194,7 +196,7 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const handleSkipForward = () => {
-    const newTime = Math.min(currentTime + 10, duration);
+    const newTime = Math.min(currentTime + 10, safeDuration);
     setCurrentTime(newTime);
     if (isPlaying) {
       handlePause();
@@ -218,7 +220,7 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const handleSeek = (value: number[]) => {
-    const newTime = (value[0] / 100) * duration;
+    const newTime = safeDuration > 0 ? (value[0] / 100) * safeDuration : 0;
     setCurrentTime(newTime);
     if (isPlaying) {
       handlePause();
@@ -243,7 +245,7 @@ export function AdvancedLessonAudioPlayer({
   };
 
   const getMarkerPosition = (segment: AudioSegment) => {
-    return (segment.start_time / duration) * 100;
+    return safeDuration > 0 ? (segment.start_time / safeDuration) * 100 : 0;
   };
 
   useEffect(() => {
@@ -266,7 +268,8 @@ export function AdvancedLessonAudioPlayer({
   }, [playbackRate]);
 
   const currentSegment = getCurrentSegment();
-  const progress = (currentTime / duration) * 100;
+  const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : (segments?.length ? Number(segments[segments.length - 1].end_time) || 0 : 0);
+  const progress = safeDuration > 0 ? (currentTime / safeDuration) * 100 : 0;
 
   return (
     <div className="bg-gradient-to-br from-primary/5 via-background to-secondary/5 rounded-lg border p-6 space-y-4">
@@ -312,7 +315,7 @@ export function AdvancedLessonAudioPlayer({
 
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
           <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+          <span>{formatTime(safeDuration)}</span>
         </div>
       </div>
 
