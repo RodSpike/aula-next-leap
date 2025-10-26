@@ -8,6 +8,7 @@ import { BookOpen, Clock, Users, Star, Play, Award, TrendingUp, TrendingDown, Ro
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { OngoingChats } from "@/components/OngoingChats";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -536,6 +537,9 @@ export default function Dashboard() {
 
             {/* Ongoing Chats Section */}
             <OngoingChats />
+
+            {/* English TV Widget */}
+            <DashboardVideoWidget />
 
             <Card className="mt-6">
               <CardHeader>
