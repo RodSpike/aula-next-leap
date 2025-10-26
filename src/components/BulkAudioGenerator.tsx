@@ -24,6 +24,7 @@ export function BulkAudioGenerator() {
     failed: 0,
     skipped: 0
   });
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const loadCourses = async () => {
     try {
@@ -45,11 +46,16 @@ export function BulkAudioGenerator() {
     setIsGenerating(true);
     setProgress(0);
     setStats({ total: 0, processed: 0, failed: 0, skipped: 0 });
+    setLastError(null);
 
     try {
       toast.info("Starting audio generation...", {
         description: "Processing lessons with server-side language detection"
       });
+
+      // Ensure we always pass a valid Authorization header for admin check
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
       // Count total lessons to process
       let countQuery = supabase
@@ -95,14 +101,24 @@ export function BulkAudioGenerator() {
             offset,
             batchSize,
             force: forceRegenerate
-          }
+          },
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
         });
 
         if (error) throw error;
 
-        totalProcessed += data.results.processed;
-        totalFailed += data.results.failed;
-        totalSkipped += data.results.skipped;
+        if (data?.error) {
+          // Surface edge function errors clearly
+          throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+        }
+
+        const processed = data?.results?.processed ?? 0;
+        const failed = data?.results?.failed ?? 0;
+        const skipped = data?.results?.skipped ?? 0;
+
+        totalProcessed += processed;
+        totalFailed += failed;
+        totalSkipped += skipped;
 
         setStats({
           total: count,
@@ -114,7 +130,7 @@ export function BulkAudioGenerator() {
         const progressPercent = Math.min(100, ((totalProcessed + totalFailed + totalSkipped) / count) * 100);
         setProgress(progressPercent);
 
-        hasMore = data.hasMore;
+        hasMore = !!data?.hasMore && (processed + failed + skipped) > 0;
         offset += batchSize;
 
         // Small delay between batches
@@ -129,14 +145,14 @@ export function BulkAudioGenerator() {
 
     } catch (error: any) {
       console.error("Audio generation error:", error);
+      setLastError(error?.message ?? String(error));
       toast.error("Audio generation failed", {
-        description: error.message
+        description: error?.message ?? 'Unknown error'
       });
     } finally {
       setIsGenerating(false);
     }
   };
-
   return (
     <Card>
       <CardHeader>
@@ -244,6 +260,9 @@ export function BulkAudioGenerator() {
               {stats.failed > 0 && ` ${stats.failed} failed.`}
               {stats.skipped > 0 && ` ${stats.skipped} skipped.`}
             </p>
+            {lastError && (
+              <p className="text-sm mt-2 text-destructive">Last error: {lastError}</p>
+            )}
           </div>
         )}
       </CardContent>
