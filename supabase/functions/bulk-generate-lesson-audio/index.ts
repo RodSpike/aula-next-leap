@@ -2,11 +2,11 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
-const corsHeaders = {
+const buildCorsHeaders = (req: Request) => ({
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') ?? 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+});
 
 interface LanguageSegment {
   text: string;
@@ -18,7 +18,7 @@ interface LanguageSegment {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: buildCorsHeaders(req) });
   }
 
   try {
@@ -237,16 +237,16 @@ serve(async (req) => {
 
     console.log(`Batch complete: ${results.processed} processed, ${results.failed} failed, ${results.skipped} skipped`);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        results,
-        hasMore: lessons.length === batchSize
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          results,
+          hasMore: lessons.length === batchSize
+        }),
+        {
+          headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        }
+      );
 
   } catch (error) {
     console.error('Bulk audio generation error:', error);
@@ -254,7 +254,7 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       {
         status: error.message.includes('Unauthorized') || error.message.includes('Admin') ? 403 : 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );
   }
