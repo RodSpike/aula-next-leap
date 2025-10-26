@@ -40,6 +40,41 @@ export function BulkAudioGenerator() {
     }
   };
 
+  const detectLanguage = (text: string): string => {
+    const englishWords = ['the', 'and', 'is', 'are', 'to', 'of', 'in', 'that', 'it', 'with'];
+    const portugueseWords = ['o', 'a', 'os', 'as', 'é', 'são', 'para', 'de', 'em', 'que', 'com'];
+    
+    let englishCount = 0;
+    let portugueseCount = 0;
+    
+    const words = text.toLowerCase().split(/\s+/);
+    words.forEach(word => {
+      if (englishWords.includes(word)) englishCount++;
+      if (portugueseWords.includes(word)) portugueseCount++;
+    });
+    
+    return englishCount > portugueseCount ? 'en-US' : 'pt-BR';
+  };
+
+  const generateSegmentsForLesson = (content: string) => {
+    const paragraphs = content.split('\n').filter(p => p.trim());
+    const segments = [];
+
+    for (const paragraph of paragraphs) {
+      const language = detectLanguage(paragraph);
+      const wordCount = paragraph.split(/\s+/).length;
+      const duration = Math.ceil((wordCount / 150) * 60); // 150 WPM
+
+      segments.push({
+        text: paragraph,
+        language: language,
+        duration: duration
+      });
+    }
+
+    return segments;
+  };
+
   const startGeneration = async () => {
     setIsGenerating(true);
     setProgress(0);
@@ -47,47 +82,74 @@ export function BulkAudioGenerator() {
 
     try {
       toast.info("Starting audio generation...", {
-        description: "This may take a few minutes"
+        description: "Processing lessons with language detection"
       });
 
-      let offset = 0;
-      const batchSize = 5;
-      let hasMore = true;
-      let totalStats = { processed: 0, failed: 0, skipped: 0 };
+      // Fetch lessons from selected course
+      let query = supabase
+        .from('lessons')
+        .select('id, title, content, audio_segments')
+        .is('audio_url', null);
 
-      while (hasMore) {
-        const { data, error } = await supabase.functions.invoke('bulk-generate-lesson-audio', {
-          body: {
-            courseId: selectedCourse === "all" ? null : selectedCourse,
-            offset,
-            batchSize
+      if (selectedCourse !== "all") {
+        query = query.eq('course_id', selectedCourse);
+      }
+
+      const { data: lessons, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+
+      if (!lessons || lessons.length === 0) {
+        toast.info("No lessons to process", {
+          description: "All lessons already have audio"
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      setStats(prev => ({ ...prev, total: lessons.length }));
+
+      // Process each lesson
+      for (let i = 0; i < lessons.length; i++) {
+        const lesson = lessons[i];
+
+        try {
+          if (!lesson.content) {
+            setStats(prev => ({ ...prev, skipped: prev.skipped + 1 }));
+            continue;
           }
-        });
 
-        if (error) throw error;
+          // Generate audio segments with language detection
+          const segments = generateSegmentsForLesson(lesson.content);
+          const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
 
-        totalStats.processed += data.results.processed;
-        totalStats.failed += data.results.failed;
-        totalStats.skipped += data.results.skipped;
+          // Update lesson with audio metadata
+          const { error: updateError } = await supabase
+            .from('lessons')
+            .update({
+              audio_segments: segments,
+              audio_duration: totalDuration,
+              audio_url: 'browser-tts',
+              audio_generated_at: new Date().toISOString()
+            })
+            .eq('id', lesson.id);
 
-        setStats({
-          total: totalStats.processed + totalStats.failed + totalStats.skipped,
-          ...totalStats
-        });
+          if (updateError) throw updateError;
 
-        offset += batchSize;
-        hasMore = data.hasMore;
-
-        // Update progress
-        if (!hasMore) {
-          setProgress(100);
-        } else {
-          setProgress(Math.min((offset / (offset + batchSize)) * 100, 95));
+          setStats(prev => ({ ...prev, processed: prev.processed + 1 }));
+        } catch (error) {
+          console.error(`Failed to process lesson ${lesson.id}:`, error);
+          setStats(prev => ({ ...prev, failed: prev.failed + 1 }));
         }
+
+        setProgress(((i + 1) / lessons.length) * 100);
+
+        // Small delay to avoid overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       toast.success("Audio generation complete!", {
-        description: `Processed: ${totalStats.processed}, Failed: ${totalStats.failed}, Skipped: ${totalStats.skipped}`
+        description: `Processed: ${stats.processed + 1}, Failed: ${stats.failed}, Skipped: ${stats.skipped}`
       });
 
     } catch (error: any) {
