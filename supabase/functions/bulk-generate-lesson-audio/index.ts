@@ -2,16 +2,10 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
-const buildCorsHeaders = (req: Request) => {
-  const origin = req.headers.get('origin') ?? '*';
-  const reqHeaders = req.headers.get('access-control-request-headers') ?? 'authorization, x-client-info, apikey, content-type, x-supabase-api-version, x-supabase-client';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': reqHeaders,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-    'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin, Access-Control-Request-Headers',
-  };
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 
@@ -25,28 +19,34 @@ interface LanguageSegment {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: buildCorsHeaders(req) });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
   if (req.method === 'GET') {
-    return new Response(JSON.stringify({ status: 'ok' }), { status: 200, headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ status: 'ok' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error('Unauthorized');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { data: roles } = await supabase
@@ -56,7 +56,10 @@ serve(async (req) => {
 
     const isAdmin = roles?.some(r => r.role === 'admin');
     if (!isAdmin) {
-      throw new Error('Admin access required');
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { courseId, offset = 0, batchSize = 5, force = false } = await req.json();
@@ -254,7 +257,7 @@ serve(async (req) => {
       hasMore: lessons.length === batchSize
     }),
     {
-      headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     }
   );
 
@@ -264,7 +267,7 @@ serve(async (req) => {
     JSON.stringify({ error: (error as any)?.message ?? 'Unexpected error' }),
     {
       status: (error as any)?.message?.includes('Unauthorized') || (error as any)?.message?.includes('Admin') ? 403 : 500,
-      headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     }
   );
 }
