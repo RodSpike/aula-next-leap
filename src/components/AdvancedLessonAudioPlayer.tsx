@@ -52,41 +52,51 @@ export function AdvancedLessonAudioPlayer({
     const voices = window.speechSynthesis.getVoices();
     
     if (language === 'pt-BR') {
-      const premiumNames = ['Maria', 'Francisca', 'Luciana', 'Microsoft Maria', 'Microsoft Francisca'];
-      const premium = voices.find(v => 
-        v.lang.includes('pt') && 
-        premiumNames.some(name => v.name.includes(name))
+      // Priority 1: Google voices (best quality, handles English words well)
+      const googlePt = voices.find(v => 
+        v.lang.includes('pt-BR') && 
+        v.name.includes('Google') &&
+        (v.name.includes('português') || v.name.includes('Portuguese'))
       );
-      if (premium) return premium;
+      if (googlePt) return googlePt;
       
-      const female = voices.find(v => 
-        v.lang.includes('pt') && 
-        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminino'))
+      // Priority 2: Microsoft neural voices with multilingual support
+      const microsoftNeural = voices.find(v => 
+        v.lang.includes('pt-BR') && 
+        (v.name.includes('Francisca') || v.name.includes('Raquel')) &&
+        v.name.includes('Online')
       );
-      if (female) return female;
+      if (microsoftNeural) return microsoftNeural;
       
-      const google = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
-      if (google) return google;
+      // Priority 3: Any Google Portuguese
+      const anyGoogle = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
+      if (anyGoogle) return anyGoogle;
       
-      return voices.find(v => v.lang.includes('pt')) || voices[0];
+      // Fallback: Any Brazilian Portuguese
+      return voices.find(v => v.lang.includes('pt-BR')) || voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
-      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava', 'Microsoft Jenny', 'Microsoft Aria'];
-      const premium = voices.find(v => 
-        v.lang.startsWith('en') && 
-        premiumNames.some(name => v.name.includes(name))
+      // Priority 1: Google US English (natural, handles multilingual content)
+      const googleEn = voices.find(v => 
+        v.lang === 'en-US' && 
+        v.name.includes('Google') &&
+        v.name.includes('US')
       );
-      if (premium) return premium;
+      if (googleEn) return googleEn;
       
-      const female = voices.find(v => 
-        v.lang.startsWith('en') && 
-        v.name.toLowerCase().includes('female')
+      // Priority 2: Microsoft neural voices (Aria, Jenny)
+      const microsoftNeural = voices.find(v => 
+        v.lang === 'en-US' && 
+        (v.name.includes('Aria') || v.name.includes('Jenny')) &&
+        v.name.includes('Online')
       );
-      if (female) return female;
+      if (microsoftNeural) return microsoftNeural;
       
-      const google = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
-      if (google) return google;
+      // Priority 3: Any Google English
+      const anyGoogle = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+      if (anyGoogle) return anyGoogle;
       
-      return voices.find(v => v.lang.startsWith('en')) || voices[0];
+      // Fallback: Any US English
+      return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
   };
 
@@ -121,8 +131,7 @@ export function AdvancedLessonAudioPlayer({
     utterance.lang = segment.language;
     utterance.volume = isMuted ? 0 : volume;
     utterance.rate = playbackRate;
-    // Slight pitch increase to bias towards more natural (often perceived as female) tone when browser lacks explicit female voices
-    utterance.pitch = 1.05;
+    utterance.pitch = 1.0;
     
     utterance.onstart = () => {
       setIsPlaying(true);
@@ -288,30 +297,42 @@ export function AdvancedLessonAudioPlayer({
         </div>
       </div>
 
-      {/* Timeline with markers */}
-      <div className="relative pt-6">
-        <div className="relative h-2 bg-muted rounded-full">
-          {/* Markers */}
+      {/* Interactive Timeline with markers */}
+      <div className="relative pt-6 pb-2">
+        {/* Clickable markers above timeline */}
+        <div className="relative mb-3 h-6">
           {segments.map((segment, index) => (
-            <button
+            <div 
               key={index}
-              className={cn(
-                "absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background transition-all hover:scale-150",
-                segment.language === 'pt-BR' ? 'bg-primary' : 'bg-secondary',
-                currentSegment === segment && 'scale-150 ring-2 ring-primary/50'
-              )}
+              className="absolute -translate-x-1/2 group"
               style={{ left: `${getMarkerPosition(segment)}%` }}
-              onClick={() => handleMarkerClick(segment)}
-              title={`${segment.marker_label} - ${segment.language === 'pt-BR' ? 'Português' : 'English'}`}
-            />
+            >
+              <button
+                className={cn(
+                  "w-3 h-3 rounded-full border-2 border-background transition-all hover:scale-150 cursor-pointer",
+                  segment.language === 'pt-BR' ? 'bg-primary' : 'bg-secondary',
+                  currentSegment === segment && 'scale-150 ring-2 ring-primary/50'
+                )}
+                onClick={() => handleMarkerClick(segment)}
+                title={`${formatTime(segment.start_time)} - ${segment.marker_label}`}
+              />
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                <span className="text-xs bg-popover text-popover-foreground px-2 py-1 rounded border shadow-md">
+                  {formatTime(segment.start_time)} - {segment.marker_label}
+                </span>
+              </div>
+            </div>
           ))}
-          
-          {/* Progress bar */}
-          <div 
-            className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-            style={{ width: `${progress}%` }}
-          />
         </div>
+
+        {/* Interactive seekable slider */}
+        <Slider
+          value={[progress]}
+          onValueChange={handleSeek}
+          max={100}
+          step={0.1}
+          className="cursor-pointer"
+        />
 
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
           <span>{formatTime(currentTime)}</span>

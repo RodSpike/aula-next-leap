@@ -31,41 +31,51 @@ export function LessonAudioPlayer({ lessonContent, lessonTitle }: LessonAudioPla
     const voices = window.speechSynthesis.getVoices();
     
     if (language.includes('pt')) {
-      const premiumNames = ['Maria', 'Francisca', 'Luciana'];
-      const premium = voices.find(v => 
-        v.lang.includes('pt') && 
-        premiumNames.some(name => v.name.includes(name))
+      // Priority 1: Google voices (best quality, handles English words well)
+      const googlePt = voices.find(v => 
+        v.lang.includes('pt-BR') && 
+        v.name.includes('Google') &&
+        (v.name.includes('português') || v.name.includes('Portuguese'))
       );
-      if (premium) return premium;
+      if (googlePt) return googlePt;
       
-      const female = voices.find(v => 
-        v.lang.includes('pt') && 
-        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('feminino'))
+      // Priority 2: Microsoft neural voices with multilingual support
+      const microsoftNeural = voices.find(v => 
+        v.lang.includes('pt-BR') && 
+        (v.name.includes('Francisca') || v.name.includes('Raquel')) &&
+        v.name.includes('Online')
       );
-      if (female) return female;
+      if (microsoftNeural) return microsoftNeural;
       
-      const google = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
-      if (google) return google;
+      // Priority 3: Any Google Portuguese
+      const anyGoogle = voices.find(v => v.lang.includes('pt') && v.name.includes('Google'));
+      if (anyGoogle) return anyGoogle;
       
-      return voices.find(v => v.lang.includes('pt')) || voices[0];
+      // Fallback: Any Brazilian Portuguese
+      return voices.find(v => v.lang.includes('pt-BR')) || voices.find(v => v.lang.includes('pt')) || voices[0];
     } else {
-      const premiumNames = ['Samantha', 'Jenny', 'Zira', 'Ava'];
-      const premium = voices.find(v => 
-        v.lang.startsWith('en') && 
-        premiumNames.some(name => v.name.includes(name))
+      // Priority 1: Google US English (natural, handles multilingual content)
+      const googleEn = voices.find(v => 
+        v.lang === 'en-US' && 
+        v.name.includes('Google') &&
+        v.name.includes('US')
       );
-      if (premium) return premium;
+      if (googleEn) return googleEn;
       
-      const female = voices.find(v => 
-        v.lang.startsWith('en') && 
-        v.name.toLowerCase().includes('female')
+      // Priority 2: Microsoft neural voices (Aria, Jenny)
+      const microsoftNeural = voices.find(v => 
+        v.lang === 'en-US' && 
+        (v.name.includes('Aria') || v.name.includes('Jenny')) &&
+        v.name.includes('Online')
       );
-      if (female) return female;
+      if (microsoftNeural) return microsoftNeural;
       
-      const google = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
-      if (google) return google;
+      // Priority 3: Any Google English
+      const anyGoogle = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+      if (anyGoogle) return anyGoogle;
       
-      return voices.find(v => v.lang.startsWith('en')) || voices[0];
+      // Fallback: Any US English
+      return voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
   };
 
