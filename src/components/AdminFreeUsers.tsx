@@ -43,15 +43,15 @@ export function AdminFreeUsers() {
       // Get admin emails for each granted_by user
       const usersWithAdminInfo = await Promise.all(
         (freeUsersData || []).map(async (user) => {
-          const { data: adminProfile } = await supabase
+          const { data: adminProfile, error: profileError } = await supabase
             .from('profiles')
             .select('email')
             .eq('user_id', user.granted_by)
-            .single();
+            .maybeSingle();
 
           return {
             ...user,
-            admin_email: adminProfile?.email || 'Unknown'
+            admin_email: adminProfile?.email || 'Sistema'
           };
         })
       );

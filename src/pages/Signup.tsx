@@ -93,22 +93,37 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      // First, save as prospect (always capture the lead)
-      const { error: prospectError } = await supabase
-        .from('prospects')
-        .insert({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          agreed_terms: formData.agreeToTerms,
-          agreed_marketing: false
-        });
+      // Check if user has free access
+      const { data: freeUserData } = await supabase
+        .from('admin_free_users')
+        .select('active')
+        .eq('email', formData.email.trim().toLowerCase())
+        .eq('active', true)
+        .maybeSingle();
 
-      if (prospectError) {
-        console.error('Error saving prospect:', prospectError);
-        // Don't block signup if prospect save fails
+      const isFreeUser = !!freeUserData;
+
+      // Save as prospect only if not a free user (don't need marketing data for free users)
+      if (!isFreeUser) {
+        const { error: prospectError } = await supabase
+          .from('prospects')
+          .upsert({
+            name: formData.name.trim(),
+            email: formData.email.trim().toLowerCase(),
+            agreed_terms: formData.agreeToTerms,
+            agreed_marketing: false
+          }, {
+            onConflict: 'email',
+            ignoreDuplicates: false
+          });
+
+        if (prospectError) {
+          console.error('Error saving prospect:', prospectError);
+          // Don't block signup if prospect save fails
+        }
       }
 
-      // Create user account without email confirmation
+      // Create user account
       const { error } = await signUp(formData.email, formData.password, formData.name, formData.username);
 
       if (error) {
@@ -123,17 +138,17 @@ export default function Signup() {
         return;
       }
 
-      // Show success message and redirect to welcome
-      // Note: Trial is automatically granted by database trigger
+      // Show appropriate success message
+      // Note: Subscription type is automatically determined by database trigger
       toast({
-        title: "Conta criada!",
-        description: "Você ganhou 7 dias grátis! Bem-vindo à plataforma.",
+        title: "✅ Conta criada com sucesso!",
+        description: isFreeUser 
+          ? "Você tem acesso completo e gratuito à plataforma!"
+          : "Aproveite seus 7 dias grátis! Bem-vindo à plataforma.",
       });
 
-      // Redirect to welcome page after a short delay
-      setTimeout(() => {
-        navigate('/welcome');
-      }, 1500);
+      // Let auth state handle redirect
+      setLoading(false);
       
     } catch (error) {
       console.error('Signup error:', error);
