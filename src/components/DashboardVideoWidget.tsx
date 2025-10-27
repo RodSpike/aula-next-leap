@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Play, Video, Expand, ThumbsUp, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EnglishTVFullFeed } from './EnglishTVFullFeed';
+import { supabase } from "@/integrations/supabase/client";
 
 interface VideoData {
   id: string;
@@ -20,94 +21,52 @@ export const DashboardVideoWidget = () => {
   const [showFullFeed, setShowFullFeed] = useState(false);
   const [watchedVideos, setWatchedVideos] = useState<string[]>([]);
   const [currentProgress, setCurrentProgress] = useState(0);
+  const [englishVideos, setEnglishVideos] = useState<VideoData[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // FIXED: Updated with verified English teaching videos for Brazilians
-  const englishVideos: VideoData[] = [
-    {
-      id: 'mY5Fda2WFCc',
-      title: 'Aprenda Inglês em 10 Minutos - Lição Diária',
-      views: '2.4M',
-      likes: '85K',
-      channel: 'English in Brazil',
-      duration: '10:15',
-      category: 'Iniciante',
-      thumbnail: 'https://i.ytimg.com/vi/mY5Fda2WFCc/maxresdefault.jpg'
-    },
-    {
-      id: 'UqyDHJtQQg4',
-      title: 'Inglês para Viagem - Frases Essenciais',
-      views: '1.8M',
-      likes: '62K',
-      channel: 'Teacher Paulo',
-      duration: '8:42',
-      category: 'Viagem',
-      thumbnail: 'https://i.ytimg.com/vi/UqyDHJtQQg4/maxresdefault.jpg'
-    },
-    {
-      id: 'sSHYwUBcCwk',
-      title: 'Pronúncia Correta para Brasileiros',
-      views: '1.2M',
-      likes: '45K',
-      channel: 'Pronunciation Pro',
-      duration: '9:23',
-      category: 'Pronúncia',
-      thumbnail: 'https://i.ytimg.com/vi/sSHYwUBcCwk/maxresdefault.jpg'
-    },
-    {
-      id: 'x2mCZgZ8rz0',
-      title: 'Conversação em Inglês - Diálogos do Dia a Dia',
-      views: '950K',
-      likes: '38K',
-      channel: 'Daily English',
-      duration: '11:07',
-      category: 'Conversação',
-      thumbnail: 'https://i.ytimg.com/vi/x2mCZgZ8rz0/maxresdefault.jpg'
-    },
-    {
-      id: 'W6g_8Zr-ZcY',
-      title: 'Gramática Inglesa Fácil - Presente Simples',
-      views: '780K',
-      likes: '32K',
-      channel: 'Grammar Master',
-      duration: '7:54',
-      category: 'Gramática',
-      thumbnail: 'https://i.ytimg.com/vi/W6g_8Zr-ZcY/maxresdefault.jpg'
-    },
-    {
-      id: 'k3rEhfSHpa0',
-      title: 'Vocabulário Essencial - 100 Palavras Mais Usadas',
-      views: '1.5M',
-      likes: '58K',
-      channel: 'Vocab Builder',
-      duration: '12:30',
-      category: 'Vocabulário',
-      thumbnail: 'https://i.ytimg.com/vi/k3rEhfSHpa0/maxresdefault.jpg'
-    },
-    {
-      id: 'p6PXe1hC6o8',
-      title: 'Listening Practice - Compreensão Auditiva',
-      views: '680K',
-      likes: '28K',
-      channel: 'English Listening',
-      duration: '15:20',
-      category: 'Listening',
-      thumbnail: 'https://i.ytimg.com/vi/p6PXe1hC6o8/maxresdefault.jpg'
-    },
-    {
-      id: 'qG8B_dJQK8g',
-      title: 'Expressões Idiomáticas em Inglês',
-      views: '890K',
-      likes: '35K',
-      channel: 'Idioms Academy',
-      duration: '8:15',
-      category: 'Expressões',
-      thumbnail: 'https://i.ytimg.com/vi/qG8B_dJQK8g/maxresdefault.jpg'
-    }
-  ];
+  // Fetch videos from database
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('english_tv_videos')
+          .select('*')
+          .order('order_index', { ascending: true });
+
+        if (error) throw error;
+
+        // Transform database format to VideoData format
+        const transformedVideos: VideoData[] = (data || []).map(video => ({
+          id: video.video_id,
+          title: video.title || `Video ${video.video_id}`,
+          views: 'N/A',
+          likes: 'N/A',
+          channel: 'Aula Next Leap',
+          duration: 'N/A',
+          category: 'Inglês',
+          thumbnail: `https://i.ytimg.com/vi/${video.video_id}/maxresdefault.jpg`
+        }));
+
+        setEnglishVideos(transformedVideos);
+      } catch (error) {
+        console.error('Error fetching videos:', error);
+        toast({
+          title: "Erro ao carregar vídeos",
+          description: "Não foi possível carregar os vídeos. Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVideos();
+  }, [toast]);
 
   // Get video of the day (rotate daily)
-  const getVideoOfTheDay = (): VideoData => {
+  const getVideoOfTheDay = (): VideoData | null => {
+    if (englishVideos.length === 0) return null;
     const today = new Date().getDate();
     return englishVideos[today % englishVideos.length];
   };
@@ -145,7 +104,7 @@ export const DashboardVideoWidget = () => {
   };
 
   // If user wants full feed, show the full component
-  if (showFullFeed) {
+  if (showFullFeed && videoOfTheDay) {
     return (
       <EnglishTVFullFeed 
         videos={englishVideos}
@@ -154,6 +113,42 @@ export const DashboardVideoWidget = () => {
         watchedVideos={watchedVideos}
         onVideoWatched={markVideoAsWatched}
       />
+    );
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Card className="w-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Carregando vídeos...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show empty state if no videos
+  if (englishVideos.length === 0 || !videoOfTheDay) {
+    return (
+      <Card className="w-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Video className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <CardTitle className="text-lg">TV de Inglês do Dia</CardTitle>
+          </div>
+          <CardDescription>
+            Recurso diário de vídeos em inglês
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhum vídeo disponível no momento
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

@@ -428,6 +428,36 @@ export type Database = {
           },
         ]
       }
+      english_tv_videos: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          order_index: number
+          title: string | null
+          video_id: string
+          youtube_url: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string | null
+          video_id: string
+          youtube_url: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string | null
+          video_id?: string
+          youtube_url?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           correct_answer: string

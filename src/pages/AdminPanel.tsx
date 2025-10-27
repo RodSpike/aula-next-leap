@@ -16,6 +16,7 @@ import { ComprehensiveLessonGenerator } from "@/components/ComprehensiveLessonGe
 import { CourseManagement } from "@/components/CourseManagement";
 import { AdminFreeUsers } from "@/components/AdminFreeUsers";
 import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
+import { EnglishTVManager } from "@/components/EnglishTVManager";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
 
 interface UserData {
@@ -693,6 +694,11 @@ export default function AdminPanel() {
                      Edit individual lessons manually with full control over content, explanations, and exercises.
                    </p>
                    <CourseManagement />
+                 </div>
+
+                 {/* English TV Manager */}
+                 <div className="bg-background/50 p-6 rounded-lg border">
+                   <EnglishTVManager />
                  </div>
                 
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
