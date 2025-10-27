@@ -20,7 +20,7 @@ const Index = () => {
   const onlineCount = useOnlineCounter();
   
   const stats = [
-    { icon: Users, label: "Estudantes Online", value: `${useOnlineCounter}` },
+    { icon: Users, label: "Estudantes Online", value: `${onlineCount}` },
     { icon: BookOpen, label: "Cursos de Inglês", value: "10+" },
     { icon: Star, label: "Avaliação Média", value: "4.9/5" },
     { icon: MessageSquare, label: "Grupos da Comunidade", value: "100+" },
