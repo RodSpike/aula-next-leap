@@ -73,40 +73,7 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const blockedIdsRef = useRef<Set<string>>(new Set());
 
-// Add a guaranteed embeddable fallback playlist (safe, autoplayable)
-const safeFallbacks: VideoData[] = [
-  {
-    id: 'M7lc1UVf-VE', // YouTube IFrame API Demo (embeddable)
-    title: 'Prática Rápida de Inglês (Demo) — Legendas PT disponíveis',
-    views: '10M',
-    likes: '200K',
-    channel: 'YouTube Developers',
-    duration: '3:47',
-    category: 'Listening',
-    thumbnail: 'https://img.youtube.com/vi/M7lc1UVf-VE/maxresdefault.jpg'
-  },
-  {
-    id: 'ysz5S6PUM-U', // Known embeddable sample video
-    title: 'Exercício de Listening — Inglês em 1 minuto',
-    views: '5M',
-    likes: '120K',
-    channel: 'YouTube Samples',
-    duration: '1:00',
-    category: 'Listening',
-    thumbnail: 'https://img.youtube.com/vi/ysz5S6PUM-U/maxresdefault.jpg'
-  },
-  {
-    id: 'aqz-KE-bpKQ', // Big Buck Bunny 4K sample (embeddable)
-    title: 'Vocabulário em Contexto (vídeo demonstrativo)',
-    views: '40M',
-    likes: '500K',
-    channel: 'Blender Foundation',
-    duration: '9:56',
-    category: 'Vocabulário',
-    thumbnail: 'https://img.youtube.com/vi/aqz-KE-bpKQ/maxresdefault.jpg'
-  }
-];
-const playlist = [...videos, ...safeFallbacks];
+const playlist = videos;
 
   const nextVideo = useCallback(() => {
     setCurrentVideoIndex((prev) => (prev + 1) % playlist.length);
@@ -131,6 +98,7 @@ const playlist = [...videos, ...safeFallbacks];
     }
 
     playerRef.current = new window.YT.Player('yt-player', {
+      host: 'https://www.youtube-nocookie.com',
       videoId,
       playerVars: {
         autoplay: 1,
@@ -144,6 +112,8 @@ const playlist = [...videos, ...safeFallbacks];
         cc_lang_pref: 'pt-BR',
         hl: 'pt-BR',
         iv_load_policy: 3,
+        fs: 0,
+        disablekb: 1,
       },
       events: {
         onReady: (e: any) => {
