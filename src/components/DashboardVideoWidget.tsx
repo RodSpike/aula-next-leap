@@ -149,6 +149,7 @@ export const DashboardVideoWidget = () => {
     return (
       <EnglishTVFullFeed 
         videos={englishVideos}
+        startVideoId={videoOfTheDay.id}
         onClose={() => setShowFullFeed(false)}
         watchedVideos={watchedVideos}
         onVideoWatched={markVideoAsWatched}

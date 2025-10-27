@@ -19,6 +19,7 @@ interface EnglishTVFullFeedProps {
   onClose: () => void;
   watchedVideos: string[];
   onVideoWatched: (videoId: string) => void;
+  startVideoId?: string;
 }
 
 declare global {
@@ -58,30 +59,54 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   videos, 
   onClose, 
   watchedVideos, 
-  onVideoWatched 
+  onVideoWatched,
+  startVideoId
 }) => {
   const { toast } = useToast();
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(() => {
+    const idx = videos?.findIndex(v => v.id === startVideoId);
+    return idx !== undefined && idx >= 0 ? idx : 0;
+  });
   const [isMuted, setIsMuted] = useState(true);
   const [touchStart, setTouchStart] = useState(0);
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const blockedIdsRef = useRef<Set<string>>(new Set());
 
-  // Add a guaranteed embeddable fallback video at the end of the list
-  const safeFallbacks: VideoData[] = [
-    {
-      id: 'ysz5S6PUM-U', // Known embeddable sample video
-      title: 'Short English Listening Practice',
-      views: '5M',
-      likes: '120K',
-      channel: 'YouTube Samples',
-      duration: '1:00',
-      category: 'Listening',
-      thumbnail: 'https://img.youtube.com/vi/ysz5S6PUM-U/maxresdefault.jpg'
-    }
-  ];
-  const playlist = [...videos, ...safeFallbacks];
+// Add a guaranteed embeddable fallback playlist (safe, autoplayable)
+const safeFallbacks: VideoData[] = [
+  {
+    id: 'M7lc1UVf-VE', // YouTube IFrame API Demo (embeddable)
+    title: 'Prática Rápida de Inglês (Demo) — Legendas PT disponíveis',
+    views: '10M',
+    likes: '200K',
+    channel: 'YouTube Developers',
+    duration: '3:47',
+    category: 'Listening',
+    thumbnail: 'https://img.youtube.com/vi/M7lc1UVf-VE/maxresdefault.jpg'
+  },
+  {
+    id: 'ysz5S6PUM-U', // Known embeddable sample video
+    title: 'Exercício de Listening — Inglês em 1 minuto',
+    views: '5M',
+    likes: '120K',
+    channel: 'YouTube Samples',
+    duration: '1:00',
+    category: 'Listening',
+    thumbnail: 'https://img.youtube.com/vi/ysz5S6PUM-U/maxresdefault.jpg'
+  },
+  {
+    id: 'aqz-KE-bpKQ', // Big Buck Bunny 4K sample (embeddable)
+    title: 'Vocabulário em Contexto (vídeo demonstrativo)',
+    views: '40M',
+    likes: '500K',
+    channel: 'Blender Foundation',
+    duration: '9:56',
+    category: 'Vocabulário',
+    thumbnail: 'https://img.youtube.com/vi/aqz-KE-bpKQ/maxresdefault.jpg'
+  }
+];
+const playlist = [...videos, ...safeFallbacks];
 
   const nextVideo = useCallback(() => {
     setCurrentVideoIndex((prev) => (prev + 1) % playlist.length);
@@ -115,6 +140,10 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
         playsinline: 1,
         origin: window.location.origin,
         mute: isMuted ? 1 : 0,
+        cc_load_policy: 1,
+        cc_lang_pref: 'pt-BR',
+        hl: 'pt-BR',
+        iv_load_policy: 3,
       },
       events: {
         onReady: (e: any) => {
