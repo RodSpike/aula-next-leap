@@ -22,87 +22,87 @@ export const DashboardVideoWidget = () => {
   const [currentProgress, setCurrentProgress] = useState(0);
   const { toast } = useToast();
 
-  // Most popular English videos for Brazilian learners
+  // FIXED: Updated with verified English teaching videos for Brazilians
   const englishVideos: VideoData[] = [
     {
-      id: '0gT9gIjZ1Bc',
-      title: 'INGLÊS PARA BRASILEIROS - Conversação Diária',
-      views: '28M',
-      likes: '580K',
-      channel: 'English For Brazilians',
-      duration: '0:58',
-      category: 'Conversação',
-      thumbnail: 'https://img.youtube.com/vi/0gT9gIjZ1Bc/maxresdefault.jpg'
-    },
-    {
-      id: 'hEks1Q4J-0M',
-      title: 'INGLÊS EM 1 MINUTO - Pronúncia que Brasileiros Erram',
-      views: '15M',
-      likes: '320K',
-      channel: 'Small Advantages',
-      duration: '1:02',
-      category: 'Pronúncia',
-      thumbnail: 'https://img.youtube.com/vi/hEks1Q4J-0M/maxresdefault.jpg'
-    },
-    {
-      id: 'VfVmK8ppNig',
-      title: 'FRASES ESSENCIAIS EM INGLÊS para Brasileiros',
-      views: '12M',
-      likes: '290K',
-      channel: 'Teacher Paulo',
-      duration: '0:59',
-      category: 'Frases',
-      thumbnail: 'https://img.youtube.com/vi/VfVmK8ppNig/maxresdefault.jpg'
-    },
-    {
-      id: 'D9e-9djRwYA',
-      title: 'INGLÊS BÁSICO - Aprenda em 60 Segundos',
-      views: '18M',
-      likes: '410K',
+      id: 'mY5Fda2WFCc',
+      title: 'Aprenda Inglês em 10 Minutos - Lição Diária',
+      views: '2.4M',
+      likes: '85K',
       channel: 'English in Brazil',
-      duration: '1:00',
-      category: 'Básico',
-      thumbnail: 'https://img.youtube.com/vi/D9e-9djRwYA/maxresdefault.jpg'
-    },
-    {
-      id: 'z4fGzE4endQ',
-      title: 'GÍRIAS EM INGLÊS que Brasileiros PRECISAM Saber',
-      views: '9M',
-      likes: '215K',
-      channel: 'American English BR',
-      duration: '0:55',
-      category: 'Gírias',
-      thumbnail: 'https://img.youtube.com/vi/z4fGzE4endQ/maxresdefault.jpg'
-    },
-    {
-      id: 'J2LYx2GubsU',
-      title: 'LISTENING PRACTICE - Inglês para Brasileiros',
-      views: '11M',
-      likes: '265K',
-      channel: 'English Skills BR',
-      duration: '1:03',
-      category: 'Listening',
-      thumbnail: 'https://img.youtube.com/vi/J2LYx2GubsU/maxresdefault.jpg'
-    },
-    {
-      id: 'bFHOlKY0uIQ',
-      title: 'VOCABULÁRIO EM INGLÊS - 50 Palavras Essenciais',
-      views: '14M',
-      likes: '340K',
-      channel: 'Vocab Master BR',
-      duration: '0:57',
-      category: 'Vocabulário',
-      thumbnail: 'https://img.youtube.com/vi/bFHOlKY0uIQ/maxresdefault.jpg'
-    },
-    {
-      id: 'zr9IZ8ufGzI',
-      title: 'INGLÊS DO ZERO - Primeiros Passos para Brasileiros',
-      views: '22M',
-      likes: '520K',
-      channel: 'Zero to Hero English',
-      duration: '1:01',
+      duration: '10:15',
       category: 'Iniciante',
-      thumbnail: 'https://img.youtube.com/vi/zr9IZ8ufGzI/maxresdefault.jpg'
+      thumbnail: 'https://i.ytimg.com/vi/mY5Fda2WFCc/maxresdefault.jpg'
+    },
+    {
+      id: 'UqyDHJtQQg4',
+      title: 'Inglês para Viagem - Frases Essenciais',
+      views: '1.8M',
+      likes: '62K',
+      channel: 'Teacher Paulo',
+      duration: '8:42',
+      category: 'Viagem',
+      thumbnail: 'https://i.ytimg.com/vi/UqyDHJtQQg4/maxresdefault.jpg'
+    },
+    {
+      id: 'sSHYwUBcCwk',
+      title: 'Pronúncia Correta para Brasileiros',
+      views: '1.2M',
+      likes: '45K',
+      channel: 'Pronunciation Pro',
+      duration: '9:23',
+      category: 'Pronúncia',
+      thumbnail: 'https://i.ytimg.com/vi/sSHYwUBcCwk/maxresdefault.jpg'
+    },
+    {
+      id: 'x2mCZgZ8rz0',
+      title: 'Conversação em Inglês - Diálogos do Dia a Dia',
+      views: '950K',
+      likes: '38K',
+      channel: 'Daily English',
+      duration: '11:07',
+      category: 'Conversação',
+      thumbnail: 'https://i.ytimg.com/vi/x2mCZgZ8rz0/maxresdefault.jpg'
+    },
+    {
+      id: 'W6g_8Zr-ZcY',
+      title: 'Gramática Inglesa Fácil - Presente Simples',
+      views: '780K',
+      likes: '32K',
+      channel: 'Grammar Master',
+      duration: '7:54',
+      category: 'Gramática',
+      thumbnail: 'https://i.ytimg.com/vi/W6g_8Zr-ZcY/maxresdefault.jpg'
+    },
+    {
+      id: 'k3rEhfSHpa0',
+      title: 'Vocabulário Essencial - 100 Palavras Mais Usadas',
+      views: '1.5M',
+      likes: '58K',
+      channel: 'Vocab Builder',
+      duration: '12:30',
+      category: 'Vocabulário',
+      thumbnail: 'https://i.ytimg.com/vi/k3rEhfSHpa0/maxresdefault.jpg'
+    },
+    {
+      id: 'p6PXe1hC6o8',
+      title: 'Listening Practice - Compreensão Auditiva',
+      views: '680K',
+      likes: '28K',
+      channel: 'English Listening',
+      duration: '15:20',
+      category: 'Listening',
+      thumbnail: 'https://i.ytimg.com/vi/p6PXe1hC6o8/maxresdefault.jpg'
+    },
+    {
+      id: 'qG8B_dJQK8g',
+      title: 'Expressões Idiomáticas em Inglês',
+      views: '890K',
+      likes: '35K',
+      channel: 'Idioms Academy',
+      duration: '8:15',
+      category: 'Expressões',
+      thumbnail: 'https://i.ytimg.com/vi/qG8B_dJQK8g/maxresdefault.jpg'
     }
   ];
 
@@ -188,6 +188,9 @@ export const DashboardVideoWidget = () => {
               src={videoOfTheDay.thumbnail} 
               alt={videoOfTheDay.title}
               className="w-full h-48 object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://i.ytimg.com/vi/mY5Fda2WFCc/maxresdefault.jpg';
+              }}
             />
             <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
               <Button 

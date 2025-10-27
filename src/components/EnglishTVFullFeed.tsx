@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Volume2, VolumeX, ThumbsUp, Eye, Share2, ChevronUp, ChevronDown } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { X, Volume2, VolumeX, ThumbsUp, Eye, Play, Pause } from "lucide-react";
 
 interface VideoData {
   id: string;
@@ -16,165 +15,66 @@ interface VideoData {
 
 interface EnglishTVFullFeedProps {
   videos: VideoData[];
+  startVideoId: string;
   onClose: () => void;
   watchedVideos: string[];
   onVideoWatched: (videoId: string) => void;
-  startVideoId?: string;
 }
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady?: () => void;
-    _ytApiLoaded?: boolean;
-  }
-}
-
-const loadYouTubeAPI = (): Promise<void> => {
-  return new Promise((resolve) => {
-    if (window._ytApiLoaded) return resolve();
-    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-    if (existing) {
-      if (window.YT && window.YT.Player) {
-        window._ytApiLoaded = true;
-        return resolve();
-      }
-      window.onYouTubeIframeAPIReady = () => {
-        window._ytApiLoaded = true;
-        resolve();
-      };
-      return;
-    }
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    window.onYouTubeIframeAPIReady = () => {
-      window._ytApiLoaded = true;
-      resolve();
-    };
-    document.body.appendChild(tag);
-  });
-};
-
-export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({ 
-  videos, 
-  onClose, 
-  watchedVideos, 
-  onVideoWatched,
-  startVideoId
+export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
+  videos,
+  startVideoId,
+  onClose,
+  watchedVideos,
+  onVideoWatched
 }) => {
-  const { toast } = useToast();
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(() => {
-    const idx = videos?.findIndex(v => v.id === startVideoId);
-    return idx !== undefined && idx >= 0 ? idx : 0;
-  });
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [touchStart, setTouchStart] = useState(0);
-  const playerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const blockedIdsRef = useRef<Set<string>>(new Set());
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-const playlist = videos;
+  // Initialize starting index from startVideoId
+  useEffect(() => {
+    const startIndex = videos.findIndex((v) => v.id === startVideoId);
+    if (startIndex !== -1) {
+      setCurrentVideoIndex(startIndex);
+    }
+  }, [startVideoId, videos]);
 
   const nextVideo = useCallback(() => {
-    setCurrentVideoIndex((prev) => (prev + 1) % playlist.length);
-  }, [playlist.length]);
+    setCurrentVideoIndex((prev) => {
+      const nextIndex = (prev + 1) % videos.length;
+      // mark current as watched
+      const current = videos[prev];
+      if (current && !watchedVideos.includes(current.id)) {
+        onVideoWatched(current.id);
+      }
+      return nextIndex;
+    });
+    setIsPlaying(true);
+    setHasError(false);
+  }, [videos, watchedVideos, onVideoWatched]);
 
   const previousVideo = useCallback(() => {
-    setCurrentVideoIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
-  }, [playlist.length]);
+    setCurrentVideoIndex((prev) => (prev - 1 + videos.length) % videos.length);
+    setIsPlaying(true);
+    setHasError(false);
+  }, [videos.length]);
 
-  const mountPlayer = useCallback(async (videoId: string) => {
-    await loadYouTubeAPI();
-
-    // Destroy previous player if any
-    if (playerRef.current && playerRef.current.destroy) {
-      try { playerRef.current.destroy(); } catch {}
-      playerRef.current = null;
-    }
-
-    // Ensure container exists
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '<div id="yt-player" class="w-full h-full"></div>';
-    }
-
-    playerRef.current = new window.YT.Player('yt-player', {
-      host: 'https://www.youtube-nocookie.com',
-      videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        modestbranding: 1,
-        rel: 0,
-        playsinline: 1,
-        origin: window.location.origin,
-        mute: isMuted ? 1 : 0,
-        cc_load_policy: 1,
-        cc_lang_pref: 'pt-BR',
-        hl: 'pt-BR',
-        iv_load_policy: 3,
-        fs: 0,
-        disablekb: 1,
-      },
-      events: {
-        onReady: (e: any) => {
-          if (isMuted) e.target.mute(); else e.target.unMute();
-          e.target.playVideo();
-        },
-        onError: () => {
-          // 101/150 => embedding disabled; 2/5 => invalid params
-          blockedIdsRef.current.add(videoId);
-          toast({
-            title: 'Vídeo indisponível',
-            description: 'Pulando para o próximo vídeo…',
-          });
-          nextVideo();
-        },
-        onStateChange: (event: any) => {
-          // Auto-advance when video ends
-          if (event.data === window.YT.PlayerState.ENDED) {
-            onVideoWatched(videoId);
-            nextVideo();
-          }
-        }
-      }
-    });
-  }, [isMuted, nextVideo, onVideoWatched, toast]);
-
-  // Create/refresh player when index changes
-  useEffect(() => {
-    const current = playlist[currentVideoIndex];
-    if (!current) return;
-    // If this id has been blocked already, skip forward
-    if (blockedIdsRef.current.has(current.id)) {
-      nextVideo();
-      return;
-    }
-    mountPlayer(current.id);
-  }, [currentVideoIndex, mountPlayer, nextVideo, playlist]);
-
-  // React to mute toggle
-  useEffect(() => {
-    if (playerRef.current) {
-      if (isMuted) playerRef.current.mute(); else playerRef.current.unMute();
-    }
-  }, [isMuted]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (playerRef.current && playerRef.current.destroy) {
-        try { playerRef.current.destroy(); } catch {}
-      }
-    };
-  }, []);
-
-  // Keyboard and swipe controls
+  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') nextVideo();
-      if (e.key === 'ArrowUp') previousVideo();
+      if (e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        nextVideo();
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        previousVideo();
+      }
       if (e.key === 'Escape') onClose();
-      if (e.key === 'm' || e.key === 'M') setIsMuted(prev => !prev);
+      if (e.key.toLowerCase() === 'm') setIsMuted((p) => !p);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -193,111 +93,132 @@ const playlist = videos;
     }
   };
 
-  const handleShare = () => {
-    const currentVideo = playlist[currentVideoIndex];
-    const shareUrl = `https://www.youtube.com/watch?v=${currentVideo.id}`;
-    if (navigator.share) {
-      navigator.share({ title: currentVideo.title, url: shareUrl });
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      toast({ title: 'Link copiado!', description: 'URL do vídeo copiada.' });
-    }
+  const currentVideo = videos[currentVideoIndex];
+
+  // Simple YouTube embed URL to avoid postMessage security issues
+  const getYouTubeUrl = (videoId: string) => {
+    const baseParams = `autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&rel=0&modestbranding=1&playsinline=1`;
+    return `https://www.youtube.com/embed/${videoId}?${baseParams}`;
   };
 
-  const currentVideo = playlist[currentVideoIndex];
-  const isWatched = watchedVideos.includes(currentVideo?.id);
+  const handleVideoError = () => {
+    setHasError(true);
+    setTimeout(() => {
+      nextVideo();
+    }, 2000);
+  };
+
+  if (!currentVideo) {
+    return (
+      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+        <div className="text-white">Carregando vídeos...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
       {/* Close Button */}
       <Button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white"
+        className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white border-0"
         size="sm"
       >
         <X className="w-4 h-4" />
       </Button>
 
       {/* Video Feed */}
-      <div 
+      <div
         className="w-full h-full max-w-md relative"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Current Video via YouTube IFrame API */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div ref={containerRef} className="w-full h-full bg-black" />
+        {/* Current Video */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <div className="w-full h-full relative">
+            {hasError ? (
+              <div className="flex flex-col items-center justify-center h-full text-white">
+                <div className="text-lg mb-4">❌ Erro ao carregar vídeo</div>
+                <div className="text-sm text-gray-400">Próximo vídeo em 2 segundos...</div>
+              </div>
+            ) : (
+              <iframe
+                key={currentVideo.id}
+                src={getYouTubeUrl(currentVideo.id)}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={currentVideo.title}
+                onError={handleVideoError}
+                loading="eager"
+              />
+            )}
+
+            {/* Custom Play/Pause Overlay */}
+            {!isPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Button
+                  onClick={() => setIsPlaying(true)}
+                  className="bg-white/90 hover:bg-white text-black rounded-full w-16 h-16"
+                >
+                  <Play className="w-6 h-6 ml-1" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Video Overlay Info */}
-        {currentVideo && (
-          <div className="absolute bottom-20 left-4 right-20 text-white pointer-events-none">
-            <h2 className="text-xl font-bold mb-2 drop-shadow-lg">{currentVideo.title}</h2>
-            <p className="text-gray-200 text-sm mb-3">{currentVideo.channel}</p>
-            <div className="flex gap-4 text-sm">
-              <div className="flex items-center gap-1">
-                <Eye className="w-4 h-4" />
-                {currentVideo.views}
-              </div>
-              <div className="flex items-center gap-1">
-                <ThumbsUp className="w-4 h-4" />
-                {currentVideo.likes}
-              </div>
-              <div className="bg-yellow-500 text-black px-2 py-1 rounded text-xs font-semibold">
-                {currentVideo.category}
-              </div>
+        <div className="absolute bottom-20 left-4 right-4 text-white">
+          <h2 className="text-xl font-bold mb-2 drop-shadow-lg">{currentVideo.title}</h2>
+          <p className="text-gray-200 text-sm mb-3">{currentVideo.channel}</p>
+          <div className="flex gap-4 text-sm flex-wrap">
+            <div className="flex items-center gap-1 bg-red-600/80 px-2 py-1 rounded">
+              <Eye className="w-4 h-4" />
+              {currentVideo.views}
+            </div>
+            <div className="flex items-center gap-1 bg-blue-600/80 px-2 py-1 rounded">
+              <ThumbsUp className="w-4 h-4" />
+              {currentVideo.likes}
+            </div>
+            <div className="bg-yellow-500 text-black px-2 py-1 rounded text-xs">
+              {currentVideo.category}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Controls */}
         <div className="absolute bottom-4 right-4 flex flex-col gap-3">
           <Button
             onClick={() => setIsMuted(!isMuted)}
-            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full"
+            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full border-0"
             size="icon"
           >
             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </Button>
           <Button
-            onClick={handleShare}
-            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full border-0"
             size="icon"
           >
-            <Share2 className="w-5 h-5" />
-          </Button>
-        </div>
-
-        {/* Navigation Buttons (Desktop) */}
-        <div className="hidden md:flex absolute right-4 top-1/2 transform -translate-y-1/2 flex-col gap-2">
-          <Button
-            onClick={previousVideo}
-            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full"
-            size="icon"
-          >
-            <ChevronUp className="w-6 h-6" />
-          </Button>
-          <Button
-            onClick={nextVideo}
-            className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full"
-            size="icon"
-          >
-            <ChevronDown className="w-6 h-6" />
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
           </Button>
         </div>
 
         {/* Progress Indicator */}
         <div className="absolute top-4 left-4 right-4">
           <div className="flex justify-between text-white text-sm mb-1">
-            <span>Vídeo {currentVideoIndex + 1} de {playlist.length}</span>
-            <span>
-              {isWatched ? '✅ Assistido' : '🆕 Novo'}
+            <span>Vídeo {currentVideoIndex + 1} de {videos.length}</span>
+            <span className={`px-2 py-1 rounded text-xs ${
+              watchedVideos.includes(currentVideo.id) ? 'bg-green-600' : 'bg-gray-600'
+            }`}>
+              {watchedVideos.includes(currentVideo.id) ? '✅ Assistido' : '🆕 Novo'}
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-1">
-            <div 
-              className="bg-green-500 h-1 rounded-full transition-all"
-              style={{ width: `${((currentVideoIndex + 1) / playlist.length) * 100}%` }}
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${((currentVideoIndex + 1) / videos.length) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -306,6 +227,25 @@ const playlist = videos;
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
           ⬆️ Arraste para navegar ⬇️
         </div>
+
+        {/* Next Video Preview */}
+        {videos.length > 1 && (
+          <div className="absolute top-1/2 right-4 transform -translate-y-1/2">
+            <div className="text-white text-center">
+              <div className="text-xs mb-2">Próximo</div>
+              <div className="w-16 h-24 bg-gray-800 rounded-lg overflow-hidden">
+                <img
+                  src={videos[(currentVideoIndex + 1) % videos.length].thumbnail}
+                  alt="Próximo vídeo"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://i.ytimg.com/vi/mY5Fda2WFCc/mqdefault.jpg';
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
