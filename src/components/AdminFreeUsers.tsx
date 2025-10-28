@@ -104,16 +104,24 @@ export function AdminFreeUsers() {
   };
 
   const handleRevokeFreeAccess = async (email: string) => {
+    if (!confirm(`⚠️ ATENÇÃO: Isso irá:\n\n1. DELETAR completamente a conta do usuário ${email}\n2. Remover o acesso gratuito\n3. Forçar o usuário a se registrar novamente e PAGAR\n\nDeseja continuar?`)) {
+      return;
+    }
+
     try {
-      const { error } = await supabase.functions.invoke('revoke-free-access', {
+      const { data, error } = await supabase.functions.invoke('revoke-free-access', {
         body: { email: email.toLowerCase() }
       });
 
       if (error) throw error;
 
+      const accountDeleted = data?.account_deleted;
+
       toast({
-        title: "Sucesso",
-        description: "Acesso gratuito revogado com sucesso"
+        title: "✅ Acesso revogado",
+        description: accountDeleted 
+          ? `Conta de ${email} foi deletada. Usuário deve se registrar novamente e pagar.`
+          : `Acesso gratuito removido para ${email}`,
       });
 
       fetchFreeUsers();

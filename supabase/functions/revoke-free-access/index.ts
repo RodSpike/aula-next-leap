@@ -51,6 +51,24 @@ serve(async (req) => {
     if (!email) throw new Error("Email is required");
     logStep("Email received", { email });
 
+    // First, find the user by email (if they have an account)
+    const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
+    if (listError) throw listError;
+    
+    const userToDelete = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    
+    if (userToDelete) {
+      logStep("User account found, deleting", { userId: userToDelete.id });
+      
+      // Delete the user account (this will cascade delete profile, subscriptions, etc.)
+      const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userToDelete.id);
+      if (deleteError) throw deleteError;
+      
+      logStep("User account deleted successfully", { userId: userToDelete.id });
+    } else {
+      logStep("No user account found for this email, continuing with revoke", { email });
+    }
+
     // Update free user access to inactive
     const { data, error } = await supabaseClient
       .from('admin_free_users')
@@ -64,8 +82,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: "Free access revoked successfully",
-      data 
+      message: userToDelete 
+        ? "Free access revoked and user account deleted. User must register again as a paying customer."
+        : "Free access revoked successfully. User had not registered yet.",
+      data,
+      account_deleted: !!userToDelete
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
