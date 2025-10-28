@@ -16,6 +16,9 @@ interface FreeUser {
   granted_by: string;
   created_at: string;
   admin_email?: string;
+  registration_status: 'pending' | 'registered';
+  registered_at?: string;
+  user_id?: string;
 }
 
 export function AdminFreeUsers() {
@@ -40,18 +43,28 @@ export function AdminFreeUsers() {
 
       if (error) throw error;
 
-      // Get admin emails for each granted_by user
+      // Get admin emails and registration status for each user
       const usersWithAdminInfo = await Promise.all(
         (freeUsersData || []).map(async (user) => {
-          const { data: adminProfile, error: profileError } = await supabase
+          const { data: adminProfile } = await supabase
             .from('profiles')
             .select('email')
             .eq('user_id', user.granted_by)
             .maybeSingle();
 
+          // Check if the free user has registered
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('user_id, created_at')
+            .eq('email', user.email)
+            .maybeSingle();
+
           return {
             ...user,
-            admin_email: adminProfile?.email || 'Sistema'
+            admin_email: adminProfile?.email || 'Sistema',
+            registration_status: userProfile ? 'registered' as const : 'pending' as const,
+            registered_at: userProfile?.created_at,
+            user_id: userProfile?.user_id
           };
         })
       );
@@ -103,32 +116,55 @@ export function AdminFreeUsers() {
     }
   };
 
-  const handleRevokeFreeAccess = async (email: string) => {
+  const handleDeleteAccount = async (email: string) => {
     if (!confirm(`⚠️ ATENÇÃO: Isso irá:\n\n1. DELETAR completamente a conta do usuário ${email}\n2. Remover o acesso gratuito\n3. Forçar o usuário a se registrar novamente e PAGAR\n\nDeseja continuar?`)) {
       return;
     }
 
     try {
       const { data, error } = await supabase.functions.invoke('revoke-free-access', {
-        body: { email: email.toLowerCase() }
+        body: { email: email.toLowerCase(), delete_account: true }
       });
 
       if (error) throw error;
 
-      const accountDeleted = data?.account_deleted;
-
       toast({
-        title: "✅ Acesso revogado",
-        description: accountDeleted 
-          ? `Conta de ${email} foi deletada. Usuário deve se registrar novamente e pagar.`
-          : `Acesso gratuito removido para ${email}`,
+        title: "✅ Conta deletada",
+        description: `Conta de ${email} foi deletada. Usuário deve se registrar novamente e pagar.`,
       });
 
       fetchFreeUsers();
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao revogar acesso gratuito",
+        description: error.message || "Erro ao deletar conta",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveFreeAccessOnly = async (email: string) => {
+    if (!confirm(`⚠️ ATENÇÃO: Isso irá:\n\n1. Manter a conta do usuário ${email}\n2. Remover APENAS o acesso gratuito\n3. Forçar o usuário a PAGAR no próximo login\n\nDeseja continuar?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('revoke-free-access', {
+        body: { email: email.toLowerCase(), delete_account: false }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Acesso gratuito removido",
+        description: `${email} deverá pagar no próximo login.`,
+      });
+
+      fetchFreeUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao remover acesso gratuito",
         variant: "destructive"
       });
     }
@@ -189,8 +225,9 @@ export function AdminFreeUsers() {
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Registro</TableHead>
                 <TableHead>Concedido por</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>Data Concessão</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -203,21 +240,41 @@ export function AdminFreeUsers() {
                       {user.active ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge variant={user.registration_status === 'registered' ? "default" : "outline"}>
+                      {user.registration_status === 'registered' 
+                        ? `Registrado: ${new Date(user.registered_at!).toLocaleDateString('pt-BR')}`
+                        : "Pendente Registro"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{user.admin_email}</TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
                     {user.active && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRevokeFreeAccess(user.email)}
-                        className="flex items-center space-x-1"
-                      >
-                        <UserMinus className="h-3 w-3" />
-                        <span>Revogar</span>
-                      </Button>
+                      <div className="flex gap-2">
+                        {user.registration_status === 'registered' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteAccount(user.email)}
+                            className="flex items-center space-x-1"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                            <span>Deletar Conta</span>
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveFreeAccessOnly(user.email)}
+                          className="flex items-center space-x-1"
+                        >
+                          <UserMinus className="h-3 w-3" />
+                          <span>Remover Acesso</span>
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>

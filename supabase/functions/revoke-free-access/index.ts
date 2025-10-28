@@ -47,26 +47,33 @@ serve(async (req) => {
     }
     logStep("Admin access verified");
 
-    const { email } = await req.json();
+    const { email, delete_account } = await req.json();
     if (!email) throw new Error("Email is required");
-    logStep("Email received", { email });
+    logStep("Email received", { email, delete_account });
 
-    // First, find the user by email (if they have an account)
-    const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
-    if (listError) throw listError;
-    
-    const userToDelete = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-    
-    if (userToDelete) {
-      logStep("User account found, deleting", { userId: userToDelete.id });
+    let accountDeleted = false;
+
+    // Only delete account if explicitly requested and account exists
+    if (delete_account) {
+      const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers();
+      if (listError) throw listError;
       
-      // Delete the user account (this will cascade delete profile, subscriptions, etc.)
-      const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userToDelete.id);
-      if (deleteError) throw deleteError;
+      const userToDelete = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
       
-      logStep("User account deleted successfully", { userId: userToDelete.id });
+      if (userToDelete) {
+        logStep("User account found, deleting", { userId: userToDelete.id });
+        
+        // Delete the user account (this will cascade delete profile, subscriptions, etc.)
+        const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userToDelete.id);
+        if (deleteError) throw deleteError;
+        
+        accountDeleted = true;
+        logStep("User account deleted successfully", { userId: userToDelete.id });
+      } else {
+        logStep("No user account found for this email", { email });
+      }
     } else {
-      logStep("No user account found for this email, continuing with revoke", { email });
+      logStep("Keeping account, only revoking free access", { email });
     }
 
     // Update free user access to inactive
@@ -82,11 +89,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: userToDelete 
+      message: accountDeleted
         ? "Free access revoked and user account deleted. User must register again as a paying customer."
-        : "Free access revoked successfully. User had not registered yet.",
+        : "Free access revoked successfully. User will need to pay on next login.",
       data,
-      account_deleted: !!userToDelete
+      account_deleted: accountDeleted
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
