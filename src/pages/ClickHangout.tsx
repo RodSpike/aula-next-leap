@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, MessageSquare } from "lucide-react";
 import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
 import RoomChatInterface from "@/components/hangout/RoomChatInterface";
+import ProximityVoiceChat from "@/components/hangout/ProximityVoiceChat";
 
 interface Room {
   id: string;
@@ -104,6 +105,38 @@ const ClickHangout = () => {
     loadRooms();
   }, [isAdmin]);
 
+  // Subscribe to room updates for user counts
+  useEffect(() => {
+    if (!isAdmin || rooms.length === 0) return;
+
+    const channel = supabase
+      .channel('virtual_rooms_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'virtual_rooms'
+        },
+        (payload) => {
+          const updatedRoom = payload.new as Room;
+          setRooms(prev => prev.map(room => 
+            room.id === updatedRoom.id ? updatedRoom : room
+          ));
+          
+          // Update current room if it's the one that changed
+          if (currentRoom?.id === updatedRoom.id) {
+            setCurrentRoom(updatedRoom);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, rooms.length, currentRoom?.id]);
+
   // Initialize or load user avatar
   useEffect(() => {
     if (!isAdmin || !user || !currentRoom) return;
@@ -193,13 +226,20 @@ const ClickHangout = () => {
           table: "user_avatars",
           filter: `current_room_id=eq.${currentRoom.id}`,
         },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
             const avatar = payload.new as Avatar;
             if (avatar.user_id !== user.id) {
+              // Fetch profile data for this avatar
+              const { data: profileData } = await supabase
+                .from("profiles")
+                .select("display_name, avatar_url")
+                .eq("user_id", avatar.user_id)
+                .single();
+
               setOtherAvatars((prev) => {
                 const filtered = prev.filter((a) => a.user_id !== avatar.user_id);
-                return [...filtered, avatar];
+                return [...filtered, { ...avatar, profiles: profileData || undefined }];
               });
             }
           } else if (payload.eventType === "DELETE") {
@@ -260,6 +300,16 @@ const ClickHangout = () => {
     if (!error) {
       setCurrentRoom(newRoom);
       toast.success(`Entered ${newRoom.name}`);
+      
+      // Refresh rooms to get updated counts
+      const { data: updatedRooms } = await supabase
+        .from("virtual_rooms")
+        .select("*")
+        .order("position_x");
+      
+      if (updatedRooms) {
+        setRooms(updatedRooms);
+      }
     }
   };
 
@@ -353,6 +403,15 @@ const ClickHangout = () => {
             )}
           </div>
         </div>
+
+        {/* Proximity Voice Chat */}
+        {myAvatar && (
+          <ProximityVoiceChat
+            myAvatar={myAvatar}
+            otherAvatars={otherAvatars}
+            proximityRadius={150}
+          />
+        )}
       </div>
     </div>
   );
