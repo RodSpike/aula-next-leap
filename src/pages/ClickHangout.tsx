@@ -1,0 +1,361 @@
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2, Users, MessageSquare } from "lucide-react";
+import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
+import RoomChatInterface from "@/components/hangout/RoomChatInterface";
+
+interface Room {
+  id: string;
+  name: string;
+  room_type: string;
+  current_users: number;
+  capacity: number;
+  map_data: any;
+}
+
+interface Avatar {
+  id: string;
+  user_id: string;
+  position_x: number;
+  position_y: number;
+  direction: string;
+  avatar_style: string;
+  current_room_id: string | null;
+  profiles?: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
+
+const ClickHangout = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [myAvatar, setMyAvatar] = useState<Avatar | null>(null);
+  const [otherAvatars, setOtherAvatars] = useState<Avatar[]>([]);
+  const [showChat, setShowChat] = useState(true);
+
+  // Check admin status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        navigate("/");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc("user_has_admin_role", {
+          user_uuid: user.id,
+        });
+
+        if (error) throw error;
+
+        if (!data) {
+          toast.error("Access denied: Admin only");
+          navigate("/dashboard");
+          return;
+        }
+
+        setIsAdmin(true);
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        navigate("/dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdmin();
+  }, [user, navigate]);
+
+  // Load rooms
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const loadRooms = async () => {
+      const { data, error } = await supabase
+        .from("virtual_rooms")
+        .select("*")
+        .order("position_x");
+
+      if (error) {
+        console.error("Error loading rooms:", error);
+        toast.error("Failed to load rooms");
+        return;
+      }
+
+      setRooms(data || []);
+      
+      // Set lobby as default room
+      const lobby = data?.find((r) => r.room_type === "lobby");
+      if (lobby) {
+        setCurrentRoom(lobby);
+      }
+    };
+
+    loadRooms();
+  }, [isAdmin]);
+
+  // Initialize or load user avatar
+  useEffect(() => {
+    if (!isAdmin || !user || !currentRoom) return;
+
+    const initAvatar = async () => {
+      // Check if avatar exists
+      const { data: existingAvatar, error: fetchError } = await supabase
+        .from("user_avatars")
+        .select("*, profiles(display_name, avatar_url)")
+        .eq("user_id", user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== "PGRST116") {
+        console.error("Error fetching avatar:", fetchError);
+        return;
+      }
+
+      if (existingAvatar) {
+        // Update room
+        const { data: updatedAvatar, error: updateError } = await supabase
+          .from("user_avatars")
+          .update({
+            current_room_id: currentRoom.id,
+            last_active: new Date().toISOString(),
+            status: "online",
+          })
+          .eq("user_id", user.id)
+          .select("*, profiles(display_name, avatar_url)")
+          .single();
+
+        if (!updateError && updatedAvatar) {
+          setMyAvatar(updatedAvatar);
+        }
+      } else {
+        // Create new avatar
+        const spawnData = currentRoom.map_data?.spawn_x ? currentRoom.map_data : { spawn_x: 400, spawn_y: 300 };
+        
+        const { data: newAvatar, error: createError } = await supabase
+          .from("user_avatars")
+          .insert({
+            user_id: user.id,
+            current_room_id: currentRoom.id,
+            position_x: spawnData.spawn_x,
+            position_y: spawnData.spawn_y,
+            direction: "down",
+            avatar_style: "default",
+            status: "online",
+          })
+          .select("*, profiles(display_name, avatar_url)")
+          .single();
+
+        if (!createError && newAvatar) {
+          setMyAvatar(newAvatar);
+        }
+      }
+    };
+
+    initAvatar();
+  }, [isAdmin, user, currentRoom]);
+
+  // Load other avatars in room
+  useEffect(() => {
+    if (!isAdmin || !currentRoom || !user) return;
+
+    const loadOtherAvatars = async () => {
+      const { data, error } = await supabase
+        .from("user_avatars")
+        .select("*, profiles(display_name, avatar_url)")
+        .eq("current_room_id", currentRoom.id)
+        .neq("user_id", user.id);
+
+      if (!error && data) {
+        setOtherAvatars(data);
+      }
+    };
+
+    loadOtherAvatars();
+
+    // Subscribe to avatar updates
+    const channel = supabase
+      .channel(`room:${currentRoom.id}:avatars`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_avatars",
+          filter: `current_room_id=eq.${currentRoom.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const avatar = payload.new as Avatar;
+            if (avatar.user_id !== user.id) {
+              setOtherAvatars((prev) => {
+                const filtered = prev.filter((a) => a.user_id !== avatar.user_id);
+                return [...filtered, avatar];
+              });
+            }
+          } else if (payload.eventType === "DELETE") {
+            const avatar = payload.old as Avatar;
+            setOtherAvatars((prev) => prev.filter((a) => a.user_id !== avatar.user_id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, currentRoom, user]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (user) {
+        supabase
+          .from("user_avatars")
+          .update({ status: "offline", current_room_id: null })
+          .eq("user_id", user.id)
+          .then(() => console.log("Avatar status updated to offline"));
+      }
+    };
+  }, [user]);
+
+  const handleMoveAvatar = async (x: number, y: number) => {
+    if (!myAvatar || !user) return;
+
+    const { error } = await supabase
+      .from("user_avatars")
+      .update({
+        position_x: x,
+        position_y: y,
+        last_active: new Date().toISOString(),
+      })
+      .eq("user_id", user.id);
+
+    if (!error) {
+      setMyAvatar((prev) => (prev ? { ...prev, position_x: x, position_y: y } : null));
+    }
+  };
+
+  const handleRoomChange = async (newRoom: Room) => {
+    if (!user || !myAvatar) return;
+
+    const { error } = await supabase
+      .from("user_avatars")
+      .update({
+        current_room_id: newRoom.id,
+        position_x: newRoom.map_data?.spawn_x || 400,
+        position_y: newRoom.map_data?.spawn_y || 300,
+      })
+      .eq("user_id", user.id);
+
+    if (!error) {
+      setCurrentRoom(newRoom);
+      toast.success(`Entered ${newRoom.name}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Header */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Click Hangout 🎮</h1>
+              <p className="text-sm text-muted-foreground">
+                Virtual Campus • Admin Beta Testing
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="text-sm">
+                  {currentRoom?.current_users || 0}/{currentRoom?.capacity || 0}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowChat(!showChat)}
+              >
+                <MessageSquare className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Campus Map */}
+          <Card className="lg:col-span-2 p-4">
+            {currentRoom && myAvatar ? (
+              <VirtualCampusMap
+                room={currentRoom}
+                myAvatar={myAvatar}
+                otherAvatars={otherAvatars}
+                onMove={handleMoveAvatar}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[600px]">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            )}
+          </Card>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Room List */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Rooms</h3>
+              <div className="space-y-2">
+                {rooms.map((room) => (
+                  <Button
+                    key={room.id}
+                    variant={currentRoom?.id === room.id ? "default" : "outline"}
+                    className="w-full justify-start"
+                    onClick={() => handleRoomChange(room)}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span>{room.name}</span>
+                      <span className="text-xs">
+                        {room.current_users}/{room.capacity}
+                      </span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </Card>
+
+            {/* Chat */}
+            {showChat && currentRoom && (
+              <RoomChatInterface roomId={currentRoom.id} roomName={currentRoom.name} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ClickHangout;

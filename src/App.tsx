@@ -32,6 +32,7 @@ import Subscribe from "./pages/Subscribe";
 import Welcome from "./pages/Welcome";
 import Profile from "./pages/Profile";
 import CourseManagement from "./pages/CourseManagement";
+import ClickHangout from "./pages/ClickHangout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
             <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/hangout" element={<ProtectedRoute><ClickHangout /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

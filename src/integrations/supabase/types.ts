@@ -146,6 +146,63 @@ export type Database = {
         }
         Relationships: []
       }
+      campus_events: {
+        Row: {
+          created_at: string
+          current_participants: number
+          description: string | null
+          end_time: string
+          event_type: string
+          host_id: string
+          id: string
+          max_participants: number
+          room_id: string
+          start_time: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          end_time: string
+          event_type?: string
+          host_id: string
+          id?: string
+          max_participants?: number
+          room_id: string
+          start_time: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          end_time?: string
+          event_type?: string
+          host_id?: string
+          id?: string
+          max_participants?: number
+          room_id?: string
+          start_time?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campus_events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "campus_events_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificates: {
         Row: {
           certificate_type: string | null
@@ -1066,6 +1123,48 @@ export type Database = {
         }
         Relationships: []
       }
+      room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_type: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       study_sessions: {
         Row: {
           course_id: string | null
@@ -1159,6 +1258,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_avatars: {
+        Row: {
+          avatar_data: Json | null
+          avatar_style: string
+          created_at: string
+          current_room_id: string | null
+          direction: string
+          id: string
+          last_active: string
+          position_x: number
+          position_y: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_data?: Json | null
+          avatar_style?: string
+          created_at?: string
+          current_room_id?: string | null
+          direction?: string
+          id?: string
+          last_active?: string
+          position_x?: number
+          position_y?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_data?: Json | null
+          avatar_style?: string
+          created_at?: string
+          current_room_id?: string | null
+          direction?: string
+          id?: string
+          last_active?: string
+          position_x?: number
+          position_y?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_avatars_current_room_id_fkey"
+            columns: ["current_room_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_avatars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       user_courses: {
         Row: {
@@ -1472,6 +1631,48 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_rooms: {
+        Row: {
+          capacity: number
+          created_at: string
+          current_users: number
+          id: string
+          is_private: boolean
+          map_data: Json | null
+          name: string
+          position_x: number
+          position_y: number
+          room_type: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          current_users?: number
+          id?: string
+          is_private?: boolean
+          map_data?: Json | null
+          name: string
+          position_x?: number
+          position_y?: number
+          room_type: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          current_users?: number
+          id?: string
+          is_private?: boolean
+          map_data?: Json | null
+          name?: string
+          position_x?: number
+          position_y?: number
+          room_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1525,6 +1726,16 @@ export type Database = {
           group_id_param: string
         }
         Returns: string
+      }
+      get_nearby_users: {
+        Args: { p_proximity_radius?: number; p_user_id: string }
+        Returns: {
+          display_name: string
+          distance: number
+          position_x: number
+          position_y: number
+          user_id: string
+        }[]
       }
       get_profile_public_fields: { Args: never; Returns: string[] }
       has_role: {
