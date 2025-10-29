@@ -405,10 +405,11 @@ const ClickHangout = () => {
         </div>
 
         {/* Proximity Voice Chat */}
-        {myAvatar && (
+        {myAvatar && currentRoom && (
           <ProximityVoiceChat
             myAvatar={myAvatar}
             otherAvatars={otherAvatars}
+            roomId={currentRoom.id}
             proximityRadius={150}
           />
         )}
