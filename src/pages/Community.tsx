@@ -1266,7 +1266,7 @@ export default function Community() {
                   )}
 
                  {/* Create Post */}
-                {selectedGroup.can_post && (
+                {(selectedGroup.can_post || isAdmin || selectedGroup.is_member) && (
                   <Card>
                     <CardContent className="p-4">
                       <div className="space-y-3">
