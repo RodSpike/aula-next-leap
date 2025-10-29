@@ -122,6 +122,13 @@ export default function Community() {
     }
   }, [user]);
 
+  // Re-fetch groups when admin status changes to update permissions
+  useEffect(() => {
+    if (user && groups.length > 0) {
+      fetchGroups();
+    }
+  }, [isAdmin]);
+
   // Handle navigation state for auto-opening chats
   useEffect(() => {
     const state = location.state as any;
@@ -324,8 +331,9 @@ export default function Community() {
       const groupsWithMembership = groupsWithCounts.map(group => ({
         ...group,
         group_type: (group.group_type as 'open' | 'closed') || 'open',
-        is_member: memberships?.some(m => m.group_id === group.id) || false,
-        can_post: memberships?.find(m => m.group_id === group.id)?.can_post || false
+        // Admins are always considered members with posting rights
+        is_member: isAdmin || memberships?.some(m => m.group_id === group.id) || false,
+        can_post: isAdmin || memberships?.find(m => m.group_id === group.id)?.can_post || false
       }));
 
       console.log('Groups with membership info:', groupsWithMembership.map(g => ({
@@ -780,6 +788,8 @@ export default function Community() {
   };
 
   const canAccessGroup = (groupLevel: string): boolean => {
+    // Admins can access all groups regardless of level
+    if (isAdmin) return true;
     if (!userProfile?.cambridge_level) return false;
     const userLevelIndex = getLevelHierarchy(userProfile.cambridge_level);
     const groupLevelIndex = getLevelHierarchy(groupLevel);
@@ -992,7 +1002,8 @@ export default function Community() {
                 {filteredGroups.map((group) => {
                   const isUserCurrentLevel = userProfile?.cambridge_level === group.level && group.is_default;
                   const canAccess = canAccessGroup(group.level);
-                  const isLocked = !canAccess && group.is_default;
+                  // Admins are never locked out of any group
+                  const isLocked = !isAdmin && !canAccess && group.is_default;
                   
                   return (
                     <Card 
