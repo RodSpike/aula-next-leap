@@ -32,8 +32,11 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredAvatar, setHoveredAvatar] = useState<Avatar | null>(null);
   const animationFrameRef = useRef<number>();
+  const frameCounterRef = useRef<number>(0);
+  const lastPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   const AVATAR_SIZE = 32;
+  const PIXEL_SIZE = 2; // Scale factor for pixelated look
   const MAP_WIDTH = room.map_data?.width || 800;
   const MAP_HEIGHT = room.map_data?.height || 600;
 
@@ -47,6 +50,8 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     const TILE_SIZE = 32;
 
     const render = () => {
+      frameCounterRef.current += 1;
+      
       // Clear canvas
       ctx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
@@ -148,63 +153,153 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     const x = avatar.position_x;
     const y = avatar.position_y;
 
-    // Avatar colors
-    const avatarColors = {
-      me: { body: "#3b82f6", outline: "#1e40af", eyes: "#ffffff" },
-      other: { body: "#10b981", outline: "#059669", eyes: "#ffffff" }
+    // Get avatar colors (from avatar_data or defaults)
+    const defaultColors = {
+      skin: isMe ? "#d4a373" : "#c68642",
+      hair: isMe ? "#8b4513" : "#4a2511",
+      torso: isMe ? "#3b82f6" : "#10b981",
+      pants: isMe ? "#1e40af" : "#059669"
     };
     
-    const colors = isMe ? avatarColors.me : avatarColors.other;
+    const colors = avatar.avatar_style === "default" ? defaultColors : defaultColors;
+
+    // Check if avatar is moving
+    const lastPos = lastPositionsRef.current.get(avatar.user_id);
+    const isMoving = lastPos && (lastPos.x !== x || lastPos.y !== y);
+    lastPositionsRef.current.set(avatar.user_id, { x, y });
+
+    // Animation frame (cycles every 15 frames for walk animation)
+    const walkFrame = Math.floor(frameCounterRef.current / 15) % 3;
+    const frame = isMoving ? walkFrame : 1; // Use middle frame when idle
 
     // Draw shadow
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-    ctx.beginPath();
-    ctx.ellipse(x, y + AVATAR_SIZE / 2 + 2, AVATAR_SIZE / 2 - 2, AVATAR_SIZE / 6, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(x - 8 * PIXEL_SIZE, y + 14 * PIXEL_SIZE, 16 * PIXEL_SIZE, 2 * PIXEL_SIZE);
 
-    // Draw body (main circle)
-    ctx.fillStyle = colors.body;
-    ctx.beginPath();
-    ctx.arc(x, y, AVATAR_SIZE / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw outline
-    ctx.strokeStyle = colors.outline;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Draw eyes
-    ctx.fillStyle = colors.eyes;
-    ctx.beginPath();
-    ctx.arc(x - 8, y - 4, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + 8, y - 4, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw pupils (looking in direction)
-    const pupilOffsets: Record<string, { x: number; y: number }> = {
-      up: { x: 0, y: -1 },
-      down: { x: 0, y: 1 },
-      left: { x: -1, y: 0 },
-      right: { x: 1, y: 0 },
+    // Helper function to draw a pixel
+    const drawPixel = (px: number, py: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        x + (px - 8) * PIXEL_SIZE,
+        y + (py - 16) * PIXEL_SIZE,
+        PIXEL_SIZE,
+        PIXEL_SIZE
+      );
     };
-    
-    const offset = pupilOffsets[avatar.direction] || { x: 0, y: 0 };
-    ctx.fillStyle = "#000000";
-    ctx.beginPath();
-    ctx.arc(x - 8 + offset.x, y - 4 + offset.y, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + 8 + offset.x, y - 4 + offset.y, 1.5, 0, Math.PI * 2);
-    ctx.fill();
 
-    // Draw mouth
-    ctx.strokeStyle = colors.outline;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y + 4, 6, 0, Math.PI);
-    ctx.stroke();
+    // Draw pixelated avatar based on direction and frame
+    const dir = avatar.direction || "down";
+    
+    // LEGS (bottom, animated based on walk frame)
+    drawPixel(5, 13, colors.pants); // Left leg
+    drawPixel(5, 14, colors.pants);
+    drawPixel(5, 15, colors.pants);
+    
+    drawPixel(10, 13, colors.pants); // Right leg
+    drawPixel(10, 14, colors.pants);
+    drawPixel(10, 15, colors.pants);
+
+    // Leg animation for walking
+    if (isMoving && dir === "down") {
+      if (frame === 0) {
+        drawPixel(4, 15, colors.pants); // Left leg forward
+        drawPixel(11, 15, colors.pants); // Right leg back
+      } else if (frame === 2) {
+        drawPixel(6, 15, colors.pants); // Left leg back
+        drawPixel(9, 15, colors.pants); // Right leg forward
+      }
+    } else if (isMoving && dir === "up") {
+      if (frame === 0) {
+        drawPixel(4, 13, colors.pants);
+      } else if (frame === 2) {
+        drawPixel(11, 13, colors.pants);
+      }
+    } else if (isMoving && dir === "left") {
+      if (frame === 0) {
+        drawPixel(4, 15, colors.pants);
+      } else if (frame === 2) {
+        drawPixel(6, 15, colors.pants);
+      }
+    } else if (isMoving && dir === "right") {
+      if (frame === 0) {
+        drawPixel(11, 15, colors.pants);
+      } else if (frame === 2) {
+        drawPixel(9, 15, colors.pants);
+      }
+    }
+
+    // TORSO/BODY
+    for (let px = 5; px <= 10; px++) {
+      for (let py = 8; py <= 12; py++) {
+        drawPixel(px, py, colors.torso);
+      }
+    }
+
+    // ARMS (on sides of torso)
+    for (let py = 9; py <= 11; py++) {
+      drawPixel(4, py, colors.torso); // Left arm
+      drawPixel(11, py, colors.torso); // Right arm
+    }
+
+    // ARM ANIMATION for walking
+    if (isMoving) {
+      if (frame === 0) {
+        drawPixel(4, 12, colors.torso); // Left arm swing
+      } else if (frame === 2) {
+        drawPixel(11, 12, colors.torso); // Right arm swing
+      }
+    }
+
+    // HANDS
+    drawPixel(4, 12, colors.skin);
+    drawPixel(11, 12, colors.skin);
+
+    // HEAD (skin color)
+    for (let px = 5; px <= 10; px++) {
+      for (let py = 3; py <= 7; py++) {
+        drawPixel(px, py, colors.skin);
+      }
+    }
+
+    // HAIR (on top of head)
+    for (let px = 5; px <= 10; px++) {
+      drawPixel(px, 2, colors.hair);
+      drawPixel(px, 3, colors.hair);
+    }
+    drawPixel(5, 4, colors.hair);
+    drawPixel(10, 4, colors.hair);
+
+    // FACE FEATURES
+    // Eyes (black pixels)
+    if (dir === "down") {
+      drawPixel(6, 5, "#000000");
+      drawPixel(9, 5, "#000000");
+    } else if (dir === "up") {
+      // Eyes not visible when looking up (back of head)
+      for (let px = 5; px <= 10; px++) {
+        drawPixel(px, 5, colors.hair);
+      }
+    } else if (dir === "left") {
+      drawPixel(6, 5, "#000000");
+    } else if (dir === "right") {
+      drawPixel(9, 5, "#000000");
+    }
+
+    // Mouth (small smile)
+    if (dir === "down" || dir === "left" || dir === "right") {
+      drawPixel(7, 6, "#000000");
+      drawPixel(8, 6, "#000000");
+    }
+
+    // Draw outline (black border around entire sprite)
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      x - 8 * PIXEL_SIZE,
+      y - 16 * PIXEL_SIZE,
+      16 * PIXEL_SIZE,
+      32 * PIXEL_SIZE
+    );
 
     // Draw name label with background
     const displayName = avatar.profiles?.display_name || "User";
@@ -216,18 +311,18 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     
     // Background for name
     ctx.fillStyle = isMe ? "#3b82f6" : "#10b981";
-    ctx.fillRect(x - textWidth / 2 - padding, y - AVATAR_SIZE - 18, textWidth + padding * 2, 16);
+    ctx.fillRect(x - textWidth / 2 - padding, y - AVATAR_SIZE - 14, textWidth + padding * 2, 16);
     
     // Name text
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(displayName, x, y - AVATAR_SIZE - 6);
+    ctx.fillText(displayName, x, y - AVATAR_SIZE - 2);
 
     // Draw speaking indicator if needed
     if (isMe) {
       ctx.strokeStyle = "#fbbf24";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x, y, AVATAR_SIZE / 2 + 4, 0, Math.PI * 2);
+      ctx.arc(x, y, AVATAR_SIZE + 2, 0, Math.PI * 2);
       ctx.stroke();
     }
   };
