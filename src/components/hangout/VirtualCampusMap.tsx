@@ -120,8 +120,8 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     const isMoving = lastPos && (lastPos.x !== x || lastPos.y !== y);
     lastPositionsRef.current.set(avatar.user_id, { x, y });
 
-    // Animation frame
-    const walkFrame = Math.floor(frameCounterRef.current / 8) % 4;
+    // Animation frame (4 frames, cycles every 6 frames for smoother animation)
+    const walkCycle = Math.floor(frameCounterRef.current / 6) % 4;
     const dir = avatar.direction || "down";
 
     // Helper to draw pixels
@@ -135,17 +135,36 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
       );
     };
 
-    // Draw shadow
-    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+    // Draw shadow - much closer to feet
+    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     ctx.beginPath();
-    ctx.ellipse(x, y + 8 * PIXEL_SIZE, 6 * PIXEL_SIZE, 2 * PIXEL_SIZE, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 4 * PIXEL_SIZE, 5 * PIXEL_SIZE, 1.5 * PIXEL_SIZE, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // LEGS
-    const legOffset = isMoving ? (walkFrame % 2 === 0 ? 1 : -1) : 0;
+    // Calculate leg positions for walk animation
+    let leftLegX = 5;
+    let rightLegX = 10;
+    
+    if (isMoving) {
+      if (walkCycle === 0) {
+        leftLegX = 4; // Left leg forward
+        rightLegX = 10;
+      } else if (walkCycle === 1) {
+        leftLegX = 5; // Center
+        rightLegX = 10;
+      } else if (walkCycle === 2) {
+        leftLegX = 5;
+        rightLegX = 11; // Right leg forward
+      } else {
+        leftLegX = 5; // Center
+        rightLegX = 10;
+      }
+    }
+
+    // LEGS with animation
     for (let py = 12; py <= 15; py++) {
-      drawPixel(5 + (dir === "right" && isMoving ? legOffset : 0), py, defaultColors.pants);
-      drawPixel(10 + (dir === "left" && isMoving ? legOffset : 0), py, defaultColors.pants);
+      drawPixel(leftLegX, py, defaultColors.pants);
+      drawPixel(rightLegX, py, defaultColors.pants);
     }
 
     // BODY
@@ -155,12 +174,27 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
       }
     }
 
-    // ARMS
-    const armOffset = isMoving ? (walkFrame % 2 === 0 ? 1 : -1) : 0;
-    for (let py = 9; py <= 11; py++) {
-      drawPixel(4, py + (isMoving ? armOffset : 0), defaultColors.skin);
-      drawPixel(11, py - (isMoving ? armOffset : 0), defaultColors.skin);
+    // ARMS with swing animation
+    let leftArmY = 10;
+    let rightArmY = 10;
+    
+    if (isMoving) {
+      if (walkCycle === 0) {
+        leftArmY = 11; // Left arm back
+        rightArmY = 9;  // Right arm forward
+      } else if (walkCycle === 2) {
+        leftArmY = 9;  // Left arm forward
+        rightArmY = 11; // Right arm back
+      }
     }
+    
+    for (let py = 9; py <= 11; py++) {
+      drawPixel(4, py, defaultColors.skin);
+      drawPixel(11, py, defaultColors.skin);
+    }
+    // Hands at different positions for animation
+    drawPixel(4, leftArmY, defaultColors.skin);
+    drawPixel(11, rightArmY, defaultColors.skin);
 
     // HEAD
     for (let px = 5; px <= 10; px++) {
@@ -185,18 +219,21 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
       drawPixel(8, 6, "#ff9999");
     }
 
-    // Name label
+    // Name label - positioned ABOVE the avatar
     const displayName = avatar.profiles?.display_name || "User";
-    ctx.font = "bold 13px Arial";
+    ctx.font = "bold 12px Arial";
     ctx.textAlign = "center";
     const textWidth = ctx.measureText(displayName).width;
     const padding = 6;
 
-    ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.95)" : "rgba(16, 185, 129, 0.95)";
-    ctx.fillRect(x - textWidth / 2 - padding, y - AVATAR_SIZE / 2 - 22, textWidth + padding * 2, 20);
+    // Position the label well above the avatar's head
+    const labelY = y - 10 * PIXEL_SIZE;
+    
+    ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.9)" : "rgba(16, 185, 129, 0.9)";
+    ctx.fillRect(x - textWidth / 2 - padding, labelY - 16, textWidth + padding * 2, 18);
     
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(displayName, x, y - AVATAR_SIZE / 2 - 7);
+    ctx.fillText(displayName, x, labelY - 4);
 
     // Speaking indicator
     if (isMe) {
