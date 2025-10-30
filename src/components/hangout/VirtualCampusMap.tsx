@@ -34,9 +34,10 @@ interface VirtualCampusMapProps {
   otherAvatars: Avatar[];
   onMove: (x: number, y: number) => void;
   onEmojiChange: (emoji: string) => void;
+  onAvatarClick?: (userId: string, profile?: { user_id: string; display_name: string; avatar_url?: string | null }) => void;
 }
 
-const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange }: VirtualCampusMapProps) => {
+const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange, onAvatarClick }: VirtualCampusMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredAvatar, setHoveredAvatar] = useState<Avatar | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -180,6 +181,25 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
       return;
     }
 
+    // Check if clicking on another user's avatar
+    if (onAvatarClick) {
+      for (const avatar of otherAvatars) {
+        const distance = Math.sqrt(
+          Math.pow(avatar.position_x - x, 2) + Math.pow(avatar.position_y - y, 2)
+        );
+        
+        if (distance <= AVATAR_SIZE / 2 + 8) {
+          // Clicked on another user's avatar
+          onAvatarClick(avatar.user_id, {
+            user_id: avatar.user_id,
+            display_name: avatar.profiles?.display_name || "User",
+            avatar_url: avatar.profiles?.avatar_url || null
+          });
+          return;
+        }
+      }
+    }
+
     // Otherwise move avatar
     const constrainedX = Math.max(AVATAR_SIZE, Math.min(MAP_WIDTH - AVATAR_SIZE, x));
     const constrainedY = Math.max(AVATAR_SIZE, Math.min(MAP_HEIGHT - AVATAR_SIZE, y));
@@ -224,7 +244,7 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
         <div className="p-4">
           <h3 className="font-semibold mb-2">{room.name}</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Click anywhere to move. Click your emoji to customize it!
+            Click anywhere to move. Click your emoji to customize it. Click others' emojis to view their profile!
           </p>
           
           <div className="relative border border-border rounded-lg overflow-hidden">
@@ -256,6 +276,7 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
             <ul className="list-disc list-inside space-y-1 mt-1">
               <li>Click on the map to move</li>
               <li>Click your emoji avatar to change it</li>
+              <li>Click other users' avatars to view their profile</li>
               <li>Get close to others to enable voice chat</li>
             </ul>
           </div>

@@ -11,6 +11,8 @@ import { Navigation } from "@/components/Navigation";
 import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
 import RoomChatInterface from "@/components/hangout/RoomChatInterface";
 import ProximityVoiceChat from "@/components/hangout/ProximityVoiceChat";
+import { useUserProfileClick } from "@/hooks/useUserProfileClick";
+import { UserProfilePopup } from "@/components/UserProfilePopup";
 
 interface Room {
   id: string;
@@ -44,6 +46,7 @@ const ClickHangout = () => {
   const [myAvatar, setMyAvatar] = useState<Avatar | null>(null);
   const [otherAvatars, setOtherAvatars] = useState<Avatar[]>([]);
   const [showChat, setShowChat] = useState(true);
+  const { isPopupOpen, selectedUserId, selectedProfile, openUserProfile, closeUserProfile, setIsPopupOpen } = useUserProfileClick();
 
   // Check user authentication
   useEffect(() => {
@@ -401,6 +404,7 @@ const ClickHangout = () => {
                 otherAvatars={otherAvatars}
                 onMove={handleMoveAvatar}
                 onEmojiChange={handleEmojiChange}
+                onAvatarClick={openUserProfile}
               />
             ) : (
               <div className="flex items-center justify-center h-[600px]">
@@ -451,6 +455,14 @@ const ClickHangout = () => {
         )}
         </div>
       </div>
+
+      {/* User Profile Popup */}
+      <UserProfilePopup
+        isOpen={isPopupOpen}
+        onOpenChange={setIsPopupOpen}
+        userId={selectedUserId}
+        profile={selectedProfile}
+      />
     </>
   );
 };
