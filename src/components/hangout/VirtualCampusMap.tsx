@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import lobbyBg from "@/assets/room-lobby-bg.png";
 import studyBg from "@/assets/room-study-bg.png";
 import socialBg from "@/assets/room-social-bg.png";
-import avatarSprite from "@/assets/avatar-sprite-sheet.png";
 
 interface Avatar {
   id: string;
@@ -39,47 +38,25 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
   const frameCounterRef = useRef<number>(0);
   const lastPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const bgImageRef = useRef<HTMLImageElement | null>(null);
-  const avatarSpriteRef = useRef<HTMLImageElement | null>(null);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
   const AVATAR_SIZE = 64;
-  const SPRITE_SIZE = 16; // Size of each frame in sprite sheet
+  const PIXEL_SIZE = 4;
   const MAP_WIDTH = room.map_data?.width || 800;
   const MAP_HEIGHT = room.map_data?.height || 600;
 
   useEffect(() => {
-    // Load images
     const bgImage = new Image();
     const roomType = room.room_type;
     bgImage.src = roomType === "lobby" ? lobbyBg : roomType === "study" ? studyBg : socialBg;
-    
-    const avatarImg = new Image();
-    avatarImg.src = avatarSprite;
-
-    let bgLoaded = false;
-    let spriteLoaded = false;
-
-    const checkLoaded = () => {
-      if (bgLoaded && spriteLoaded) {
-        bgImageRef.current = bgImage;
-        avatarSpriteRef.current = avatarImg;
-        setImagesLoaded(true);
-      }
-    };
 
     bgImage.onload = () => {
-      bgLoaded = true;
-      checkLoaded();
-    };
-
-    avatarImg.onload = () => {
-      spriteLoaded = true;
-      checkLoaded();
+      bgImageRef.current = bgImage;
+      setImagesLoaded(true);
     };
 
     return () => {
       bgImageRef.current = null;
-      avatarSpriteRef.current = null;
     };
   }, [room.room_type]);
 
@@ -127,77 +104,106 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
   };
 
   const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean) => {
-    if (!avatarSpriteRef.current) return;
-
     const x = avatar.position_x;
     const y = avatar.position_y;
+
+    // Get avatar colors
+    const defaultColors = {
+      skin: isMe ? "#ffdbac" : "#f4c2a0",
+      hair: isMe ? "#8b4513" : "#654321",
+      torso: isMe ? "#3b82f6" : "#10b981",
+      pants: isMe ? "#1e40af" : "#059669"
+    };
 
     // Check if avatar is moving
     const lastPos = lastPositionsRef.current.get(avatar.user_id);
     const isMoving = lastPos && (lastPos.x !== x || lastPos.y !== y);
     lastPositionsRef.current.set(avatar.user_id, { x, y });
 
-    // Animation frame (cycles every 10 frames for walk animation)
-    const walkFrame = Math.floor(frameCounterRef.current / 10) % 3;
-    const frame = isMoving ? walkFrame : 1; // Use middle frame (idle) when not moving
-
-    // Direction mapping to sprite sheet rows
+    // Animation frame
+    const walkFrame = Math.floor(frameCounterRef.current / 8) % 4;
     const dir = avatar.direction || "down";
-    const directionRow: { [key: string]: number } = {
-      down: 0,
-      up: 1,
-      left: 2,
-      right: 3
+
+    // Helper to draw pixels
+    const drawPixel = (px: number, py: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(
+        x + (px - 8) * PIXEL_SIZE,
+        y + (py - 16) * PIXEL_SIZE,
+        PIXEL_SIZE,
+        PIXEL_SIZE
+      );
     };
-    const row = directionRow[dir] || 0;
 
     // Draw shadow
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
     ctx.beginPath();
-    ctx.ellipse(x, y + AVATAR_SIZE / 2 - 4, AVATAR_SIZE / 3, AVATAR_SIZE / 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 8 * PIXEL_SIZE, 6 * PIXEL_SIZE, 2 * PIXEL_SIZE, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Calculate sprite position in sheet (assuming 3 columns x 4 rows layout)
-    const spriteX = frame * SPRITE_SIZE;
-    const spriteY = row * SPRITE_SIZE;
-
-    // Draw avatar sprite
-    ctx.drawImage(
-      avatarSpriteRef.current,
-      spriteX, spriteY, SPRITE_SIZE, SPRITE_SIZE,
-      x - AVATAR_SIZE / 2, y - AVATAR_SIZE / 2, AVATAR_SIZE, AVATAR_SIZE
-    );
-
-    // Apply color tint for different users (optional)
-    if (!isMe) {
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = "#10b981";
-      ctx.fillRect(x - AVATAR_SIZE / 2, y - AVATAR_SIZE / 2, AVATAR_SIZE, AVATAR_SIZE);
-      ctx.globalAlpha = 1.0;
+    // LEGS
+    const legOffset = isMoving ? (walkFrame % 2 === 0 ? 1 : -1) : 0;
+    for (let py = 12; py <= 15; py++) {
+      drawPixel(5 + (dir === "right" && isMoving ? legOffset : 0), py, defaultColors.pants);
+      drawPixel(10 + (dir === "left" && isMoving ? legOffset : 0), py, defaultColors.pants);
     }
 
-    // Draw name label with background
+    // BODY
+    for (let px = 5; px <= 10; px++) {
+      for (let py = 8; py <= 11; py++) {
+        drawPixel(px, py, defaultColors.torso);
+      }
+    }
+
+    // ARMS
+    const armOffset = isMoving ? (walkFrame % 2 === 0 ? 1 : -1) : 0;
+    for (let py = 9; py <= 11; py++) {
+      drawPixel(4, py + (isMoving ? armOffset : 0), defaultColors.skin);
+      drawPixel(11, py - (isMoving ? armOffset : 0), defaultColors.skin);
+    }
+
+    // HEAD
+    for (let px = 5; px <= 10; px++) {
+      for (let py = 3; py <= 7; py++) {
+        drawPixel(px, py, defaultColors.skin);
+      }
+    }
+
+    // HAIR
+    for (let px = 5; px <= 10; px++) {
+      drawPixel(px, 2, defaultColors.hair);
+      drawPixel(px, 3, defaultColors.hair);
+    }
+    drawPixel(5, 4, defaultColors.hair);
+    drawPixel(10, 4, defaultColors.hair);
+
+    // FACE
+    if (dir === "down" || dir === "left" || dir === "right") {
+      drawPixel(dir === "right" ? 9 : 6, 5, "#000000"); // Eyes
+      if (dir === "down") drawPixel(9, 5, "#000000");
+      drawPixel(7, 6, "#ff9999"); // Mouth
+      drawPixel(8, 6, "#ff9999");
+    }
+
+    // Name label
     const displayName = avatar.profiles?.display_name || "User";
-    ctx.font = "bold 12px Arial";
+    ctx.font = "bold 13px Arial";
     ctx.textAlign = "center";
-    
     const textWidth = ctx.measureText(displayName).width;
     const padding = 6;
-    
-    // Background for name
-    ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.9)" : "rgba(16, 185, 129, 0.9)";
-    ctx.fillRect(x - textWidth / 2 - padding, y - AVATAR_SIZE / 2 - 20, textWidth + padding * 2, 18);
-    
-    // Name text
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(displayName, x, y - AVATAR_SIZE / 2 - 6);
 
-    // Draw speaking indicator if needed
+    ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.95)" : "rgba(16, 185, 129, 0.95)";
+    ctx.fillRect(x - textWidth / 2 - padding, y - AVATAR_SIZE / 2 - 22, textWidth + padding * 2, 20);
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(displayName, x, y - AVATAR_SIZE / 2 - 7);
+
+    // Speaking indicator
     if (isMe) {
       ctx.strokeStyle = "#fbbf24";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(x, y, AVATAR_SIZE / 2 + 4, 0, Math.PI * 2);
+      ctx.arc(x, y, AVATAR_SIZE / 2 + 6, 0, Math.PI * 2);
       ctx.stroke();
     }
   };
