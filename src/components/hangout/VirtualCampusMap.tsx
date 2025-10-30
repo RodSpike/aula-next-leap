@@ -1,5 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import lobbyBg from "@/assets/room-lobby-bg.png";
+import studyBg from "@/assets/room-study-bg.png";
+import socialBg from "@/assets/room-social-bg.png";
 
 interface Avatar {
   id: string;
@@ -35,10 +38,11 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
   const frameCounterRef = useRef<number>(0);
   const lastPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
-  const AVATAR_SIZE = 32;
-  const PIXEL_SIZE = 2; // Scale factor for pixelated look
+  const AVATAR_SIZE = 48; // Increased from 32
+  const PIXEL_SIZE = 3; // Increased scale factor for pixelated look
   const MAP_WIDTH = room.map_data?.width || 800;
   const MAP_HEIGHT = room.map_data?.height || 600;
+  const MOVE_SPEED = 3; // pixels per frame for smooth movement
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,7 +51,15 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const TILE_SIZE = 32;
+    // Load room background image
+    const bgImage = new Image();
+    const roomType = room.room_type;
+    bgImage.src = roomType === "lobby" ? lobbyBg : roomType === "study" ? studyBg : socialBg;
+    
+    let imageLoaded = false;
+    bgImage.onload = () => {
+      imageLoaded = true;
+    };
 
     const render = () => {
       frameCounterRef.current += 1;
@@ -55,33 +67,14 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
       // Clear canvas
       ctx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
-      // Draw floor tiles (checkered pattern)
-      for (let x = 0; x < MAP_WIDTH; x += TILE_SIZE) {
-        for (let y = 0; y < MAP_HEIGHT; y += TILE_SIZE) {
-          const isLight = (Math.floor(x / TILE_SIZE) + Math.floor(y / TILE_SIZE)) % 2 === 0;
-          ctx.fillStyle = isLight ? "#e8f4f8" : "#d4e8f0";
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        }
+      // Draw room background image if loaded
+      if (imageLoaded) {
+        ctx.drawImage(bgImage, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+      } else {
+        // Fallback: simple floor while loading
+        ctx.fillStyle = "#e8f4f8";
+        ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
       }
-
-      // Draw tile borders for pixel effect
-      ctx.strokeStyle = "#b8d4e0";
-      ctx.lineWidth = 1;
-      for (let x = 0; x <= MAP_WIDTH; x += TILE_SIZE) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, MAP_HEIGHT);
-        ctx.stroke();
-      }
-      for (let y = 0; y <= MAP_HEIGHT; y += TILE_SIZE) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(MAP_WIDTH, y);
-        ctx.stroke();
-      }
-
-      // Draw room decorations (furniture, walls)
-      drawRoomDecorations(ctx);
 
       // Draw other avatars
       otherAvatars.forEach((avatar) => {
@@ -101,52 +94,11 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [myAvatar, otherAvatars, MAP_WIDTH, MAP_HEIGHT]);
+  }, [myAvatar, otherAvatars, MAP_WIDTH, MAP_HEIGHT, room.room_type]);
 
   const drawRoomDecorations = (ctx: CanvasRenderingContext2D) => {
-    // Draw simple furniture/decorations based on room type
-    const roomType = room.room_type;
-
-    // Draw walls (border)
-    ctx.strokeStyle = "#8b4513";
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, MAP_WIDTH - 8, MAP_HEIGHT - 8);
-
-    // Draw entrance/doors
-    ctx.fillStyle = "#f0e68c";
-    ctx.fillRect(MAP_WIDTH / 2 - 40, MAP_HEIGHT - 8, 80, 8);
-
-    if (roomType === "study") {
-      // Draw desks
-      ctx.fillStyle = "#8b7355";
-      for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 2; j++) {
-          ctx.fillRect(100 + i * 200, 100 + j * 200, 80, 60);
-        }
-      }
-    } else if (roomType === "social") {
-      // Draw tables
-      ctx.fillStyle = "#daa520";
-      ctx.beginPath();
-      ctx.arc(200, 200, 50, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(600, 200, 50, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(400, 400, 50, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (roomType === "lobby") {
-      // Draw welcome mat
-      ctx.fillStyle = "#dc143c";
-      ctx.fillRect(MAP_WIDTH / 2 - 60, MAP_HEIGHT / 2 - 40, 120, 80);
-      
-      // Draw info board
-      ctx.fillStyle = "#4a4a4a";
-      ctx.fillRect(50, 50, 100, 150);
-    }
+    // Room decorations are now part of the background image
+    // This function can be removed or used for dynamic decorations
   };
 
   const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean) => {

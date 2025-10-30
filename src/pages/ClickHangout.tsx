@@ -269,20 +269,56 @@ const ClickHangout = () => {
     };
   }, [user]);
 
-  const handleMoveAvatar = async (x: number, y: number) => {
+  const handleMoveAvatar = async (targetX: number, targetY: number) => {
     if (!myAvatar || !user) return;
 
+    // Start smooth movement animation
+    const startX = myAvatar.position_x;
+    const startY = myAvatar.position_y;
+    const distance = Math.sqrt(Math.pow(targetX - startX, 2) + Math.pow(targetY - startY, 2));
+    const steps = Math.ceil(distance / 3); // Move 3 pixels per step
+    
+    if (steps === 0) return;
+
+    const dx = (targetX - startX) / steps;
+    const dy = (targetY - startY) / steps;
+
+    // Determine direction based on movement
+    let direction = myAvatar.direction;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      direction = dx > 0 ? "right" : "left";
+    } else {
+      direction = dy > 0 ? "down" : "up";
+    }
+
+    // Animate movement locally
+    for (let i = 1; i <= steps; i++) {
+      const currentX = Math.round(startX + dx * i);
+      const currentY = Math.round(startY + dy * i);
+      
+      setMyAvatar((prev) => (prev ? { 
+        ...prev, 
+        position_x: currentX, 
+        position_y: currentY,
+        direction 
+      } : null));
+      
+      await new Promise(resolve => setTimeout(resolve, 16)); // ~60fps
+    }
+
+    // Update final position in database
     const { error } = await supabase
       .from("user_avatars")
       .update({
-        position_x: x,
-        position_y: y,
+        position_x: targetX,
+        position_y: targetY,
+        direction,
         last_active: new Date().toISOString(),
       })
       .eq("user_id", user.id);
 
-    if (!error) {
-      setMyAvatar((prev) => (prev ? { ...prev, position_x: x, position_y: y } : null));
+    if (error) {
+      console.error("Error updating avatar position:", error);
     }
   };
 
