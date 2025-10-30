@@ -103,12 +103,20 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
     };
   }, [myAvatar, otherAvatars, MAP_WIDTH, MAP_HEIGHT, imagesLoaded]);
 
+  // Normalize avatar_style values to a valid emoji. Treat 'default', empty or null as 😀
+  const resolveEmoji = (style?: string | null) => {
+    if (!style) return "😀";
+    const s = String(style).trim();
+    if (!s || s.toLowerCase() === "default") return "😀";
+    return s;
+  };
+
   const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean) => {
     const x = avatar.position_x;
     const y = avatar.position_y;
     
-    // Get emoji from avatar_style, default to a person emoji
-    const emoji = avatar.avatar_style || "🧑";
+    // Resolve emoji, using 😀 as the default when style is missing or 'default'
+    const emoji = resolveEmoji(avatar.avatar_style);
     
     // Draw shadow
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
@@ -120,6 +128,9 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
     ctx.font = `${AVATAR_SIZE}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    // Ensure full opacity after drawing semi-transparent shadow
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "hsl(0 0% 0% / 1)";
     ctx.fillText(emoji, x, y);
     
     // Name label - positioned ABOVE the avatar
@@ -233,7 +244,7 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange 
                   {hoveredAvatar.profiles?.display_name || "User"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {hoveredAvatar.avatar_style || "🧑"}
+                  {resolveEmoji(hoveredAvatar.avatar_style)}
                 </p>
               </div>
             )}
