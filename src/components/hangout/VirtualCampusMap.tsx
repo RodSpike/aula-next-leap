@@ -1,8 +1,12 @@
 import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EmojiPickerComponent } from "@/components/enhanced/EmojiPicker";
 import lobbyBg from "@/assets/room-lobby-bg.png";
 import studyBg from "@/assets/room-study-bg.png";
 import socialBg from "@/assets/room-social-bg.png";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Avatar {
   id: string;
@@ -29,19 +33,20 @@ interface VirtualCampusMapProps {
   myAvatar: Avatar;
   otherAvatars: Avatar[];
   onMove: (x: number, y: number) => void;
+  onEmojiChange: (emoji: string) => void;
 }
 
-const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampusMapProps) => {
+const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange }: VirtualCampusMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredAvatar, setHoveredAvatar] = useState<Avatar | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const animationFrameRef = useRef<number>();
   const frameCounterRef = useRef<number>(0);
   const lastPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const bgImageRef = useRef<HTMLImageElement | null>(null);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
-  const AVATAR_SIZE = 64;
-  const PIXEL_SIZE = 4;
+  const AVATAR_SIZE = 48;
   const MAP_WIDTH = room.map_data?.width || 800;
   const MAP_HEIGHT = room.map_data?.height || 600;
 
@@ -98,150 +103,50 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     };
   }, [myAvatar, otherAvatars, MAP_WIDTH, MAP_HEIGHT, imagesLoaded]);
 
-  const drawRoomDecorations = (ctx: CanvasRenderingContext2D) => {
-    // Room decorations are now part of the background image
-    // This function can be removed or used for dynamic decorations
-  };
-
   const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean) => {
     const x = avatar.position_x;
     const y = avatar.position_y;
-
-    // Get avatar colors
-    const defaultColors = {
-      skin: isMe ? "#ffdbac" : "#f4c2a0",
-      hair: isMe ? "#8b4513" : "#654321",
-      torso: isMe ? "#3b82f6" : "#10b981",
-      pants: isMe ? "#1e40af" : "#059669"
-    };
-
-    // Check if avatar is moving
-    const lastPos = lastPositionsRef.current.get(avatar.user_id);
-    const isMoving = lastPos && (lastPos.x !== x || lastPos.y !== y);
-    lastPositionsRef.current.set(avatar.user_id, { x, y });
-
-    // Animation frame (4 frames, cycles every 6 frames for smoother animation)
-    const walkCycle = Math.floor(frameCounterRef.current / 6) % 4;
-    const dir = avatar.direction || "down";
-
-    // Helper to draw pixels
-    const drawPixel = (px: number, py: number, color: string) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(
-        x + (px - 8) * PIXEL_SIZE,
-        y + (py - 16) * PIXEL_SIZE,
-        PIXEL_SIZE,
-        PIXEL_SIZE
-      );
-    };
-
-    // Draw shadow - much closer to feet
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    
+    // Get emoji from avatar_style, default to a person emoji
+    const emoji = avatar.avatar_style || "🧑";
+    
+    // Draw shadow
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
     ctx.beginPath();
-    ctx.ellipse(x, y + 4 * PIXEL_SIZE, 5 * PIXEL_SIZE, 1.5 * PIXEL_SIZE, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + AVATAR_SIZE / 2 + 4, AVATAR_SIZE / 3, AVATAR_SIZE / 8, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // Calculate leg positions for walk animation
-    let leftLegX = 5;
-    let rightLegX = 10;
     
-    if (isMoving) {
-      if (walkCycle === 0) {
-        leftLegX = 4; // Left leg forward
-        rightLegX = 10;
-      } else if (walkCycle === 1) {
-        leftLegX = 5; // Center
-        rightLegX = 10;
-      } else if (walkCycle === 2) {
-        leftLegX = 5;
-        rightLegX = 11; // Right leg forward
-      } else {
-        leftLegX = 5; // Center
-        rightLegX = 10;
-      }
-    }
-
-    // LEGS with animation
-    for (let py = 12; py <= 15; py++) {
-      drawPixel(leftLegX, py, defaultColors.pants);
-      drawPixel(rightLegX, py, defaultColors.pants);
-    }
-
-    // BODY
-    for (let px = 5; px <= 10; px++) {
-      for (let py = 8; py <= 11; py++) {
-        drawPixel(px, py, defaultColors.torso);
-      }
-    }
-
-    // ARMS with swing animation
-    let leftArmY = 10;
-    let rightArmY = 10;
+    // Draw emoji
+    ctx.font = `${AVATAR_SIZE}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emoji, x, y);
     
-    if (isMoving) {
-      if (walkCycle === 0) {
-        leftArmY = 11; // Left arm back
-        rightArmY = 9;  // Right arm forward
-      } else if (walkCycle === 2) {
-        leftArmY = 9;  // Left arm forward
-        rightArmY = 11; // Right arm back
-      }
-    }
-    
-    for (let py = 9; py <= 11; py++) {
-      drawPixel(4, py, defaultColors.skin);
-      drawPixel(11, py, defaultColors.skin);
-    }
-    // Hands at different positions for animation
-    drawPixel(4, leftArmY, defaultColors.skin);
-    drawPixel(11, rightArmY, defaultColors.skin);
-
-    // HEAD
-    for (let px = 5; px <= 10; px++) {
-      for (let py = 3; py <= 7; py++) {
-        drawPixel(px, py, defaultColors.skin);
-      }
-    }
-
-    // HAIR
-    for (let px = 5; px <= 10; px++) {
-      drawPixel(px, 2, defaultColors.hair);
-      drawPixel(px, 3, defaultColors.hair);
-    }
-    drawPixel(5, 4, defaultColors.hair);
-    drawPixel(10, 4, defaultColors.hair);
-
-    // FACE
-    if (dir === "down" || dir === "left" || dir === "right") {
-      drawPixel(dir === "right" ? 9 : 6, 5, "#000000"); // Eyes
-      if (dir === "down") drawPixel(9, 5, "#000000");
-      drawPixel(7, 6, "#ff9999"); // Mouth
-      drawPixel(8, 6, "#ff9999");
-    }
-
     // Name label - positioned ABOVE the avatar
     const displayName = avatar.profiles?.display_name || "User";
     ctx.font = "bold 12px Arial";
     ctx.textAlign = "center";
     const textWidth = ctx.measureText(displayName).width;
     const padding = 6;
-
-    // Position the label well above the avatar's head
-    const labelY = y - 10 * PIXEL_SIZE;
+    
+    // Position the label above the emoji
+    const labelY = y - AVATAR_SIZE / 2 - 10;
     
     ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.9)" : "rgba(16, 185, 129, 0.9)";
     ctx.fillRect(x - textWidth / 2 - padding, labelY - 16, textWidth + padding * 2, 18);
     
     ctx.fillStyle = "#ffffff";
     ctx.fillText(displayName, x, labelY - 4);
-
-    // Speaking indicator
+    
+    // Clickable indicator for my avatar
     if (isMe) {
       ctx.strokeStyle = "#fbbf24";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(x, y, AVATAR_SIZE / 2 + 6, 0, Math.PI * 2);
+      ctx.arc(x, y, AVATAR_SIZE / 2 + 8, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.setLineDash([]);
     }
   };
 
@@ -253,11 +158,33 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Constrain to map bounds
+    // Check if clicking on my avatar
+    const distanceToMyAvatar = Math.sqrt(
+      Math.pow(myAvatar.position_x - x, 2) + Math.pow(myAvatar.position_y - y, 2)
+    );
+    
+    if (distanceToMyAvatar <= AVATAR_SIZE / 2 + 8) {
+      // Clicked on my avatar, open emoji picker
+      setShowEmojiPicker(true);
+      return;
+    }
+
+    // Otherwise move avatar
     const constrainedX = Math.max(AVATAR_SIZE, Math.min(MAP_WIDTH - AVATAR_SIZE, x));
     const constrainedY = Math.max(AVATAR_SIZE, Math.min(MAP_HEIGHT - AVATAR_SIZE, y));
 
     onMove(Math.round(constrainedX), Math.round(constrainedY));
+  };
+
+  const handleEmojiSelect = async (emoji: string) => {
+    try {
+      await onEmojiChange(emoji);
+      setShowEmojiPicker(false);
+      toast.success("Avatar updated!");
+    } catch (error) {
+      console.error("Error updating emoji:", error);
+      toast.error("Failed to update avatar");
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -281,47 +208,61 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove }: VirtualCampu
   };
 
   return (
-    <Card className="relative">
-      <div className="p-4">
-        <h3 className="font-semibold mb-2">{room.name}</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Click anywhere to move your avatar
-        </p>
-        
-        <div className="relative border border-border rounded-lg overflow-hidden">
-          <canvas
-            ref={canvasRef}
-            width={MAP_WIDTH}
-            height={MAP_HEIGHT}
-            onClick={handleCanvasClick}
-            onMouseMove={handleMouseMove}
-            className="cursor-pointer"
-          />
+    <>
+      <Card className="relative">
+        <div className="p-4">
+          <h3 className="font-semibold mb-2">{room.name}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Click anywhere to move. Click your emoji to customize it!
+          </p>
           
-          {/* Hover tooltip */}
-          {hoveredAvatar && (
-            <div className="absolute bottom-4 left-4 bg-popover text-popover-foreground p-2 rounded-md shadow-lg text-sm">
-              <p className="font-semibold">
-                {hoveredAvatar.profiles?.display_name || "User"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Position: ({hoveredAvatar.position_x}, {hoveredAvatar.position_y})
-              </p>
-            </div>
-          )}
-        </div>
+          <div className="relative border border-border rounded-lg overflow-hidden">
+            <canvas
+              ref={canvasRef}
+              width={MAP_WIDTH}
+              height={MAP_HEIGHT}
+              onClick={handleCanvasClick}
+              onMouseMove={handleMouseMove}
+              className="cursor-pointer"
+            />
+            
+            {/* Hover tooltip */}
+            {hoveredAvatar && (
+              <div className="absolute bottom-4 left-4 bg-popover text-popover-foreground p-2 rounded-md shadow-lg text-sm">
+                <p className="font-semibold">
+                  {hoveredAvatar.profiles?.display_name || "User"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {hoveredAvatar.avatar_style || "🧑"}
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Controls */}
-        <div className="mt-4 text-xs text-muted-foreground">
-          <p>💡 Tips:</p>
-          <ul className="list-disc list-inside space-y-1 mt-1">
-            <li>Click on the map to move</li>
-            <li>Hover over avatars to see user info</li>
-            <li>Get close to others to enable voice chat</li>
-          </ul>
+          {/* Controls */}
+          <div className="mt-4 text-xs text-muted-foreground">
+            <p>💡 Tips:</p>
+            <ul className="list-disc list-inside space-y-1 mt-1">
+              <li>Click on the map to move</li>
+              <li>Click your emoji avatar to change it</li>
+              <li>Get close to others to enable voice chat</li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {/* Emoji Picker Dialog */}
+      <Dialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose Your Avatar Emoji</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <EmojiPickerComponent onEmojiSelect={handleEmojiSelect} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

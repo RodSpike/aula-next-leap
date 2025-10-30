@@ -276,6 +276,25 @@ const ClickHangout = () => {
     };
   }, [user]);
 
+  const handleEmojiChange = async (emoji: string) => {
+    if (!myAvatar) return;
+
+    try {
+      const { error } = await supabase
+        .from("user_avatars")
+        .update({ avatar_style: emoji })
+        .eq("id", myAvatar.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setMyAvatar({ ...myAvatar, avatar_style: emoji });
+    } catch (error) {
+      console.error("Error updating emoji:", error);
+      throw error;
+    }
+  };
+
   const handleMoveAvatar = async (targetX: number, targetY: number) => {
     if (!myAvatar || !user) return;
 
@@ -411,6 +430,7 @@ const ClickHangout = () => {
                 myAvatar={myAvatar}
                 otherAvatars={otherAvatars}
                 onMove={handleMoveAvatar}
+                onEmojiChange={handleEmojiChange}
               />
             ) : (
               <div className="flex items-center justify-center h-[600px]">
