@@ -40,7 +40,7 @@ serve(async (req) => {
     const { data: freeUserData, error: freeUserError } = await supabaseClient
       .from('admin_free_users')
       .select('active')
-      .eq('email', user.email)
+      .ilike('email', user.email)
       .eq('active', true)
       .maybeSingle();
 
