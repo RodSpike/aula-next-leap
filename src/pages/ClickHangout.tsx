@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, MessageSquare } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
@@ -37,7 +38,6 @@ interface Avatar {
 const ClickHangout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -45,49 +45,20 @@ const ClickHangout = () => {
   const [otherAvatars, setOtherAvatars] = useState<Avatar[]>([]);
   const [showChat, setShowChat] = useState(true);
 
-  // Check admin status
+  // Check user authentication
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) {
-        console.log("No user found, redirecting to login");
-        toast.error("Please log in to access Click Hangout");
-        setLoading(false);
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase.rpc("user_has_admin_role", {
-          user_uuid: user.id,
-        });
-
-        if (error) {
-          console.error("RPC error:", error);
-          throw error;
-        }
-
-        if (!data) {
-          toast.error("Access denied: Admin only");
-          navigate("/dashboard");
-          return;
-        }
-
-        setIsAdmin(true);
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        toast.error("Failed to verify access");
-        navigate("/dashboard");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAdmin();
+    if (!user) {
+      console.log("No user found, redirecting to login");
+      toast.error("Please log in to access Click Hangout");
+      navigate("/login");
+      return;
+    }
+    setLoading(false);
   }, [user, navigate]);
 
   // Load rooms
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!user) return;
 
     const loadRooms = async () => {
       const { data, error } = await supabase
@@ -111,11 +82,11 @@ const ClickHangout = () => {
     };
 
     loadRooms();
-  }, [isAdmin]);
+  }, [user]);
 
   // Subscribe to room updates for user counts
   useEffect(() => {
-    if (!isAdmin || rooms.length === 0) return;
+    if (!user || rooms.length === 0) return;
 
     const channel = supabase
       .channel('virtual_rooms_updates')
@@ -143,11 +114,11 @@ const ClickHangout = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, rooms.length, currentRoom?.id]);
+  }, [user, rooms.length, currentRoom?.id]);
 
   // Initialize or load user avatar
   useEffect(() => {
-    if (!isAdmin || !user || !currentRoom) return;
+    if (!user || !currentRoom) return;
 
     const initAvatar = async () => {
       // Check if avatar exists
@@ -203,11 +174,11 @@ const ClickHangout = () => {
     };
 
     initAvatar();
-  }, [isAdmin, user, currentRoom]);
+  }, [user, currentRoom]);
 
   // Load other avatars in room
   useEffect(() => {
-    if (!isAdmin || !currentRoom || !user) return;
+    if (!currentRoom || !user) return;
 
     const loadOtherAvatars = async () => {
       const { data, error } = await supabase
@@ -261,7 +232,7 @@ const ClickHangout = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, currentRoom, user]);
+  }, [currentRoom, user]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -384,10 +355,6 @@ const ClickHangout = () => {
     );
   }
 
-  if (!isAdmin) {
-    return null;
-  }
-
   return (
     <>
       <Navigation />
@@ -396,11 +363,14 @@ const ClickHangout = () => {
         {/* Header */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Click Hangout 🎮</h1>
-              <p className="text-sm text-muted-foreground">
-                Virtual Campus • Admin Beta Testing
-              </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Click Hangout 🎮</h1>
+                <p className="text-sm text-muted-foreground">
+                  Virtual Campus
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs">Beta Testing</Badge>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">

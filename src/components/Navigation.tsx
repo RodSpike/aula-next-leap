@@ -81,16 +81,18 @@ export const Navigation = () => {
   
   const navigation = [
     user 
-      ? { name: "My Dashboard", href: "/dashboard", icon: User }
+      ? { name: "Dashboard", href: "/dashboard", icon: User }
       : { name: "Início", href: "/", icon: BookOpen },
     { name: "Cursos", href: "/courses", icon: BookOpen },
     { name: "Comunidade", href: "/community", icon: Users },
-    { name: "Amigos", href: "/friends", icon: UserPlus },
-    ...(user ? [{ name: "Mensagens", href: "/messages", icon: MessageCircle }] : []),
+    ...(user ? [
+      { name: "Mensagens", href: "/messages", icon: MessageCircle },
+      { name: "Amigos", href: "/friends", icon: UserPlus },
+      { name: "Conquistas", href: "/achievements", icon: Trophy },
+      { name: "Hangout", href: "/hangout", icon: Gamepad2 },
+    ] : []),
     { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
-    ...(user ? [{ name: "Conquistas", href: "/achievements", icon: Trophy }] : []),
     ...(isAdmin ? [
-      { name: "Click Hangout", href: "/hangout", icon: Gamepad2 },
       { name: "Admin", href: "/admin", icon: Shield }
     ] : []),
   ];
@@ -110,23 +112,23 @@ export const Navigation = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
+                className={`flex items-center space-x-1 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
                   isActive(item.href)
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
-                onClick={item.name === "My Dashboard" ? () => {
+                onClick={item.name === "Dashboard" ? () => {
                   // Clear navigation persistence to force dashboard navigation
                   localStorage.removeItem('aula-click-nav-state');
                 } : undefined}
               >
                 <item.icon className="h-4 w-4" />
-                <span>{item.name}</span>
+                <span className="hidden lg:inline">{item.name}</span>
                 {item.name === "Mensagens" && unreadCount > 0 && (
                   <Badge variant="destructive" className="ml-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
                     {unreadCount > 99 ? '99+' : unreadCount}
