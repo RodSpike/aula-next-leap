@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, MessageSquare } from "lucide-react";
+import { Navigation } from "@/components/Navigation";
 import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
 import RoomChatInterface from "@/components/hangout/RoomChatInterface";
 import ProximityVoiceChat from "@/components/hangout/ProximityVoiceChat";
@@ -326,8 +327,10 @@ const ClickHangout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto space-y-4">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
@@ -413,8 +416,9 @@ const ClickHangout = () => {
             proximityRadius={150}
           />
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
