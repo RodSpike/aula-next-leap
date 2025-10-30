@@ -49,7 +49,10 @@ const ClickHangout = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       if (!user) {
-        navigate("/");
+        console.log("No user found, redirecting to login");
+        toast.error("Please log in to access Click Hangout");
+        setLoading(false);
+        navigate("/login");
         return;
       }
 
@@ -58,7 +61,10 @@ const ClickHangout = () => {
           user_uuid: user.id,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("RPC error:", error);
+          throw error;
+        }
 
         if (!data) {
           toast.error("Access denied: Admin only");
@@ -69,6 +75,7 @@ const ClickHangout = () => {
         setIsAdmin(true);
       } catch (error) {
         console.error("Error checking admin status:", error);
+        toast.error("Failed to verify access");
         navigate("/dashboard");
       } finally {
         setLoading(false);
