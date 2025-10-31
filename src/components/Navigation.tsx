@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle, Settings, Gamepad2 } from "lucide-react";
+import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle, Settings, Gamepad2, Mic } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,10 +13,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -140,6 +142,17 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            {isAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSpeechTutorOpen(true)}
+                className="gap-2"
+              >
+                <Mic className="h-4 w-4" />
+                AI Tutor
+              </Button>
+            )}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -252,6 +265,8 @@ export const Navigation = () => {
           </div>
         </div>
       )}
+
+      <SpeechTutorDialog open={speechTutorOpen} onOpenChange={setSpeechTutorOpen} />
     </nav>
   );
 };
