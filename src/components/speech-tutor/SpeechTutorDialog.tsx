@@ -182,7 +182,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         // Send setup message
         const setupMessage = {
           setup: {
-            model: 'models/gemini-2.5-flash-native-audio-preview-09-2025',
+            model: 'gemini-2.5-flash-native-audio-preview-09-2025',
             generation_config: {
               response_modalities: ['AUDIO']
             },
@@ -196,19 +196,24 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         
         console.log('[Speech Tutor] Sending setup:', setupMessage);
         ws.send(JSON.stringify(setupMessage));
+
+        // Assume ready to stream after setup is sent (some implementations don't send a setup ack)
+        setupAcknowledgedRef.current = true;
+        setStatus(ConversationStatus.Listening);
+        toast({
+          title: 'Connected',
+          description: 'Start speaking your mixed-language sentences',
+        });
       };
 
       ws.onmessage = async (event) => {
-        // Check if the message is a Blob (binary audio data)
+        // If Blob, skip (we expect JSON text messages with base64 data fields)
         if (event.data instanceof Blob) {
-          console.log('[Speech Tutor] Received binary data (Blob)');
-          // For now, skip binary blobs - Gemini sends audio in JSON format
+          console.log('[Speech Tutor] Received Blob, skipping');
           return;
         }
-
-        // Check if it's a string before parsing
         if (typeof event.data !== 'string') {
-          console.log('[Speech Tutor] Received non-string data:', typeof event.data);
+          console.log('[Speech Tutor] Non-string message received');
           return;
         }
 
@@ -216,49 +221,28 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           const data = JSON.parse(event.data);
           console.log('[Speech Tutor] WebSocket message:', data);
 
-          // Handle setup acknowledgment
-          if (data.setupComplete) {
-            setupAcknowledgedRef.current = true;
-            setStatus(ConversationStatus.Listening);
-            console.log('[Speech Tutor] Setup acknowledged - ready to stream audio');
-            
-            toast({
-              title: 'Connected',
-              description: 'Start speaking your mixed-language sentences',
-            });
+          // Top-level audio data (base64 PCM @24kHz)
+          if (data.data) {
+            await playAudioResponse(data.data);
           }
 
-          // Handle server content (audio response)
+          // Server model turn
           if (data.serverContent?.modelTurn?.parts) {
-            console.log('[Speech Tutor] Received model turn with parts:', data.serverContent.modelTurn.parts.length);
-            
             for (const part of data.serverContent.modelTurn.parts) {
               if (part.inlineData?.data) {
-                console.log('[Speech Tutor] Playing audio response');
                 await playAudioResponse(part.inlineData.data);
               }
               if (part.text) {
-                console.log('[Speech Tutor] Tutor text:', part.text);
-                setTranscript(prev => [...prev, {
-                  role: 'tutor',
-                  text: part.text,
-                  timestamp: Date.now()
-                }]);
+                setTranscript(prev => [...prev, { role: 'tutor', text: part.text, timestamp: Date.now() }]);
               }
             }
           }
 
-          // Handle user transcription
-          if (data.serverContent?.interrupted) {
-            console.log('[Speech Tutor] User interrupted');
-          }
-
-          // Handle turn complete
           if (data.serverContent?.turnComplete) {
             console.log('[Speech Tutor] Turn complete');
           }
-        } catch (error) {
-          console.error('[Speech Tutor] Error parsing WebSocket message:', error);
+        } catch (err) {
+          console.error('[Speech Tutor] Error parsing message', err);
         }
       };
 
@@ -280,13 +264,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           const pcmData = float32ToPcm16(inputData);
           const base64Audio = arrayBufferToBase64(pcmData);
 
-          // Send with correct MIME type including sample rate
+          // Send with correct shape expected by Live API
           ws.send(JSON.stringify({
             realtimeInput: {
-              mediaChunks: [{
-                mimeType: 'audio/pcm;rate=16000',
-                data: base64Audio
-              }]
+              audio: {
+                data: base64Audio,
+                mimeType: 'audio/pcm;rate=16000'
+              }
             }
           }));
         }
@@ -325,12 +309,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
+      <DialogContent aria-describedby="speech-tutor-desc" className="max-w-5xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Bilingual Speech Tutor
           </DialogTitle>
         </DialogHeader>
+        <p id="speech-tutor-desc" className="sr-only">Real-time bilingual speech tutor with voice input and audio responses.</p>
 
         <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
           {/* Left Panel - Controls */}
