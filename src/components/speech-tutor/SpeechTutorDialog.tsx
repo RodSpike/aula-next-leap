@@ -23,10 +23,12 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const playbackContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const setupAcknowledgedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -35,6 +37,8 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   }, [transcript]);
 
   const stopSession = useCallback(() => {
+    console.log('[Speech Tutor] Stopping session...');
+    
     // Stop WebSocket
     if (wsRef.current) {
       wsRef.current.close();
@@ -58,27 +62,82 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    if (playbackContextRef.current) {
+      playbackContextRef.current.close();
+      playbackContextRef.current = null;
+    }
 
+    setupAcknowledgedRef.current = false;
     setStatus(ConversationStatus.Idle);
   }, []);
 
   const playAudioResponse = useCallback(async (base64Audio: string) => {
     try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      // Create playback context with 24kHz sample rate (Gemini output rate)
+      if (!playbackContextRef.current) {
+        playbackContextRef.current = new AudioContext({ sampleRate: 24000 });
       }
 
-      const audioData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0));
-      const audioBuffer = await audioContextRef.current.decodeAudioData(audioData.buffer);
+      // Decode base64 to PCM data
+      const pcmData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0));
       
-      const source = audioContextRef.current.createBufferSource();
+      // Create WAV file with proper headers for 24kHz PCM
+      const wavData = createWavFile(pcmData, 24000);
+      
+      // Decode audio data - ensure we have a proper ArrayBuffer
+      const arrayBuffer = new ArrayBuffer(wavData.byteLength);
+      new Uint8Array(arrayBuffer).set(wavData);
+      const audioBuffer = await playbackContextRef.current.decodeAudioData(arrayBuffer);
+      
+      // Play audio
+      const source = playbackContextRef.current.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContextRef.current.destination);
+      source.connect(playbackContextRef.current.destination);
       source.start(0);
+      
+      console.log('[Speech Tutor] Playing audio response');
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('[Speech Tutor] Error playing audio:', error);
     }
   }, []);
+
+  const createWavFile = (pcmData: Uint8Array, sampleRate: number): Uint8Array => {
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = pcmData.length;
+    
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+    
+    // Copy PCM data
+    const wavArray = new Uint8Array(buffer);
+    wavArray.set(pcmData, 44);
+    
+    return wavArray;
+  };
 
   const startSession = useCallback(async () => {
     try {
@@ -118,10 +177,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('[Speech Tutor] WebSocket connected');
         
         // Send setup message
-        ws.send(JSON.stringify({
+        const setupMessage = {
           setup: {
             model: 'models/gemini-2.5-flash-native-audio-preview-09-2025',
             generation_config: {
@@ -133,26 +192,39 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
               }]
             }
           }
-        }));
-
-        setStatus(ConversationStatus.Listening);
-        toast({
-          title: 'Connected',
-          description: 'Start speaking your mixed-language sentences',
-        });
+        };
+        
+        console.log('[Speech Tutor] Sending setup:', setupMessage);
+        ws.send(JSON.stringify(setupMessage));
       };
 
       ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message:', data);
+        console.log('[Speech Tutor] WebSocket message:', data);
+
+        // Handle setup acknowledgment
+        if (data.setupComplete) {
+          setupAcknowledgedRef.current = true;
+          setStatus(ConversationStatus.Listening);
+          console.log('[Speech Tutor] Setup acknowledged - ready to stream audio');
+          
+          toast({
+            title: 'Connected',
+            description: 'Start speaking your mixed-language sentences',
+          });
+        }
 
         // Handle server content (audio response)
         if (data.serverContent?.modelTurn?.parts) {
+          console.log('[Speech Tutor] Received model turn with parts:', data.serverContent.modelTurn.parts.length);
+          
           for (const part of data.serverContent.modelTurn.parts) {
             if (part.inlineData?.data) {
+              console.log('[Speech Tutor] Playing audio response');
               await playAudioResponse(part.inlineData.data);
             }
             if (part.text) {
+              console.log('[Speech Tutor] Tutor text:', part.text);
               setTranscript(prev => [...prev, {
                 role: 'tutor',
                 text: part.text,
@@ -162,9 +234,14 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           }
         }
 
+        // Handle user transcription
+        if (data.serverContent?.interrupted) {
+          console.log('[Speech Tutor] User interrupted');
+        }
+
         // Handle turn complete
         if (data.serverContent?.turnComplete) {
-          console.log('Turn complete');
+          console.log('[Speech Tutor] Turn complete');
         }
       };
 
@@ -179,17 +256,18 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         stopSession();
       };
 
-      // Process audio
+      // Process audio - only send after setup is acknowledged
       processor.onaudioprocess = (e) => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws.readyState === WebSocket.OPEN && setupAcknowledgedRef.current) {
           const inputData = e.inputBuffer.getChannelData(0);
           const pcmData = float32ToPcm16(inputData);
           const base64Audio = arrayBufferToBase64(pcmData);
 
+          // Send with correct MIME type including sample rate
           ws.send(JSON.stringify({
             realtimeInput: {
               mediaChunks: [{
-                mimeType: 'audio/pcm',
+                mimeType: 'audio/pcm;rate=16000',
                 data: base64Audio
               }]
             }
