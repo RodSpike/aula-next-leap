@@ -199,49 +199,66 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       };
 
       ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log('[Speech Tutor] WebSocket message:', data);
-
-        // Handle setup acknowledgment
-        if (data.setupComplete) {
-          setupAcknowledgedRef.current = true;
-          setStatus(ConversationStatus.Listening);
-          console.log('[Speech Tutor] Setup acknowledged - ready to stream audio');
-          
-          toast({
-            title: 'Connected',
-            description: 'Start speaking your mixed-language sentences',
-          });
+        // Check if the message is a Blob (binary audio data)
+        if (event.data instanceof Blob) {
+          console.log('[Speech Tutor] Received binary data (Blob)');
+          // For now, skip binary blobs - Gemini sends audio in JSON format
+          return;
         }
 
-        // Handle server content (audio response)
-        if (data.serverContent?.modelTurn?.parts) {
-          console.log('[Speech Tutor] Received model turn with parts:', data.serverContent.modelTurn.parts.length);
-          
-          for (const part of data.serverContent.modelTurn.parts) {
-            if (part.inlineData?.data) {
-              console.log('[Speech Tutor] Playing audio response');
-              await playAudioResponse(part.inlineData.data);
-            }
-            if (part.text) {
-              console.log('[Speech Tutor] Tutor text:', part.text);
-              setTranscript(prev => [...prev, {
-                role: 'tutor',
-                text: part.text,
-                timestamp: Date.now()
-              }]);
+        // Check if it's a string before parsing
+        if (typeof event.data !== 'string') {
+          console.log('[Speech Tutor] Received non-string data:', typeof event.data);
+          return;
+        }
+
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[Speech Tutor] WebSocket message:', data);
+
+          // Handle setup acknowledgment
+          if (data.setupComplete) {
+            setupAcknowledgedRef.current = true;
+            setStatus(ConversationStatus.Listening);
+            console.log('[Speech Tutor] Setup acknowledged - ready to stream audio');
+            
+            toast({
+              title: 'Connected',
+              description: 'Start speaking your mixed-language sentences',
+            });
+          }
+
+          // Handle server content (audio response)
+          if (data.serverContent?.modelTurn?.parts) {
+            console.log('[Speech Tutor] Received model turn with parts:', data.serverContent.modelTurn.parts.length);
+            
+            for (const part of data.serverContent.modelTurn.parts) {
+              if (part.inlineData?.data) {
+                console.log('[Speech Tutor] Playing audio response');
+                await playAudioResponse(part.inlineData.data);
+              }
+              if (part.text) {
+                console.log('[Speech Tutor] Tutor text:', part.text);
+                setTranscript(prev => [...prev, {
+                  role: 'tutor',
+                  text: part.text,
+                  timestamp: Date.now()
+                }]);
+              }
             }
           }
-        }
 
-        // Handle user transcription
-        if (data.serverContent?.interrupted) {
-          console.log('[Speech Tutor] User interrupted');
-        }
+          // Handle user transcription
+          if (data.serverContent?.interrupted) {
+            console.log('[Speech Tutor] User interrupted');
+          }
 
-        // Handle turn complete
-        if (data.serverContent?.turnComplete) {
-          console.log('[Speech Tutor] Turn complete');
+          // Handle turn complete
+          if (data.serverContent?.turnComplete) {
+            console.log('[Speech Tutor] Turn complete');
+          }
+        } catch (error) {
+          console.error('[Speech Tutor] Error parsing WebSocket message:', error);
         }
       };
 
