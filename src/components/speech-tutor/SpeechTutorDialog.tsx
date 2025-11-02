@@ -29,6 +29,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const setupAcknowledgedRef = useRef<boolean>(false);
+  const intentionalDisconnectRef = useRef<boolean>(false);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const keepaliveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const MAX_RECONNECT_ATTEMPTS = 3;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,9 +43,18 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const stopSession = useCallback(() => {
     console.log('[Speech Tutor] Stopping session...');
     
+    // Mark as intentional disconnect
+    intentionalDisconnectRef.current = true;
+    
+    // Clear keepalive
+    if (keepaliveIntervalRef.current) {
+      clearInterval(keepaliveIntervalRef.current);
+      keepaliveIntervalRef.current = null;
+    }
+    
     // Stop WebSocket
     if (wsRef.current) {
-      wsRef.current.close();
+      wsRef.current.close(1000, 'User stopped session');
       wsRef.current = null;
     }
 
@@ -68,6 +81,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     }
 
     setupAcknowledgedRef.current = false;
+    reconnectAttemptsRef.current = 0;
     setStatus(ConversationStatus.Idle);
   }, []);
 
@@ -143,6 +157,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     try {
       setStatus(ConversationStatus.Connecting);
       setErrorMessage('');
+      intentionalDisconnectRef.current = false;
 
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -168,13 +183,22 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       // Connect WebSocket
       const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!geminiApiKey) {
-        throw new Error('Gemini API key not configured');
+        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your environment.');
       }
 
       const ws = new WebSocket(
         `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
       );
       wsRef.current = ws;
+
+      // Connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (!setupAcknowledgedRef.current && ws.readyState !== WebSocket.CLOSED) {
+          console.error('[Speech Tutor] Connection timeout');
+          ws.close();
+          throw new Error('Connection timeout - server did not respond');
+        }
+      }, 10000); // 10 second timeout
 
       ws.onopen = () => {
         console.log('[Speech Tutor] WebSocket connected');
@@ -196,14 +220,6 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         
         console.log('[Speech Tutor] Sending setup:', setupMessage);
         ws.send(JSON.stringify(setupMessage));
-
-        // Assume ready to stream after setup is sent (some implementations don't send a setup ack)
-        setupAcknowledgedRef.current = true;
-        setStatus(ConversationStatus.Listening);
-        toast({
-          title: 'Connected',
-          description: 'Start speaking your mixed-language sentences',
-        });
       };
 
       ws.onmessage = async (event) => {
@@ -220,6 +236,28 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         try {
           const data = JSON.parse(event.data);
           console.log('[Speech Tutor] WebSocket message:', data);
+
+          // Handle setup acknowledgment
+          if (data.setupComplete || data.setup) {
+            clearTimeout(connectionTimeout);
+            setupAcknowledgedRef.current = true;
+            setStatus(ConversationStatus.Listening);
+            
+            // Start keepalive
+            keepaliveIntervalRef.current = setInterval(() => {
+              if (ws.readyState === WebSocket.OPEN) {
+                console.log('[Speech Tutor] Sending keepalive');
+                ws.send(JSON.stringify({ ping: true }));
+              }
+            }, 30000); // Every 30 seconds
+            
+            toast({
+              title: 'Connected',
+              description: 'Start speaking your mixed-language sentences',
+            });
+            console.log('[Speech Tutor] Setup acknowledged, ready to listen');
+            return;
+          }
 
           // Top-level audio data (base64 PCM @24kHz)
           if (data.data) {
@@ -247,14 +285,65 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('[Speech Tutor] WebSocket error:', error);
+        clearTimeout(connectionTimeout);
         setErrorMessage('Connection error occurred');
         setStatus(ConversationStatus.Error);
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket closed');
-        stopSession();
+      ws.onclose = (event) => {
+        console.log('[Speech Tutor] WebSocket closed', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          intentional: intentionalDisconnectRef.current
+        });
+        
+        clearTimeout(connectionTimeout);
+        
+        // Clear keepalive
+        if (keepaliveIntervalRef.current) {
+          clearInterval(keepaliveIntervalRef.current);
+          keepaliveIntervalRef.current = null;
+        }
+
+        // If intentional disconnect, do nothing (user stopped it)
+        if (intentionalDisconnectRef.current) {
+          console.log('[Speech Tutor] Intentional disconnect, cleaning up');
+          return;
+        }
+
+        // Handle unexpected disconnect
+        const isNormalClose = event.code === 1000;
+        const isAbnormalClose = event.code === 1006;
+        
+        if (!isNormalClose) {
+          console.error('[Speech Tutor] Unexpected disconnect:', event.code, event.reason);
+          
+          // Attempt reconnection if we haven't exceeded max attempts
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttemptsRef.current++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 5000);
+            
+            setErrorMessage(`Connection lost. Reconnecting in ${delay/1000}s... (Attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
+            setStatus(ConversationStatus.Error);
+            
+            setTimeout(() => {
+              console.log(`[Speech Tutor] Reconnect attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}`);
+              startSession();
+            }, delay);
+          } else {
+            setErrorMessage('Connection lost. Maximum reconnection attempts reached.');
+            setStatus(ConversationStatus.Error);
+            stopSession();
+            
+            toast({
+              title: 'Connection Failed',
+              description: 'Unable to maintain connection to the server. Please try again.',
+              variant: 'destructive',
+            });
+          }
+        }
       };
 
       // Process audio - only send after setup is acknowledged
@@ -280,7 +369,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       processor.connect(audioContext.destination);
 
     } catch (error: any) {
-      console.error('Error starting session:', error);
+      console.error('[Speech Tutor] Error starting session:', error);
       setErrorMessage(error.message || 'Failed to start session');
       setStatus(ConversationStatus.Error);
       stopSession();
