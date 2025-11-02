@@ -114,7 +114,7 @@ export default function Signup() {
             agreed_marketing: false
           }, {
             onConflict: 'email',
-            ignoreDuplicates: false
+            ignoreDuplicates: true
           });
 
         if (prospectError) {
