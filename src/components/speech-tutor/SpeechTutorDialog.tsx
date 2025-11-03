@@ -32,6 +32,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const intentionalDisconnectRef = useRef<boolean>(false);
   const reconnectAttemptsRef = useRef<number>(0);
   const keepaliveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptBufferRef = useRef<{ input: string; output: string }>({ input: '', output: '' });
   const MAX_RECONNECT_ATTEMPTS = 3;
 
   useEffect(() => {
@@ -203,81 +204,98 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       ws.onopen = () => {
         console.log('[Speech Tutor] WebSocket connected');
         
-        // Send setup message
+        // Send setup message for Gemini Live v1beta
         const setupMessage = {
           setup: {
-            model: 'gemini-1.5-flash-latest',
-            generation_config: {
-              response_modalities: ['AUDIO']
-            },
+            model: 'gemini-2.0-flash-exp',
+            generation_config: { response_modalities: ['AUDIO'] },
             system_instruction: {
               parts: [{
-                text: "You are a language tutor specializing in bilingual speech. The user will provide sentences that mix Brazilian Portuguese and English. Your primary function is to repeat these sentences back to the user with a natural and fluent pronunciation, seamlessly switching between the two languages as they appear in the sentence. Be encouraging and supportive."
+                text: 'You are a language tutor specializing in bilingual speech. The user will provide sentences that mix Brazilian Portuguese and English. Your primary function is to repeat these sentences back to the user with a natural and fluent pronunciation, seamlessly switching between the two languages as they appear in the sentence. Be encouraging and supportive.'
               }]
             }
           }
         };
-        
         console.log('[Speech Tutor] Sending setup:', setupMessage);
         ws.send(JSON.stringify(setupMessage));
       };
 
       ws.onmessage = async (event) => {
-        // If Blob, skip (we expect JSON text messages with base64 data fields)
         if (event.data instanceof Blob) {
-          console.log('[Speech Tutor] Received Blob, skipping');
+          // Realtime API sends text frames, but guard anyway
           return;
         }
-        if (typeof event.data !== 'string') {
-          console.log('[Speech Tutor] Non-string message received');
-          return;
-        }
+        if (typeof event.data !== 'string') return;
 
         try {
-          const data = JSON.parse(event.data);
-          console.log('[Speech Tutor] WebSocket message:', data);
+          const data = JSON.parse(event.data as string);
+          // console.log('[Speech Tutor] WS message:', data);
 
-          // Handle setup acknowledgment
-          if (data.setupComplete || data.setup) {
+          // Session lifecycle
+          if (data.type === 'session.created') {
             clearTimeout(connectionTimeout);
+            // Update default session config (audio in/out, VAD, etc.)
+            const update = {
+              event_id: `evt_${Date.now()}`,
+              type: 'session.update',
+              session: {
+                modalities: ['text', 'audio'],
+                voice: 'alloy',
+                input_audio_format: 'pcm16',
+                output_audio_format: 'pcm16',
+                input_audio_transcription: { model: 'whisper-1' },
+                turn_detection: {
+                  type: 'server_vad',
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 1000,
+                },
+                temperature: 0.8,
+                max_response_output_tokens: 'inf',
+                instructions:
+                  'You are a bilingual (PT-BR + EN) speech tutor. Repeat user sentences with natural pronunciation, switching languages seamlessly. Be encouraging and concise.',
+              },
+            };
+            ws.send(JSON.stringify(update));
             setupAcknowledgedRef.current = true;
             setStatus(ConversationStatus.Listening);
-            
-            // Start keepalive
-            keepaliveIntervalRef.current = setInterval(() => {
-              if (ws.readyState === WebSocket.OPEN) {
-                console.log('[Speech Tutor] Sending keepalive');
-                ws.send(JSON.stringify({ ping: true }));
-              }
-            }, 30000); // Every 30 seconds
-            
-            toast({
-              title: 'Connected',
-              description: 'Start speaking your mixed-language sentences',
-            });
-            console.log('[Speech Tutor] Setup acknowledged, ready to listen');
+            toast({ title: 'Connected', description: 'Start speaking your mixed-language sentences' });
             return;
           }
 
-          // Top-level audio data (base64 PCM @24kHz)
-          if (data.data) {
-            await playAudioResponse(data.data);
+          // Audio stream from model (PCM16 base64 @24kHz)
+          if (data.type === 'response.audio.delta' && data.delta) {
+            await playAudioResponse(data.delta);
+            return;
           }
 
-          // Server model turn
-          if (data.serverContent?.modelTurn?.parts) {
-            for (const part of data.serverContent.modelTurn.parts) {
-              if (part.inlineData?.data) {
-                await playAudioResponse(part.inlineData.data);
-              }
-              if (part.text) {
-                setTranscript(prev => [...prev, { role: 'tutor', text: part.text, timestamp: Date.now() }]);
-              }
+          // Transcripts from model
+          if (data.type === 'response.audio_transcript.delta' && data.delta) {
+            transcriptBufferRef.current.output += data.delta;
+            return;
+          }
+
+          // User transcript (if provided by server in future)
+          if (data.type === 'conversation.item.input_audio_transcription.completed' && data.transcript) {
+            transcriptBufferRef.current.input += data.transcript;
+            return;
+          }
+
+          // Response done -> flush transcript buffers
+          if (data.type === 'response.done') {
+            const input = transcriptBufferRef.current.input.trim();
+            const output = transcriptBufferRef.current.output.trim();
+            if (input || output) {
+              setTranscript((prev) => {
+                const appended: TranscriptEntry[] = [
+                  ...(input ? [{ role: 'user' as const, text: input, timestamp: Date.now() }] : []),
+                  ...(output ? [{ role: 'tutor' as const, text: output, timestamp: Date.now() }] : []),
+                ];
+                return [...prev, ...appended];
+              });
             }
-          }
-
-          if (data.serverContent?.turnComplete) {
-            console.log('[Speech Tutor] Turn complete');
+            transcriptBufferRef.current = { input: '', output: '' };
+            return;
           }
         } catch (err) {
           console.error('[Speech Tutor] Error parsing message', err);
@@ -361,7 +379,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           const pcmData = float32ToPcm16(inputData);
           const base64Audio = arrayBufferToBase64(pcmData);
 
-          // Send with correct shape expected by Live API
+          // Send with correct shape expected by Gemini Live API
           ws.send(JSON.stringify({
             realtimeInput: {
               audio: {
