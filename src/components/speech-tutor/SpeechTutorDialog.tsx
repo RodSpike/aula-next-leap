@@ -187,7 +187,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       }
 
       const ws = new WebSocket(
-        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
+        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
       );
       wsRef.current = ws;
 
@@ -206,7 +206,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         // Send setup message
         const setupMessage = {
           setup: {
-            model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+            model: 'gemini-1.5-flash-latest',
             generation_config: {
               response_modalities: ['AUDIO']
             },
@@ -319,6 +319,14 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         
         if (!isNormalClose) {
           console.error('[Speech Tutor] Unexpected disconnect:', event.code, event.reason);
+          
+          // Improve error message for model/API version issues
+          if (event.code === 1008 && event.reason.includes('not found for API version')) {
+            setErrorMessage('The speech model is incompatible. Please refresh and try again.');
+            setStatus(ConversationStatus.Error);
+            stopSession();
+            return;
+          }
           
           // Attempt reconnection if we haven't exceeded max attempts
           if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
