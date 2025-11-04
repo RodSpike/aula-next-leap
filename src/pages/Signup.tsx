@@ -105,20 +105,19 @@ export default function Signup() {
 
       // Save as prospect only if not a free user (don't need marketing data for free users)
       if (!isFreeUser) {
-        const { error: prospectError } = await supabase
-          .from('prospects')
-          .upsert({
+        const { error: prospectError } = await supabase.functions.invoke('save-prospect', {
+          body: {
             name: formData.name.trim(),
             email: formData.email.trim().toLowerCase(),
             agreed_terms: formData.agreeToTerms,
-            agreed_marketing: false
-          }, {
-            onConflict: 'email',
-            ignoreDuplicates: true
-          });
+            agreed_marketing: false,
+            utm_source: new URLSearchParams(window.location.search).get('utm_source'),
+            utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign'),
+          },
+        });
 
         if (prospectError) {
-          console.error('Error saving prospect:', prospectError);
+          console.error('Error saving prospect via function:', prospectError);
           // Don't block signup if prospect save fails
         }
       }

@@ -38,14 +38,16 @@ export default function Subscribe() {
 
     setLoading(true);
     try {
-      // Save prospect data first
-      const { error: prospectError } = await supabase.from('prospects').insert({
-        email: formData.email,
-        name: formData.name,
-        agreed_terms: formData.agreedTerms,
-        agreed_marketing: formData.agreedMarketing,
-        utm_source: new URLSearchParams(window.location.search).get('utm_source'),
-        utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign')
+      // Save prospect data first (via Edge Function to avoid RLS/auth issues)
+      const { error: prospectError } = await supabase.functions.invoke('save-prospect', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          agreed_terms: formData.agreedTerms,
+          agreed_marketing: formData.agreedMarketing,
+          utm_source: new URLSearchParams(window.location.search).get('utm_source'),
+          utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign'),
+        },
       });
 
       if (prospectError) {
