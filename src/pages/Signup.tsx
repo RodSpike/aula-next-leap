@@ -93,19 +93,9 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      // Check if user has free access
-      const { data: freeUserData } = await supabase
-        .from('admin_free_users')
-        .select('active')
-        .eq('email', formData.email.trim().toLowerCase())
-        .eq('active', true)
-        .maybeSingle();
-
-      const isFreeUser = !!freeUserData;
-
-      // Save as prospect only if not a free user (don't need marketing data for free users)
-      if (!isFreeUser) {
-        const { error: prospectError } = await supabase.functions.invoke('save-prospect', {
+      // Save prospect data before signup
+      try {
+        await supabase.functions.invoke('save-prospect', {
           body: {
             name: formData.name.trim(),
             email: formData.email.trim().toLowerCase(),
@@ -115,11 +105,8 @@ export default function Signup() {
             utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign'),
           },
         });
-
-        if (prospectError) {
-          console.error('Error saving prospect via function:', prospectError);
-          // Don't block signup if prospect save fails
-        }
+      } catch (prospectError) {
+        console.log('Prospect save failed (non-blocking):', prospectError);
       }
 
       // Create user account
@@ -137,13 +124,10 @@ export default function Signup() {
         return;
       }
 
-      // Show appropriate success message
-      // Note: Subscription type is automatically determined by database trigger
+      // Success message (specific access type determined by backend)
       toast({
         title: "✅ Conta criada com sucesso!",
-        description: isFreeUser 
-          ? "Você tem acesso completo e gratuito à plataforma!"
-          : "Aproveite seus 7 dias grátis! Bem-vindo à plataforma.",
+        description: "Verifique seu email para confirmar sua conta e ter acesso à plataforma.",
       });
 
       // Let auth state handle redirect
