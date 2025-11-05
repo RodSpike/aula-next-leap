@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { UserPlus, UserMinus, Users } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { UserPlus, UserMinus, Users, Eye, EyeOff } from "lucide-react";
 
 interface FreeUser {
   id: string;
@@ -26,6 +27,10 @@ export function AdminFreeUsers() {
   const [loading, setLoading] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({ email: "", name: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [creating, setCreating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -170,6 +175,58 @@ export function AdminFreeUsers() {
     }
   };
 
+  const handleCreateFreeUser = async () => {
+    const { email, name, password } = createUserForm;
+
+    if (!email.trim() || !name.trim() || !password.trim()) {
+      toast({
+        title: "Erro",
+        description: "Todos os campos são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const { data, error } = await supabase.functions.invoke('admin-create-free-user', {
+        body: { 
+          email: email.toLowerCase().trim(),
+          name: name.trim(),
+          password 
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Conta criada com sucesso!",
+        description: `Compartilhe as credenciais com o usuário:\nEmail: ${email}\nSenha: ${password}\n\nO usuário pode alterá-la em Configurações.`,
+      });
+
+      setCreateUserForm({ email: "", name: "", password: "" });
+      setIsCreateDialogOpen(false);
+      fetchFreeUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar conta",
+        variant: "destructive"
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -177,38 +234,110 @@ export function AdminFreeUsers() {
           <Users className="h-5 w-5" />
           <CardTitle>Usuários com Acesso Gratuito</CardTitle>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center space-x-2">
-              <UserPlus className="h-4 w-4" />
-              <span>Conceder Acesso</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Conceder Acesso Gratuito</DialogTitle>
-              <DialogDescription>
-                Digite o email do usuário para conceder acesso gratuito à plataforma.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder="email@example.com"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                type="email"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
+        <div className="flex gap-2">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center space-x-2" variant="default">
+                <UserPlus className="h-4 w-4" />
+                <span>Criar Conta Gratuita</span>
               </Button>
-              <Button onClick={handleGrantFreeAccess}>
-                Conceder Acesso
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Conta de Usuário Gratuito</DialogTitle>
+                <DialogDescription>
+                  Crie uma conta diretamente para o usuário. Ele poderá fazer login imediatamente sem precisar se registrar.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="create-email">Email</Label>
+                  <Input
+                    id="create-email"
+                    placeholder="email@example.com"
+                    value={createUserForm.email}
+                    onChange={(e) => setCreateUserForm(prev => ({ ...prev, email: e.target.value }))}
+                    type="email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="create-name">Nome Completo</Label>
+                  <Input
+                    id="create-name"
+                    placeholder="João Silva"
+                    value={createUserForm.name}
+                    onChange={(e) => setCreateUserForm(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="create-password">Senha Inicial</Label>
+                  <div className="relative">
+                    <Input
+                      id="create-password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={createUserForm.password}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      type={showPassword ? "text" : "password"}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O usuário pode alterar esta senha nas Configurações
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateFreeUser} disabled={creating}>
+                  {creating ? "Criando..." : "Criar Conta"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center space-x-2" variant="outline">
+                <UserPlus className="h-4 w-4" />
+                <span>Conceder Acesso</span>
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Conceder Acesso Gratuito</DialogTitle>
+                <DialogDescription>
+                  Digite o email do usuário para conceder acesso gratuito. O usuário ainda precisa se registrar normalmente.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Input
+                  placeholder="email@example.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  type="email"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleGrantFreeAccess}>
+                  Conceder Acesso
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (

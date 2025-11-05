@@ -85,16 +85,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   const signUp = async (email: string, password: string, fullName: string, username?: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    console.debug('[Auth] Starting signup for:', email);
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
           username: username,
         }
       }
     });
+    
+    if (error) {
+      console.error('[Auth] Signup error:', error.message);
+      
+      // Provide user-friendly error messages
+      if (error.message.includes('already registered')) {
+        toast({
+          title: "Email já cadastrado",
+          description: "Este email já está em uso. Faça login ou use outro email.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      console.debug('[Auth] Signup successful, confirmation email sent');
+    }
+    
     return { error };
   };
 

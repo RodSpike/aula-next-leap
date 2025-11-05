@@ -123,5 +123,8 @@ verify_jwt = false
 [functions.bulk-generate-lesson-audio]
 verify_jwt = false
 
+[functions.admin-create-free-user]
+verify_jwt = true
+
 [functions.save-prospect]
 verify_jwt = false
