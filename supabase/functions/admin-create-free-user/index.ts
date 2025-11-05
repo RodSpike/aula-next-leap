@@ -68,6 +68,14 @@ serve(async (req) => {
       throw new Error('Password must be at least 6 characters long');
     }
 
+    // Check if user already exists
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const userExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === normalizedEmail);
+    
+    if (userExists) {
+      throw new Error('Um usuário com este email já existe. Use "Conceder Acesso" para adicionar à lista gratuita ou escolha outro email.');
+    }
+
     // Create the user account with email already confirmed
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
@@ -81,7 +89,7 @@ serve(async (req) => {
 
     if (createError) {
       console.error('User creation error:', createError);
-      throw new Error(`Failed to create user: ${createError.message}`);
+      throw new Error(`Erro ao criar usuário: ${createError.message}`);
     }
 
     console.log('[admin-create-free-user] User created:', newUser.user.id);
