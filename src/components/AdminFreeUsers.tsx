@@ -381,9 +381,9 @@ export function AdminFreeUsers() {
                     {new Date(user.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    {user.active && (
-                      <div className="flex gap-2">
-                        {user.registration_status === 'registered' && (
+                    <div className="flex gap-2">
+                      {user.registration_status === 'registered' ? (
+                        <>
                           <Button
                             variant="destructive"
                             size="sm"
@@ -393,18 +393,28 @@ export function AdminFreeUsers() {
                             <UserMinus className="h-3 w-3" />
                             <span>Deletar Conta</span>
                           </Button>
-                        )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveFreeAccessOnly(user.email)}
+                            className="flex items-center space-x-1"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                            <span>Remover Acesso</span>
+                          </Button>
+                        </>
+                      ) : (
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleRemoveFreeAccessOnly(user.email)}
+                          onClick={() => handleDeleteAccount(user.email)}
                           className="flex items-center space-x-1"
                         >
                           <UserMinus className="h-3 w-3" />
-                          <span>Remover Acesso</span>
+                          <span>Excluir Entrada</span>
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

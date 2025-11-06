@@ -68,31 +68,46 @@ serve(async (req) => {
       throw new Error('Password must be at least 6 characters long');
     }
 
-    // Check if user already exists
+    // Check if user already exists and handle accordingly
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const userExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === normalizedEmail);
-    
-    if (userExists) {
-      throw new Error('Um usuário com este email já existe. Use "Conceder Acesso" para adicionar à lista gratuita ou escolha outro email.');
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+
+    let targetUserId: string | null = null;
+
+    if (existingUser) {
+      console.log('[admin-create-free-user] Existing user found, updating:', existingUser.id);
+      const { data: updated, error: updateError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
+        password,
+        user_metadata: {
+          full_name: name,
+          username: normalizedEmail.split('@')[0],
+        },
+      });
+      if (updateError) {
+        console.error('User update error:', updateError);
+        throw new Error(`Erro ao atualizar usuário existente: ${updateError.message}`);
+      }
+      targetUserId = updated.user.id;
+    } else {
+      // Create the user account with email already confirmed
+      const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true, // Auto-confirm so user can login immediately
+        user_metadata: {
+          full_name: name,
+          username: normalizedEmail.split('@')[0],
+        },
+      });
+
+      if (createError) {
+        console.error('User creation error:', createError);
+        throw new Error(`Erro ao criar usuário: ${createError.message}`);
+      }
+
+      targetUserId = newUser.user.id;
+      console.log('[admin-create-free-user] User created:', targetUserId);
     }
-
-    // Create the user account with email already confirmed
-    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email: normalizedEmail,
-      password,
-      email_confirm: true, // Auto-confirm so user can login immediately
-      user_metadata: {
-        full_name: name,
-        username: normalizedEmail.split('@')[0],
-      },
-    });
-
-    if (createError) {
-      console.error('User creation error:', createError);
-      throw new Error(`Erro ao criar usuário: ${createError.message}`);
-    }
-
-    console.log('[admin-create-free-user] User created:', newUser.user.id);
 
     // Ensure entry exists in admin_free_users (handle old method gracefully)
     const { data: existingFree, error: freeSelectError } = await adminClient
@@ -125,9 +140,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        user_id: newUser.user.id,
+        user_id: targetUserId,
         email: normalizedEmail,
-        message: 'Free user account created successfully',
+        message: 'Free user account created or updated successfully',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
