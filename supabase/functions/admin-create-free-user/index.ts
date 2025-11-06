@@ -22,13 +22,14 @@ serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    // Create client with anon key to verify caller identity
+    // Create client with anon key and verify caller identity using the bearer token
+    const token = authHeader.replace('Bearer ', '');
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
     });
 
-    // Get the caller's user
-    const { data: { user: caller }, error: userError } = await authClient.auth.getUser();
+    // Get the caller's user using provided token
+    const { data: { user: caller }, error: userError } = await authClient.auth.getUser(token);
     if (userError || !caller) {
       console.error('Auth error:', userError);
       throw new Error('Unauthorized: Invalid token');
