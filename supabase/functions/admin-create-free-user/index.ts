@@ -94,20 +94,32 @@ serve(async (req) => {
 
     console.log('[admin-create-free-user] User created:', newUser.user.id);
 
-    // Upsert into admin_free_users to guarantee they're on the free list
-    const { error: freeUserError } = await adminClient
+    // Ensure entry exists in admin_free_users (handle old method gracefully)
+    const { data: existingFree, error: freeSelectError } = await adminClient
       .from('admin_free_users')
-      .upsert({
-        email: normalizedEmail,
-        active: true,
-        granted_by: caller.id,
-      }, {
-        onConflict: 'email',
-      });
+      .select('id, active')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
-    if (freeUserError) {
-      console.error('Free user upsert error:', freeUserError);
-      // Don't throw - user was created successfully, this is just metadata
+    if (freeSelectError) {
+      console.error('Free user select error:', freeSelectError);
+    }
+
+    if (existingFree?.id) {
+      const { error: freeUpdateError } = await adminClient
+        .from('admin_free_users')
+        .update({ active: true, granted_by: caller.id })
+        .eq('id', existingFree.id);
+      if (freeUpdateError) {
+        console.error('Free user update error:', freeUpdateError);
+      }
+    } else {
+      const { error: freeInsertError } = await adminClient
+        .from('admin_free_users')
+        .insert({ email: normalizedEmail, active: true, granted_by: caller.id });
+      if (freeInsertError) {
+        console.error('Free user insert error:', freeInsertError);
+      }
     }
 
     return new Response(

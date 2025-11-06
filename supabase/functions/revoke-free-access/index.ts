@@ -76,23 +76,31 @@ serve(async (req) => {
       logStep("Keeping account, only revoking free access", { email });
     }
 
-    // Update free user access to inactive
-    const { data, error } = await supabaseClient
-      .from('admin_free_users')
-      .update({ active: false })
-      .eq('email', email.toLowerCase())
-      .select()
-      .single();
-
-    if (error) throw error;
-    logStep("Free access revoked successfully", { email });
+    // Remove or revoke free user access
+    let freeUserAction = 'revoked';
+    if (delete_account) {
+      const { error: delErr } = await supabaseClient
+        .from('admin_free_users')
+        .delete()
+        .eq('email', email.toLowerCase());
+      if (delErr) throw delErr;
+      freeUserAction = 'deleted';
+      logStep("Free user entry deleted", { email });
+    } else {
+      const { error: updErr } = await supabaseClient
+        .from('admin_free_users')
+        .update({ active: false })
+        .eq('email', email.toLowerCase());
+      if (updErr) throw updErr;
+      logStep("Free access revoked successfully", { email });
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
       message: accountDeleted
-        ? "Free access revoked and user account deleted. User must register again as a paying customer."
+        ? "Free access removed and user account deleted. All related data was cleaned."
         : "Free access revoked successfully. User will need to pay on next login.",
-      data,
+      free_user_action: freeUserAction,
       account_deleted: accountDeleted
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
