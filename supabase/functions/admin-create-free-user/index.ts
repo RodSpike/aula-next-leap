@@ -69,11 +69,31 @@ serve(async (req) => {
       throw new Error('Password must be at least 6 characters long');
     }
 
-    // Check if user already exists and handle accordingly
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+    // Check if user already exists and handle accordingly (robust search across all pages)
+    const findUserByEmail = async (email: string) => {
+      try {
+        let page = 1;
+        const perPage = 1000;
+        while (true) {
+          const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+          if (error) {
+            console.error('[admin-create-free-user] listUsers error:', error);
+            break;
+          }
+          const match = data?.users?.find((u: any) => u.email?.toLowerCase() === email);
+          if (match) return match;
+          if (!data?.users?.length || data.users.length < perPage) break;
+          page += 1;
+        }
+      } catch (e) {
+        console.error('[admin-create-free-user] findUserByEmail exception:', e);
+      }
+      return null;
+    };
 
     let targetUserId: string | null = null;
+
+    let existingUser = await findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       console.log('[admin-create-free-user] Existing user found, updating:', existingUser.id);
@@ -103,11 +123,29 @@ serve(async (req) => {
 
       if (createError) {
         console.error('User creation error:', createError);
-        throw new Error(`Erro ao criar usuário: ${createError.message}`);
+        // If creation failed, double-check if user already exists and update instead
+        existingUser = await findUserByEmail(normalizedEmail);
+        if (existingUser) {
+          console.warn('[admin-create-free-user] Create failed but user exists, attempting update:', existingUser.id);
+          const { data: updated, error: updateError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
+            password,
+            user_metadata: {
+              full_name: name,
+              username: normalizedEmail.split('@')[0],
+            },
+          });
+          if (updateError) {
+            console.error('User update-after-create error:', updateError);
+            throw new Error(`Erro ao ajustar usuário existente após falha de criação: ${updateError.message}`);
+          }
+          targetUserId = updated.user.id;
+        } else {
+          throw new Error(`Erro ao criar usuário: ${createError.message || 'Falha desconhecida'}`);
+        }
+      } else {
+        targetUserId = newUser.user.id;
+        console.log('[admin-create-free-user] User created:', targetUserId);
       }
-
-      targetUserId = newUser.user.id;
-      console.log('[admin-create-free-user] User created:', targetUserId);
     }
 
     // Ensure entry exists in admin_free_users (handle old method gracefully)
