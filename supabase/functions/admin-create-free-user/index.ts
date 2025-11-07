@@ -69,6 +69,34 @@ serve(async (req) => {
       throw new Error('Password must be at least 6 characters long');
     }
 
+    // Generate a unique username to avoid DB constraint errors on profiles trigger
+    const baseFromName = (name || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9_]/g, '');
+    const baseLocalPart = normalizedEmail.split('@')[0];
+    const initialBase = (baseFromName && baseFromName.length >= 3) ? baseFromName : baseLocalPart;
+    const sanitizeBase = (b: string) => (b || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20) || 'user';
+    const generateUniqueUsername = async (base: string) => {
+      let sanitized = sanitizeBase(base);
+      if (sanitized.length < 3) sanitized = `user${Math.floor(Math.random()*1000)}`;
+      let candidate = sanitized;
+      let suffix = 0;
+      while (true) {
+        const { data } = await adminClient
+          .from('profiles')
+          .select('username')
+          .eq('username', candidate)
+          .maybeSingle();
+        if (!data) {
+          return candidate;
+        }
+        suffix += 1;
+        candidate = `${sanitized}${suffix}`;
+        if (suffix > 100) {
+          candidate = `${sanitized}${Math.floor(Math.random()*10000)}`;
+        }
+      }
+    };
+    const safeUsername = await generateUniqueUsername(initialBase);
+
     // Check if user already exists and handle accordingly (robust search across all pages)
     const findUserByEmail = async (email: string) => {
       try {
@@ -101,7 +129,7 @@ serve(async (req) => {
         password,
         user_metadata: {
           full_name: name,
-          username: normalizedEmail.split('@')[0],
+          username: safeUsername,
         },
       });
       if (updateError) {
@@ -109,6 +137,14 @@ serve(async (req) => {
         throw new Error(`Erro ao atualizar usuário existente: ${updateError.message}`);
       }
       targetUserId = updated.user.id;
+      // Sync profile as well to avoid unique constraint issues
+      const { error: profileUpdateError } = await adminClient
+        .from('profiles')
+        .update({ display_name: name, username: safeUsername })
+        .eq('user_id', targetUserId);
+      if (profileUpdateError) {
+        console.error('Profile update error:', profileUpdateError);
+      }
     } else {
       // Create the user account with email already confirmed
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
@@ -117,7 +153,7 @@ serve(async (req) => {
         email_confirm: true, // Auto-confirm so user can login immediately
         user_metadata: {
           full_name: name,
-          username: normalizedEmail.split('@')[0],
+           username: safeUsername,
         },
       });
 
@@ -131,7 +167,7 @@ serve(async (req) => {
             password,
             user_metadata: {
               full_name: name,
-              username: normalizedEmail.split('@')[0],
+              username: safeUsername,
             },
           });
           if (updateError) {
@@ -139,6 +175,14 @@ serve(async (req) => {
             throw new Error(`Erro ao ajustar usuário existente após falha de criação: ${updateError.message}`);
           }
           targetUserId = updated.user.id;
+          // Sync profile as well
+          const { error: profileUpdateError } = await adminClient
+            .from('profiles')
+            .update({ display_name: name, username: safeUsername })
+            .eq('user_id', targetUserId);
+          if (profileUpdateError) {
+            console.error('Profile update error:', profileUpdateError);
+          }
         } else {
           throw new Error(`Erro ao criar usuário: ${createError.message || 'Falha desconhecida'}`);
         }
