@@ -38,9 +38,9 @@ export default function Welcome() {
           description: "Sua assinatura foi ativada com sucesso. Aproveite seus 7 dias grátis!",
         });
 
-        // Redirect to dashboard after 3 seconds
+        // Redirect to placement test after 3 seconds
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/placement-test');
         }, 3000);
 
       } catch (error) {
@@ -104,11 +104,11 @@ export default function Welcome() {
               </div>
               
               <p className="text-sm text-muted-foreground">
-                Redirecionando para o painel em alguns segundos...
+                Redirecionando para o teste de nivelamento em alguns segundos...
               </p>
               
-              <Button onClick={() => navigate('/dashboard')} className="w-full">
-                Ir para o Painel
+              <Button onClick={() => navigate('/placement-test')} className="w-full">
+                Fazer Teste de Nivelamento
               </Button>
             </div>
           )}

@@ -79,7 +79,10 @@ serve(async (req) => {
       success_url: `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/subscribe?canceled=true`,
       locale: "pt-BR",
-      billing_address_collection: "required",
+      billing_address_collection: "auto",
+      phone_number_collection: {
+        enabled: false,
+      },
       subscription_data: {
         trial_period_days: 7,
         metadata: {

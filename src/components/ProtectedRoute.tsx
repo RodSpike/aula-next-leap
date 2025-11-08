@@ -124,16 +124,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const hasAccess = userRole?.role === 'admin' || 
                     subscriptionStatus?.subscribed || 
                     subscriptionStatus?.in_trial ||
-                    path === '/onboarding' ||
                     path === '/placement-test' ||
-                    path === '/settings';
+                    path === '/settings' ||
+                    path === '/subscribe';  // Allow access to subscribe page for completing checkout
 
   // Detect browser reload to avoid false-positive redirect during auth/subscription checks
   const navEntry = (typeof performance !== 'undefined' && (performance.getEntriesByType?.('navigation')?.[0] as PerformanceNavigationTiming | undefined)) || undefined;
   const isReload = !!navEntry && navEntry.type === 'reload';
 
   // Don't redirect if we just checked and user doesn't have access but is on a non-protected route
-  const isPublicRoute = ['/', '/login', '/signup', '/placement-test'].includes(path) || path.startsWith('/course/');
+  const isPublicRoute = ['/', '/login', '/signup', '/placement-test', '/subscribe'].includes(path) || path.startsWith('/course/');
   
   if (!hasAccess && !isPublicRoute && !isReload) {
     return <Navigate to="/subscribe" replace />;
