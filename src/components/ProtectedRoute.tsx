@@ -42,7 +42,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
         console.log('[ProtectedRoute] Admin check result:', { isAdminData, roleRpcError });
 
-        const isAdmin = isAdminData === true && !roleRpcError;
+        const isAdmin = Boolean(isAdminData) && !roleRpcError;
         if (isAdmin) {
           console.log('[ProtectedRoute] User is admin, granting permanent free access');
           setUserRole({ role: 'admin' });
