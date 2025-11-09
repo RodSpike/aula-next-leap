@@ -181,15 +181,16 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
 
-      // Connect WebSocket
-      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!geminiApiKey) {
-        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your environment.');
+      // Connect to secure proxy edge function (no API key exposed to frontend)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
       }
 
-      const ws = new WebSocket(
-        `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`
-      );
+      // Use WebSocket protocol and connect to our proxy function
+      const wsProtocol = supabaseUrl.startsWith('https') ? 'wss' : 'ws';
+      const wsUrl = supabaseUrl.replace(/^https?/, wsProtocol);
+      const ws = new WebSocket(`${wsUrl}/functions/v1/speech-tutor-proxy`);
       wsRef.current = ws;
 
       // Connection timeout
