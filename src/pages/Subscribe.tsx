@@ -118,7 +118,7 @@ export default function Subscribe() {
 
           <Button 
             onClick={handleStartTrial}
-            className="w-full animate-pulse" 
+            className="w-full" 
             size="lg"
             disabled={loading}
           >
