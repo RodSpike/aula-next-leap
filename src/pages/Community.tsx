@@ -29,6 +29,8 @@ import {
   Upload,
   Image as ImageIcon,
   FileText,
+  FileIcon,
+  Video,
   X,
   Lock,
   Building2,
@@ -73,6 +75,10 @@ interface GroupPost {
     name: string;
     thumbnail?: string;
     videoId?: string;
+    mimeType?: string;
+    data?: string;
+    size?: number;
+    path?: string;
   }[];
   profiles: {
     display_name: string;
@@ -628,26 +634,36 @@ export default function Community() {
     try {
       let attachments: any[] = [];
 
-      // Upload files if any
+      // Upload files to Supabase Storage
       if (selectedFiles.length > 0) {
         const uploadPromises = selectedFiles.map(async (file) => {
+          // Create a unique filename with timestamp
+          const timestamp = Date.now();
           const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+          const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `${selectedGroup.id}/${user.id}/${fileName}`;
 
           const { data, error } = await supabase.storage
-            .from('community-files')
-            .upload(fileName, file);
+            .from('group-post-attachments')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
           if (error) throw error;
 
+          // Get public URL
           const { data: { publicUrl } } = supabase.storage
-            .from('community-files')
-            .getPublicUrl(data.path);
+            .from('group-post-attachments')
+            .getPublicUrl(filePath);
 
           return {
             url: publicUrl,
-            type: file.type,
-            name: file.name
+            type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
+            name: file.name,
+            mimeType: file.type,
+            size: file.size,
+            path: filePath
           };
         });
 
@@ -1279,22 +1295,22 @@ export default function Community() {
                         {/* File Upload */}
                         <div className="space-y-3">
                           <div className="flex gap-2">
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*,application/pdf,.txt,.doc,.docx"
-                              onChange={handleFileSelect}
-                              className="hidden"
-                              id="file-upload"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => document.getElementById('file-upload')?.click()}
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              Anexar Arquivos
-                            </Button>
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*,application/pdf,.txt,.doc,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => document.getElementById('file-upload')?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Attach Files
+            </Button>
                           </div>
                           
                           {/* Selected Files Preview */}
@@ -1397,42 +1413,86 @@ export default function Community() {
                            
                             {/* Post Attachments */}
                             {post.attachments && post.attachments.length > 0 && (
-                              <div className="mt-3 space-y-2">
-                                {post.attachments.map((attachment, index) => (
-                                  <div key={index}>
-                                     {attachment.type === 'youtube' ? (
-                                       <div className="border rounded-lg overflow-hidden">
-                                         <div className="aspect-video">
-                                           <iframe
-                                             src={`https://www.youtube.com/embed/${attachment.videoId}`}
-                                             title="YouTube Video"
-                                             className="w-full h-full"
-                                             frameBorder="0"
-                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                             allowFullScreen
-                                           />
-                                         </div>
-                                       </div>
-                                    ) : attachment.type.startsWith('image/') ? (
-                                      <img
-                                        src={attachment.url}
-                                        alt={attachment.name}
-                                        className="max-w-full h-auto rounded-lg border"
-                                        style={{ maxHeight: '300px' }}
+                              <div className="mt-3 space-y-3">
+                                {/* YouTube Videos */}
+                                {post.attachments.filter(a => a.type === 'youtube').map((attachment, index) => (
+                                  <div key={`youtube-${index}`} className="border rounded-lg overflow-hidden">
+                                    <div className="aspect-video">
+                                      <iframe
+                                        src={`https://www.youtube.com/embed/${attachment.videoId}`}
+                                        title="YouTube Video"
+                                        className="w-full h-full"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
                                       />
-                                    ) : (
-                                      <a
-                                        href={attachment.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors"
-                                      >
-                                        <FileText className="h-4 w-4" />
-                                        <span className="text-sm">{attachment.name}</span>
-                                      </a>
-                                    )}
+                                    </div>
                                   </div>
                                 ))}
+
+                                {/* Images Grid */}
+                                {post.attachments.filter(a => a.type === 'image' || a.mimeType?.startsWith('image/')).length > 0 && (
+                                  <div className={`grid gap-2 ${
+                                    post.attachments.filter(a => a.type === 'image' || a.mimeType?.startsWith('image/')).length === 1 
+                                      ? 'grid-cols-1' 
+                                      : post.attachments.filter(a => a.type === 'image' || a.mimeType?.startsWith('image/')).length === 2
+                                      ? 'grid-cols-2'
+                                      : 'grid-cols-2 sm:grid-cols-3'
+                                  }`}>
+                                    {post.attachments
+                                      .filter(a => a.type === 'image' || a.mimeType?.startsWith('image/'))
+                                      .map((attachment, index) => (
+                                        <div key={`image-${index}`} className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
+                                          <img
+                                            src={attachment.url || attachment.data}
+                                            alt={attachment.name}
+                                            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                            onClick={() => window.open(attachment.url || attachment.data, '_blank')}
+                                          />
+                                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {attachment.name}
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
+
+                                {/* Videos */}
+                                {post.attachments.filter(a => a.type === 'video' || a.mimeType?.startsWith('video/')).map((attachment, index) => (
+                                  <div key={`video-${index}`} className="border rounded-lg overflow-hidden">
+                                    <video 
+                                      controls 
+                                      className="w-full max-h-96"
+                                      src={attachment.url}
+                                    >
+                                      Your browser does not support the video tag.
+                                    </video>
+                                  </div>
+                                ))}
+
+                                {/* Other Files */}
+                                {post.attachments
+                                  .filter(a => a.type === 'file' || (!a.type?.startsWith('image/') && !a.type?.startsWith('video/') && a.type !== 'youtube'))
+                                  .map((attachment, index) => (
+                                    <a
+                                      key={`file-${index}`}
+                                      href={attachment.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted transition-colors"
+                                    >
+                                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{attachment.name}</p>
+                                        {attachment.size && (
+                                          <p className="text-xs text-muted-foreground">
+                                            {(attachment.size / 1024 / 1024).toFixed(2)} MB
+                                          </p>
+                                        )}
+                                      </div>
+                                      <FileIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    </a>
+                                  ))}
                               </div>
                             )}
 

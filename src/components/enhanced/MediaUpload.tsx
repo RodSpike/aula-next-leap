@@ -8,13 +8,15 @@ interface MediaUploadProps {
   className?: string;
   accept?: string;
   maxSize?: number; // in MB
+  multiple?: boolean;
 }
 
 export const MediaUpload: React.FC<MediaUploadProps> = ({
   onFileSelect,
   className = "",
   accept = "image/*,application/pdf,.doc,.docx,.txt",
-  maxSize = 10
+  maxSize = 10,
+  multiple = true
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -24,20 +26,23 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Check file size
-    if (file.size > maxSize * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: `Maximum file size is ${maxSize}MB`,
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Process each file
+    Array.from(files).forEach(file => {
+      // Check file size
+      if (file.size > maxSize * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: `${file.name} exceeds ${maxSize}MB limit`,
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    onFileSelect(file);
+      onFileSelect(file);
+    });
     
     // Reset input
     if (fileInputRef.current) {
@@ -59,6 +64,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         ref={fileInputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         onChange={handleFileChange}
         className="hidden"
       />
