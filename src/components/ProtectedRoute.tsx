@@ -34,15 +34,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       try {
         console.log('[ProtectedRoute] Checking access for user:', user.id);
         
-        // FIRST: Check user role via secure RPC to avoid RLS issues
-        const { data: isAdminData, error: roleRpcError } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin'
+        // FIRST: Check user role via secure Edge Function (bypasses RLS safely)
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const { data: adminResp, error: adminError } = await supabase.functions.invoke('check-admin', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
-        console.log('[ProtectedRoute] Admin check result:', { isAdminData, roleRpcError });
+        console.log('[ProtectedRoute] Admin check via function:', { adminResp, adminError });
 
-        const isAdmin = Boolean(isAdminData) && !roleRpcError;
+        const isAdmin = adminResp?.is_admin === true && !adminError;
         if (isAdmin) {
           console.log('[ProtectedRoute] User is admin, granting permanent free access');
           setUserRole({ role: 'admin' });

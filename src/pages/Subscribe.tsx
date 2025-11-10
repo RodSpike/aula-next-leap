@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,22 @@ export default function Subscribe() {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Admins should never see this page
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const { data: adminResp } = await supabase.functions.invoke('check-admin', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (adminResp?.is_admin) {
+        navigate('/dashboard', { replace: true });
+      }
+    };
+    checkAdmin();
+  }, [user, navigate]);
 
   // For logged-in users, directly go to Stripe checkout
   const handleStartTrial = async () => {
