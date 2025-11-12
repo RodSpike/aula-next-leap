@@ -41,6 +41,8 @@ serve(async (req) => {
     // Connect to Gemini
     const geminiSocket = new WebSocket(geminiWsUrl);
     console.log('[Speech Tutor Proxy] Connecting to Gemini...');
+    // Keepalive ping to avoid idle timeouts (cleared on close)
+    let keepAlive: number | undefined;
 
     // Queue to buffer client messages until Gemini socket is open
     const pendingToGemini: any[] = [];
@@ -69,9 +71,27 @@ serve(async (req) => {
       }
     };
     
-    // Handle Gemini connection open - flush any queued client messages
+    // Handle Gemini connection open - notify client and flush any queued messages
     geminiSocket.onopen = () => {
       console.log('[Speech Tutor Proxy] ✓ Successfully connected to Gemini Live API');
+      // Notify client that upstream is ready so it can safely send setup/start messages
+      try {
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(JSON.stringify({ type: 'proxy.ready' }));
+        }
+      } catch (_) { /* no-op */ }
+
+      // Start keepalive pings to keep the upstream connection active
+      try {
+        keepAlive = setInterval(() => {
+          if (geminiSocket.readyState === WebSocket.OPEN) {
+            try { geminiSocket.send(JSON.stringify({ type: 'ping' })); } catch {}
+          }
+        }, 25000) as unknown as number;
+      } catch (e) {
+        console.warn('[Speech Tutor Proxy] Failed to start keepalive:', e);
+      }
+
       try {
         while (pendingToGemini.length) {
           const msg = pendingToGemini.shift();
@@ -86,25 +106,44 @@ serve(async (req) => {
     // Handle errors
     geminiSocket.onerror = (error) => {
       console.error('[Speech Tutor Proxy] Gemini connection error:', error);
+      try {
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(JSON.stringify({ type: 'proxy.error', source: 'gemini', message: 'Gemini connection error' }));
+        }
+      } catch (_) { /* no-op */ }
       clientSocket.close(1011, 'Gemini connection error');
     };
     
     clientSocket.onerror = (error) => {
       console.error('[Speech Tutor Proxy] Client connection error:', error);
-      geminiSocket.close();
+      try {
+        if (geminiSocket.readyState === WebSocket.OPEN) {
+          geminiSocket.close();
+        }
+      } catch (_) { /* no-op */ }
     };
     
     // Handle connection close
     geminiSocket.onclose = (event) => {
       console.log('[Speech Tutor Proxy] Gemini connection closed - Code:', event.code, 'Reason:', event.reason);
-      clientSocket.close(event.code, event.reason);
+      try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
+      try {
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(JSON.stringify({ type: 'proxy.closed', source: 'gemini', code: event.code, reason: event.reason }));
+          clientSocket.close(event.code, event.reason);
+        }
+      } catch (_) { /* no-op */ }
     };
     
     clientSocket.onclose = (event) => {
       console.log('[Speech Tutor Proxy] Client connection closed - Code:', event.code, 'Reason:', event.reason);
-      geminiSocket.close();
+      try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
+      try {
+        if (geminiSocket.readyState === WebSocket.OPEN) {
+          geminiSocket.close();
+        }
+      } catch (_) { /* no-op */ }
     };
-    
     return response;
   } catch (error) {
     console.error('[Speech Tutor Proxy] Fatal error:', error);
