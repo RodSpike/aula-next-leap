@@ -41,15 +41,22 @@ serve(async (req) => {
     // Connect to Gemini
     const geminiSocket = new WebSocket(geminiWsUrl);
     console.log('[Speech Tutor Proxy] Connecting to Gemini...');
-    
-    // Forward messages from client to Gemini
-    clientSocket.onmessage = (event) => {
+
+    // Queue to buffer client messages until Gemini socket is open
+    const pendingToGemini: any[] = [];
+    const forwardToGemini = (data: any) => {
       if (geminiSocket.readyState === WebSocket.OPEN) {
         console.log('[Speech Tutor Proxy] Forwarding message from client to Gemini');
-        geminiSocket.send(event.data);
+        geminiSocket.send(data);
       } else {
-        console.warn('[Speech Tutor Proxy] Gemini socket not ready, state:', geminiSocket.readyState);
+        console.warn('[Speech Tutor Proxy] Gemini socket not ready, queuing message. state:', geminiSocket.readyState);
+        pendingToGemini.push(data);
       }
+    };
+    
+    // Forward messages from client to Gemini (buffer if Gemini not ready)
+    clientSocket.onmessage = (event) => {
+      forwardToGemini(event.data);
     };
     
     // Forward messages from Gemini to client
@@ -62,11 +69,20 @@ serve(async (req) => {
       }
     };
     
-    // Handle Gemini connection open
+    // Handle Gemini connection open - flush any queued client messages
     geminiSocket.onopen = () => {
       console.log('[Speech Tutor Proxy] ✓ Successfully connected to Gemini Live API');
+      try {
+        while (pendingToGemini.length) {
+          const msg = pendingToGemini.shift();
+          if (msg !== undefined) {
+            geminiSocket.send(msg);
+          }
+        }
+      } catch (e) {
+        console.error('[Speech Tutor Proxy] Error flushing queued messages:', e);
+      }
     };
-    
     // Handle errors
     geminiSocket.onerror = (error) => {
       console.error('[Speech Tutor Proxy] Gemini connection error:', error);
