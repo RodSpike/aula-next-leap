@@ -14,14 +14,13 @@ serve(async (req) => {
 
   try {
     console.log('[Speech Tutor Proxy] Incoming connection request');
-    
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      console.error('[Speech Tutor Proxy] GEMINI_API_KEY not found in environment');
-      throw new Error('GEMINI_API_KEY not configured');
+
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
+      console.error('[Speech Tutor Proxy] OPENAI_API_KEY not found in environment');
+      throw new Error('OPENAI_API_KEY not configured');
     }
-    
-    console.log('[Speech Tutor Proxy] GEMINI_API_KEY successfully loaded');
+    console.log('[Speech Tutor Proxy] OPENAI_API_KEY successfully loaded');
 
     // Check if this is a WebSocket upgrade request
     const upgrade = req.headers.get('upgrade') || '';
@@ -32,49 +31,77 @@ serve(async (req) => {
 
     console.log('[Speech Tutor Proxy] WebSocket upgrade request detected');
 
-    // Create WebSocket connection to Gemini
-    const geminiWsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${geminiApiKey}`;
-    
     const { socket: clientSocket, response } = Deno.upgradeWebSocket(req);
     console.log('[Speech Tutor Proxy] Client WebSocket upgraded');
-    
-    // Connect to Gemini
-    const geminiSocket = new WebSocket(geminiWsUrl);
-    console.log('[Speech Tutor Proxy] Connecting to Gemini...');
+
+    // Connect to OpenAI Realtime API (exact endpoint required)
+    const model = 'gpt-4o-realtime-preview-2024-10-01';
+    const openaiWsUrl = `wss://api.openai.com/v1/realtime?model=${model}`;
+
+    // Use subprotocols to pass API key (works in environments where custom headers aren't supported)
+    // See OpenAI Realtime docs for details
+    const protocols = [
+      'realtime',
+      `openai-insecure-api-key.${openaiKey}`,
+      'openai-beta.realtime-v1',
+    ];
+
+    console.log('[Speech Tutor Proxy] Connecting to OpenAI Realtime...');
+    const upstreamSocket = new WebSocket(openaiWsUrl, protocols);
+
     // Keepalive ping to avoid idle timeouts (cleared on close)
     let keepAlive: number | undefined;
 
-    // Queue to buffer client messages until Gemini socket is open
-    const pendingToGemini: any[] = [];
-    const forwardToGemini = (data: any) => {
-      if (geminiSocket.readyState === WebSocket.OPEN) {
-        console.log('[Speech Tutor Proxy] Forwarding message from client to Gemini');
-        geminiSocket.send(data);
+    // Queue to buffer client messages until upstream is open
+    const pendingToUpstream: any[] = [];
+    const forwardToUpstream = (data: any) => {
+      // Filter out legacy/invalid events to prevent upstream closes
+      if (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data);
+          // Ignore obsolete setup messages (Gemini-only)
+          if (parsed && parsed.setup) {
+            console.warn('[Speech Tutor Proxy] Dropping legacy setup message');
+            return;
+          }
+        } catch (_) {
+          // non-JSON message, forward as-is below
+        }
+      }
+
+      if (upstreamSocket.readyState === WebSocket.OPEN) {
+        try {
+          upstreamSocket.send(data);
+        } catch (e) {
+          console.error('[Speech Tutor Proxy] Error sending to upstream:', e);
+        }
       } else {
-        console.warn('[Speech Tutor Proxy] Gemini socket not ready, queuing message. state:', geminiSocket.readyState);
-        pendingToGemini.push(data);
+        console.warn('[Speech Tutor Proxy] Upstream not ready, queuing message. state:', upstreamSocket.readyState);
+        pendingToUpstream.push(data);
       }
     };
-    
-    // Forward messages from client to Gemini (buffer if Gemini not ready)
+
+    // Forward messages from client to OpenAI
     clientSocket.onmessage = (event) => {
-      forwardToGemini(event.data);
+      forwardToUpstream(event.data);
     };
-    
-    // Forward messages from Gemini to client
-    geminiSocket.onmessage = (event) => {
+
+    // Forward messages from OpenAI to client
+    upstreamSocket.onmessage = (event) => {
       if (clientSocket.readyState === WebSocket.OPEN) {
-        console.log('[Speech Tutor Proxy] Forwarding message from Gemini to client');
-        clientSocket.send(event.data);
+        try {
+          clientSocket.send(event.data);
+        } catch (e) {
+          console.error('[Speech Tutor Proxy] Error forwarding to client:', e);
+        }
       } else {
         console.warn('[Speech Tutor Proxy] Client socket not ready, state:', clientSocket.readyState);
       }
     };
-    
-    // Handle Gemini connection open - notify client and flush any queued messages
-    geminiSocket.onopen = () => {
-      console.log('[Speech Tutor Proxy] ✓ Successfully connected to Gemini Live API');
-      // Notify client that upstream is ready so it can safely send setup/start messages
+
+    // Handle upstream open - notify client and flush any queued messages
+    upstreamSocket.onopen = () => {
+      console.log('[Speech Tutor Proxy] ✓ Connected to OpenAI Realtime');
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
           clientSocket.send(JSON.stringify({ type: 'proxy.ready' }));
@@ -84,8 +111,8 @@ serve(async (req) => {
       // Start keepalive pings to keep the upstream connection active
       try {
         keepAlive = setInterval(() => {
-          if (geminiSocket.readyState === WebSocket.OPEN) {
-            try { geminiSocket.send(JSON.stringify({ type: 'ping' })); } catch {}
+          if (upstreamSocket.readyState === WebSocket.OPEN) {
+            try { upstreamSocket.send(JSON.stringify({ type: 'ping' })); } catch {}
           }
         }, 25000) as unknown as number;
       } catch (e) {
@@ -93,57 +120,59 @@ serve(async (req) => {
       }
 
       try {
-        while (pendingToGemini.length) {
-          const msg = pendingToGemini.shift();
+        while (pendingToUpstream.length) {
+          const msg = pendingToUpstream.shift();
           if (msg !== undefined) {
-            geminiSocket.send(msg);
+            upstreamSocket.send(msg);
           }
         }
       } catch (e) {
         console.error('[Speech Tutor Proxy] Error flushing queued messages:', e);
       }
     };
+
     // Handle errors
-    geminiSocket.onerror = (error) => {
-      console.error('[Speech Tutor Proxy] Gemini connection error:', error);
+    upstreamSocket.onerror = (error) => {
+      console.error('[Speech Tutor Proxy] Upstream connection error:', error);
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(JSON.stringify({ type: 'proxy.error', source: 'gemini', message: 'Gemini connection error' }));
+          clientSocket.send(JSON.stringify({ type: 'proxy.error', source: 'upstream', message: 'Realtime connection error' }));
         }
       } catch (_) { /* no-op */ }
-      clientSocket.close(1011, 'Gemini connection error');
+      try { clientSocket.close(1011, 'Realtime connection error'); } catch (_) {}
     };
-    
+
     clientSocket.onerror = (error) => {
       console.error('[Speech Tutor Proxy] Client connection error:', error);
       try {
-        if (geminiSocket.readyState === WebSocket.OPEN) {
-          geminiSocket.close();
+        if (upstreamSocket.readyState === WebSocket.OPEN) {
+          upstreamSocket.close();
         }
       } catch (_) { /* no-op */ }
     };
-    
+
     // Handle connection close
-    geminiSocket.onclose = (event) => {
-      console.log('[Speech Tutor Proxy] Gemini connection closed - Code:', event.code, 'Reason:', event.reason);
+    upstreamSocket.onclose = (event) => {
+      console.log('[Speech Tutor Proxy] Upstream closed - Code:', event.code, 'Reason:', event.reason);
       try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(JSON.stringify({ type: 'proxy.closed', source: 'gemini', code: event.code, reason: event.reason }));
+          clientSocket.send(JSON.stringify({ type: 'proxy.closed', source: 'upstream', code: event.code, reason: event.reason }));
           clientSocket.close(event.code, event.reason);
         }
       } catch (_) { /* no-op */ }
     };
-    
+
     clientSocket.onclose = (event) => {
-      console.log('[Speech Tutor Proxy] Client connection closed - Code:', event.code, 'Reason:', event.reason);
+      console.log('[Speech Tutor Proxy] Client closed - Code:', event.code, 'Reason:', event.reason);
       try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
       try {
-        if (geminiSocket.readyState === WebSocket.OPEN) {
-          geminiSocket.close();
+        if (upstreamSocket.readyState === WebSocket.OPEN) {
+          upstreamSocket.close();
         }
       } catch (_) { /* no-op */ }
     };
+
     return response;
   } catch (error) {
     console.error('[Speech Tutor Proxy] Fatal error:', error);
