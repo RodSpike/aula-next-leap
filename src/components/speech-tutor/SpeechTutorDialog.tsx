@@ -163,7 +163,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          sampleRate: 16000,
+          sampleRate: 24000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true
@@ -172,7 +172,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       mediaStreamRef.current = stream;
 
       // Set up audio context
-      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
 
       const source = audioContext.createMediaStreamSource(stream);
@@ -215,21 +215,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       ws.onopen = () => {
         console.log('[Speech Tutor] WebSocket connected');
-        
-        // Send setup message for Gemini Live v1beta
-        const setupMessage = {
-          setup: {
-            model: 'gemini-1.5-flash',
-            generation_config: { response_modalities: ['AUDIO'] },
-            system_instruction: {
-              parts: [{
-                text: 'You are a language tutor specializing in bilingual speech. The user will provide sentences that mix Brazilian Portuguese and English. Your primary function is to repeat these sentences back to the user with a natural and fluent pronunciation, seamlessly switching between the two languages as they appear in the sentence. Be encouraging and supportive.'
-              }]
-            }
-          }
-        };
-        console.log('[Speech Tutor] Sending setup:', setupMessage);
-        ws.send(JSON.stringify(setupMessage));
+        // Wait for session.created from Realtime API, then we'll send session.update
       };
 
       ws.onmessage = async (event) => {
@@ -400,14 +386,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           const pcmData = float32ToPcm16(inputData);
           const base64Audio = arrayBufferToBase64(pcmData);
 
-          // Send with correct shape expected by Gemini Live API
+          // OpenAI Realtime: stream PCM16 at 24kHz
           ws.send(JSON.stringify({
-            realtimeInput: {
-              audio: {
-                data: base64Audio,
-                mimeType: 'audio/pcm;rate=16000'
-              }
-            }
+            type: 'input_audio_buffer.append',
+            audio: base64Audio,
           }));
         }
       };
