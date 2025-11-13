@@ -219,7 +219,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         // Send setup message for Gemini Live v1beta
         const setupMessage = {
           setup: {
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-1.5-flash',
             generation_config: { response_modalities: ['AUDIO'] },
             system_instruction: {
               parts: [{
@@ -242,6 +242,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         try {
           const data = JSON.parse(event.data as string);
           // console.log('[Speech Tutor] WS message:', data);
+
+          // Handle proxy handshake (Gemini upstream ready)
+          if (data.type === 'proxy.ready') {
+            clearTimeout(connectionTimeout);
+            setupAcknowledgedRef.current = true;
+            setStatus(ConversationStatus.Listening);
+            toast({ title: 'Connected', description: 'Proxy ready. Establishing upstream...' });
+            return;
+          }
 
           // Session lifecycle
           if (data.type === 'session.created') {
