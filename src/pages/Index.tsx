@@ -150,14 +150,14 @@ const Index = () => {
               </div>
               
               <Button size="xl" asChild className="w-full md:w-auto">
-                <Link to="/placement-test">
+                <Link to="/signup">
                   <Play className="mr-2 h-5 w-5" />
                   Fazer Teste Gratuito
                 </Link>
               </Button>
               
               <p className="text-xs text-muted-foreground">
-                Não é necessário criar conta para fazer o teste
+                Crie sua conta e comece seu teste grátis de 7 dias
               </p>
             </CardContent>
           </Card>
