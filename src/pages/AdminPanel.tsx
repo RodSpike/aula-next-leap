@@ -17,7 +17,7 @@ import { CourseManagement } from "@/components/CourseManagement";
 import { AdminFreeUsers } from "@/components/AdminFreeUsers";
 import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { EnglishTVManager } from "@/components/EnglishTVManager";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive } from "lucide-react";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -568,13 +568,21 @@ export default function AdminPanel() {
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Admin Panel
-          </h1>
-          <p className="text-muted-foreground">
-            Comprehensive platform administration and monitoring
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Admin Panel
+            </h1>
+            <p className="text-muted-foreground">
+              Comprehensive platform administration and monitoring
+            </p>
+          </div>
+          {user?.email === "rodspike2k8@gmail.com" && (
+            <Button onClick={() => navigate("/admin/payment-history")}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Payment History
+            </Button>
+          )}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
