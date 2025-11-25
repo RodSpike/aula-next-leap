@@ -48,9 +48,8 @@ serve(async (req) => {
 
     console.log('[Speech Tutor Proxy] Connecting to OpenAI Realtime...');
     const upstreamSocket = new WebSocket(openaiWsUrl, protocols);
-
-    // Keepalive ping to avoid idle timeouts (cleared on close)
-    let keepAlive: number | undefined;
+    
+    console.log('[Speech Tutor Proxy] Upstream WebSocket created, waiting for connection...');
 
     // Queue to buffer client messages until upstream is open
     const pendingToUpstream: any[] = [];
@@ -102,24 +101,25 @@ serve(async (req) => {
     // Handle upstream open - notify client and flush any queued messages
     upstreamSocket.onopen = () => {
       console.log('[Speech Tutor Proxy] ✓ Connected to OpenAI Realtime');
+      console.log('[Speech Tutor Proxy] Client socket state:', clientSocket.readyState);
+      
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
           clientSocket.send(JSON.stringify({ type: 'proxy.ready' }));
+          console.log('[Speech Tutor Proxy] Sent proxy.ready to client');
+        } else {
+          console.warn('[Speech Tutor Proxy] Client socket not ready when upstream opened');
         }
-      } catch (_) { /* no-op */ }
-
-      // Start keepalive pings to keep the upstream connection active
-      try {
-        keepAlive = setInterval(() => {
-          if (upstreamSocket.readyState === WebSocket.OPEN) {
-            try { upstreamSocket.send(JSON.stringify({ type: 'ping' })); } catch {}
-          }
-        }, 25000) as unknown as number;
       } catch (e) {
-        console.warn('[Speech Tutor Proxy] Failed to start keepalive:', e);
+        console.error('[Speech Tutor Proxy] Error sending proxy.ready:', e);
       }
 
+      // Flush any queued messages
       try {
+        const queueSize = pendingToUpstream.length;
+        if (queueSize > 0) {
+          console.log(`[Speech Tutor Proxy] Flushing ${queueSize} queued messages`);
+        }
         while (pendingToUpstream.length) {
           const msg = pendingToUpstream.shift();
           if (msg !== undefined) {
@@ -153,24 +153,39 @@ serve(async (req) => {
 
     // Handle connection close
     upstreamSocket.onclose = (event) => {
-      console.log('[Speech Tutor Proxy] Upstream closed - Code:', event.code, 'Reason:', event.reason);
-      try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
+      console.log('[Speech Tutor Proxy] Upstream closed - Code:', event.code, 'Reason:', event.reason || 'No reason provided');
+      console.log('[Speech Tutor Proxy] Was clean:', event.wasClean);
+      
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(JSON.stringify({ type: 'proxy.closed', source: 'upstream', code: event.code, reason: event.reason }));
-          clientSocket.close(event.code, event.reason);
+          const closeMessage = {
+            type: 'proxy.closed',
+            source: 'upstream',
+            code: event.code,
+            reason: event.reason || 'Upstream connection closed',
+            wasClean: event.wasClean
+          };
+          clientSocket.send(JSON.stringify(closeMessage));
+          console.log('[Speech Tutor Proxy] Sent close notification to client');
+          clientSocket.close(event.code, event.reason || 'Upstream closed');
         }
-      } catch (_) { /* no-op */ }
+      } catch (e) {
+        console.error('[Speech Tutor Proxy] Error notifying client of upstream close:', e);
+      }
     };
 
     clientSocket.onclose = (event) => {
-      console.log('[Speech Tutor Proxy] Client closed - Code:', event.code, 'Reason:', event.reason);
-      try { if (keepAlive) clearInterval(keepAlive as unknown as number); } catch (_) {}
+      console.log('[Speech Tutor Proxy] Client closed - Code:', event.code, 'Reason:', event.reason || 'No reason provided');
+      console.log('[Speech Tutor Proxy] Was clean:', event.wasClean);
+      
       try {
         if (upstreamSocket.readyState === WebSocket.OPEN) {
+          console.log('[Speech Tutor Proxy] Closing upstream due to client disconnect');
           upstreamSocket.close();
         }
-      } catch (_) { /* no-op */ }
+      } catch (e) {
+        console.error('[Speech Tutor Proxy] Error closing upstream:', e);
+      }
     };
 
     return response;

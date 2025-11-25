@@ -227,14 +227,32 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
         try {
           const data = JSON.parse(event.data as string);
-          // console.log('[Speech Tutor] WS message:', data);
+          console.log('[Speech Tutor] WS message type:', data.type);
 
-          // Handle proxy handshake (Gemini upstream ready)
+          // Handle proxy messages
           if (data.type === 'proxy.ready') {
             clearTimeout(connectionTimeout);
             setupAcknowledgedRef.current = true;
             setStatus(ConversationStatus.Listening);
-            toast({ title: 'Connected', description: 'Proxy ready. Establishing upstream...' });
+            console.log('[Speech Tutor] Proxy ready, upstream connection established');
+            toast({ title: 'Connected', description: 'Ready to start speaking' });
+            return;
+          }
+
+          if (data.type === 'proxy.error') {
+            console.error('[Speech Tutor] Proxy error:', data);
+            clearTimeout(connectionTimeout);
+            setErrorMessage(data.message || 'Proxy connection error');
+            setStatus(ConversationStatus.Error);
+            return;
+          }
+
+          if (data.type === 'proxy.closed') {
+            console.warn('[Speech Tutor] Proxy closed by upstream:', data);
+            clearTimeout(connectionTimeout);
+            const reason = data.reason || 'Connection closed by server';
+            setErrorMessage(`${reason} (Code: ${data.code})`);
+            setStatus(ConversationStatus.Error);
             return;
           }
 
