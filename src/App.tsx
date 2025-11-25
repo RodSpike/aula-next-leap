@@ -34,6 +34,7 @@ import Profile from "./pages/Profile";
 import CourseManagement from "./pages/CourseManagement";
 import ClickHangout from "./pages/ClickHangout";
 import AdminPaymentHistory from "./pages/AdminPaymentHistory";
+import EnemTutor from "./pages/EnemTutor";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/hangout" element={<ProtectedRoute><ClickHangout /></ProtectedRoute>} />
+            <Route path="/enem-tutor" element={<ProtectedRoute><EnemTutor /></ProtectedRoute>} />
             <Route path="/admin/payment-history" element={<ProtectedRoute><AdminPaymentHistory /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -14,6 +14,8 @@ interface Course {
   lessonsCount: number;
   completedLessons: number;
   isCurrentLevel: boolean;
+  admin_only?: boolean;
+  course_type?: string;
 }
 
 interface CourseCardProps {
@@ -33,9 +35,12 @@ export const CourseCard = ({ course }: CourseCardProps) => {
       'B2': 'bg-warning/10 text-warning border-warning/20',
       'C1': 'bg-destructive/10 text-destructive border-destructive/20',
       'C2': 'bg-destructive/10 text-destructive border-destructive/20',
+      'ENEM': 'bg-primary/10 text-primary border-primary/20',
     };
     return colors[level] || 'bg-muted text-muted-foreground';
   };
+
+  const isEnemCourse = course.course_type === 'enem';
 
   return (
     <Card className={`group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden ${
@@ -52,6 +57,11 @@ export const CourseCard = ({ course }: CourseCardProps) => {
             {course.isCurrentLevel && (
               <Badge variant="default" className="bg-primary text-primary-foreground">
                 Current
+              </Badge>
+            )}
+            {course.admin_only && (
+              <Badge variant="secondary" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+                Admin Beta
               </Badge>
             )}
           </div>
@@ -113,9 +123,13 @@ export const CourseCard = ({ course }: CourseCardProps) => {
             className="w-full group-hover:bg-primary group-hover:text-primary-foreground" 
             asChild
           >
-            <Link to={`/course/${course.id}`}>
+            <Link to={isEnemCourse ? '/enem-tutor' : `/course/${course.id}`}>
               <PlayCircle className="h-4 w-4 mr-2" />
-              {course.completedLessons === 0 ? 'Start Course' : 'Continue Learning'}
+              {isEnemCourse 
+                ? 'Acessar Tutor ENEM' 
+                : course.completedLessons === 0 
+                  ? 'Start Course' 
+                  : 'Continue Learning'}
             </Link>
           </Button>
         ) : (

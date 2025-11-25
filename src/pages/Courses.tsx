@@ -19,6 +19,8 @@ interface Course {
   lessonsCount: number;
   completedLessons: number;
   isCurrentLevel: boolean;
+  admin_only?: boolean;
+  course_type?: string;
 }
 
 const levelOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -60,17 +62,28 @@ export default function Courses() {
       }
 
       // Fetch all courses from database
-      const { data: allCoursesData, error: coursesError } = await supabase
+      let query = supabase
         .from('courses')
         .select('*')
         .order('level')
         .order('order_index');
 
+      // Filter out admin-only courses for non-admins
+      if (!isUserAdmin) {
+        query = query.or('admin_only.is.null,admin_only.eq.false');
+      }
+
+      const { data: allCoursesData, error: coursesError } = await query;
+
       if (coursesError) throw coursesError;
 
-      // Group courses by level and pick the first course for each level
+      // Separate ENEM courses from level courses
+      const enemCourses = allCoursesData?.filter(c => c.course_type === 'enem') || [];
+      const levelCoursesData = allCoursesData?.filter(c => c.course_type !== 'enem') || [];
+
+      // Group level courses by level and pick the first course for each level
       const coursesByLevel: { [key: string]: any } = {};
-      allCoursesData?.forEach(course => {
+      levelCoursesData?.forEach(course => {
         if (!coursesByLevel[course.level]) {
           coursesByLevel[course.level] = course;
         }
@@ -80,7 +93,7 @@ export default function Courses() {
       const levelCourses = levelOrder.map(level => {
         const firstCourse = coursesByLevel[level];
         return {
-          id: firstCourse?.id || level, // Use actual course ID if exists, otherwise level
+          id: firstCourse?.id || level,
           title: `${level} - English Course`,
           description: `Complete ${level} level English course with comprehensive lessons and exercises`,
           level: level,
@@ -89,8 +102,25 @@ export default function Courses() {
           lessonsCount: 0,
           completedLessons: 0,
           isCurrentLevel: false,
+          admin_only: false,
+          course_type: 'english',
         };
       });
+
+      // Add ENEM courses for admins
+      const enemCoursesFormatted = enemCourses.map(course => ({
+        id: course.id,
+        title: course.title,
+        description: course.description || '',
+        level: course.level,
+        order_index: course.order_index,
+        isUnlocked: isUserAdmin, // ENEM always unlocked for admins
+        lessonsCount: 0,
+        completedLessons: 0,
+        isCurrentLevel: false,
+        admin_only: course.admin_only || false,
+        course_type: course.course_type || 'enem',
+      }));
 
       // Get user's current level and progress if logged in
       let userLevel = 'A1';
@@ -151,7 +181,10 @@ export default function Courses() {
         levelCourses[0].isUnlocked = true;
       }
 
-      setCourses(levelCourses);
+      // Combine level courses with ENEM courses
+      const allCourses = [...levelCourses, ...enemCoursesFormatted];
+
+      setCourses(allCourses);
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast({

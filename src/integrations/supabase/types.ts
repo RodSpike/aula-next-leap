@@ -386,6 +386,8 @@ export type Database = {
       }
       courses: {
         Row: {
+          admin_only: boolean | null
+          course_type: string | null
           created_at: string
           description: string | null
           id: string
@@ -395,6 +397,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_only?: boolean | null
+          course_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -404,6 +408,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_only?: boolean | null
+          course_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
