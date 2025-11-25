@@ -132,6 +132,9 @@ verify_jwt = false
 [functions.speech-tutor-proxy]
 verify_jwt = false
 
+[functions.speech-tutor-gemini]
+verify_jwt = false
+
 [functions.stripe-payment-history]
 verify_jwt = true
 

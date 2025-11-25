@@ -187,18 +187,18 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         throw new Error('Supabase URL not configured');
       }
 
-      // Build correct WebSocket URL for Supabase Edge Functions
+      // Build correct WebSocket URL for Supabase Edge Functions (Gemini endpoint)
       let wsFullUrl: string;
       const projectRefMatch = supabaseUrl.match(/^https?:\/\/([a-zA-Z0-9-]+)\.supabase\.co$/);
       if (projectRefMatch) {
         // Production: use functions subdomain (required for WS)
         const projectRef = projectRefMatch[1];
-        wsFullUrl = `wss://${projectRef}.functions.supabase.co/speech-tutor-proxy`;
+        wsFullUrl = `wss://${projectRef}.functions.supabase.co/speech-tutor-gemini`;
       } else {
         // Local dev fallback via REST domain
         const wsProtocol = supabaseUrl.startsWith('https') ? 'wss' : 'ws';
         const wsUrl = supabaseUrl.replace(/^https?/, wsProtocol);
-        wsFullUrl = `${wsUrl}/functions/v1/speech-tutor-proxy`;
+        wsFullUrl = `${wsUrl}/functions/v1/speech-tutor-gemini`;
       }
 
       const ws = new WebSocket(wsFullUrl);
