@@ -144,9 +144,15 @@ serve(async (req) => {
             }
           }
           
-          // Handle turn complete
-          if (content.turnComplete) {
-            console.log('[Speech Tutor Gemini] Turn complete');
+          // Handle user turn (user speech detected)
+          if (content.interrupted || content.turnComplete) {
+            console.log('[Speech Tutor Gemini] Turn event:', content.interrupted ? 'interrupted' : 'complete');
+            if (clientSocket.readyState === WebSocket.OPEN) {
+              clientSocket.send(JSON.stringify({ 
+                type: content.interrupted ? 'conversation.interrupted' : 'input_audio_buffer.speech_stopped',
+                event_id: `turn_${Date.now()}`
+              }));
+            }
           }
         } else if (message.toolCall) {
           // Handle tool calls if needed
@@ -174,14 +180,14 @@ serve(async (req) => {
             speechConfig: {
               voiceConfig: {
                 prebuiltVoiceConfig: {
-                  voiceName: "Aoede"
+                  voiceName: "Puck"
                 }
               }
             }
           },
           systemInstruction: {
             parts: [{
-              text: "You are a bilingual AI speech tutor. Users will speak to you mixing Portuguese and English. Your job is to listen carefully and repeat back what they said with perfect pronunciation in both languages. Be encouraging and natural. When repeating, maintain the same language mix they used."
+              text: "You are a bilingual AI speech tutor helping users practice pronunciation. Users will speak sentences mixing Brazilian Portuguese and English. Listen carefully and repeat back EXACTLY what they said with perfect pronunciation in both languages. Keep your responses natural and encouraging. Match their language mixing pattern precisely."
             }]
           }
         }
