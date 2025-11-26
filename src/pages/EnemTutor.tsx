@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ const enemSubjects = [
 export default function EnemTutor() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -54,9 +56,10 @@ export default function EnemTutor() {
 
   useEffect(() => {
     // Set welcome message
-    const welcomeMessage: Message = {
-      id: 'welcome',
-      content: `Olá! Sou seu tutor especializado em ENEM e vestibulares brasileiros! 🎓
+    const urlSubject = searchParams.get('subject');
+    const mistakesCount = searchParams.get('mistakes');
+    
+    let welcomeContent = `Olá! Sou seu tutor especializado em ENEM e vestibulares brasileiros! 🎓
 
 Estou aqui para ajudá-lo a dominar todas as matérias cobradas nas provas mais importantes do Brasil. Posso ajudar com:
 
@@ -73,14 +76,35 @@ Estou aqui para ajudá-lo a dominar todas as matérias cobradas nas provas mais 
 - Mostrar questões recorrentes do ENEM
 - Ajudar com estratégias de prova
 - Revisar e corrigir redações
-- Ensinar métodos de organização (mapas mentais, flashcards, etc.)
+- Ensinar métodos de organização (mapas mentais, flashcards, etc.)`;
 
-Selecione uma matéria específica acima ou pergunte sobre qualquer assunto. Vamos juntos garantir sua aprovação! 💪`,
+    if (urlSubject && mistakesCount) {
+      const subjectName = enemSubjects.find(s => s.value === urlSubject)?.label || urlSubject;
+      welcomeContent = `Olá! Vi que você acabou de fazer o simulado de **${subjectName}** e errou ${mistakesCount} questão(ões). 📊
+
+Não se preocupe! Erros são parte fundamental do aprendizado. Vamos trabalhar juntos para reforçar esses conceitos.
+
+💪 **Como posso ajudá-lo:**
+- Explicar os conceitos que geraram dúvidas
+- Dar técnicas de memorização específicas para ${subjectName}
+- Mostrar macetes para questões similares no ENEM
+- Criar um plano de estudo focado nos seus pontos fracos
+
+**Sobre o que você gostaria de conversar primeiro?** Pode me perguntar sobre qualquer tópico de ${subjectName} ou sobre os erros que você cometeu no simulado.`;
+      
+      if (urlSubject !== 'all') {
+        setSelectedSubject(urlSubject);
+      }
+    }
+
+    const welcomeMessage: Message = {
+      id: 'welcome',
+      content: welcomeContent,
       role: 'assistant',
       timestamp: new Date()
     };
     setMessages([welcomeMessage]);
-  }, []);
+  }, [searchParams]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

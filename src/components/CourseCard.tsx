@@ -123,10 +123,10 @@ export const CourseCard = ({ course }: CourseCardProps) => {
             className="w-full group-hover:bg-primary group-hover:text-primary-foreground" 
             asChild
           >
-            <Link to={isEnemCourse ? '/enem-tutor' : `/course/${course.id}`}>
+            <Link to={isEnemCourse ? '/enem-course' : `/course/${course.id}`}>
               <PlayCircle className="h-4 w-4 mr-2" />
               {isEnemCourse 
-                ? 'Acessar Tutor ENEM' 
+                ? 'Acessar Curso ENEM' 
                 : course.completedLessons === 0 
                   ? 'Start Course' 
                   : 'Continue Learning'}

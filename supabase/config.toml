@@ -138,6 +138,9 @@ verify_jwt = false
 [functions.enem-tutor-chat]
 verify_jwt = false
 
+[functions.generate-enem-content]
+verify_jwt = false
+
 [functions.stripe-payment-history]
 verify_jwt = true
 
