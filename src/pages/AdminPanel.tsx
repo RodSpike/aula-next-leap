@@ -17,6 +17,7 @@ import { CourseManagement } from "@/components/CourseManagement";
 import { AdminFreeUsers } from "@/components/AdminFreeUsers";
 import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { EnglishTVManager } from "@/components/EnglishTVManager";
+import { EnemContentPopulator } from "@/components/EnemContentPopulator";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard } from "lucide-react";
 
 interface UserData {
@@ -693,6 +694,8 @@ export default function AdminPanel() {
                    <ComprehensiveLessonGenerator />
                  </div>
 
+                 <EnemContentPopulator />
+
                  {/* Bulk regenerate exercises for all lessons */}
                  <BulkExerciseRegenerator />
                  
@@ -709,7 +712,7 @@ export default function AdminPanel() {
                    <EnglishTVManager />
                  </div>
                 
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
+                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <Star className="w-4 h-4 text-amber-600" />
                     Content Features
