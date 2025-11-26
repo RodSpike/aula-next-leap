@@ -36,11 +36,23 @@ export default function EnemLesson() {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-enem-content', {
-        body: { subject: subjectNames[subjectId], type: 'lesson' }
-      });
+      const { data, error } = await supabase
+        .from('enem_lessons')
+        .select('content')
+        .eq('subject_id', subjectId)
+        .single();
 
       if (error) throw error;
+      
+      if (!data) {
+        toast({
+          title: "Conteúdo não encontrado",
+          description: "O conteúdo desta matéria ainda não foi gerado. Entre em contato com o administrador.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setContent(data.content);
     } catch (error) {
       console.error('Error loading content:', error);
@@ -61,7 +73,7 @@ export default function EnemLesson() {
         <div className="flex items-center justify-center h-[80vh]">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Gerando conteúdo personalizado...</p>
+            <p className="text-muted-foreground">Carregando conteúdo...</p>
           </div>
         </div>
       </div>

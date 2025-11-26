@@ -13,6 +13,9 @@ import { useNavigate } from "react-router-dom";
 import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
 import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
 import { BulkAudioGenerator } from "@/components/BulkAudioGenerator";
+import { SeedDataButton } from "@/components/SeedDataButton";
+import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
+import { EnemContentPopulator } from "@/components/EnemContentPopulator";
 
 interface Course {
   id: string;
@@ -229,6 +232,8 @@ export default function CourseManagement() {
         <div className="mb-8 space-y-4">
           <BulkLessonEnhancer />
           <BulkAudioGenerator />
+          <BulkExerciseRegenerator />
+          <EnemContentPopulator />
         </div>
 
         {showCreateForm && (

@@ -48,16 +48,29 @@ export default function EnemExam() {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-enem-content', {
-        body: { subject: subjectNames[subjectId], type: 'exam' }
-      });
+      const { data, error } = await supabase
+        .from('enem_exam_questions')
+        .select('questions')
+        .eq('subject_id', subjectId)
+        .single();
 
       if (error) throw error;
       
-      let parsedQuestions = data.content;
-      if (typeof parsedQuestions === 'string') {
-        parsedQuestions = JSON.parse(parsedQuestions.replace(/```json\n?/g, '').replace(/```\n?/g, ''));
+      if (!data) {
+        toast({
+          title: "Simulado não encontrado",
+          description: "As questões desta matéria ainda não foram geradas. Entre em contato com o administrador.",
+          variant: "destructive",
+        });
+        return;
       }
+      
+      // Parse the questions from JSON
+      const parsedQuestions: Question[] = typeof data.questions === 'string' 
+        ? JSON.parse(data.questions)
+        : Array.isArray(data.questions) 
+          ? data.questions 
+          : [];
       
       setQuestions(parsedQuestions);
     } catch (error) {
@@ -105,7 +118,7 @@ export default function EnemExam() {
         <div className="flex items-center justify-center h-[80vh]">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Gerando questões do simulado...</p>
+            <p className="text-muted-foreground">Carregando simulado...</p>
           </div>
         </div>
       </div>
