@@ -20,46 +20,31 @@ const subjects = [
   { id: 'sociologia', name: 'Sociologia' },
 ];
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+async function generateSubjectContent(
+  subject: { id: string; name: string },
+  supabase: any,
+  LOVABLE_API_KEY: string
+) {
+  console.log(`Generating content for ${subject.name}...`);
+  
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    console.log('Starting ENEM content population...');
-    const results = [];
-
-    for (const subject of subjects) {
-      console.log(`Generating content for ${subject.name}...`);
-      
-      try {
-        // Generate lesson content
-        const lessonResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
+    // Generate lesson content
+    const lessonResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { 
+            role: 'system', 
+            content: `Você é um especialista em preparação para o ENEM e vestibulares brasileiros. Crie conteúdo educacional COMPLETO e DETALHADO em português brasileiro.`
           },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { 
-                role: 'system', 
-                content: `Você é um especialista em preparação para o ENEM e vestibulares brasileiros. Crie conteúdo educacional COMPLETO e DETALHADO em português brasileiro.`
-              },
-              { 
-                role: 'user', 
-                content: `Crie uma aula COMPLETA sobre ${subject.name} para o ENEM. 
+          { 
+            role: 'user', 
+            content: `Crie uma aula COMPLETA sobre ${subject.name} para o ENEM. 
 
 FORMATO OBRIGATÓRIO em HTML:
 <h2>Título Principal</h2>
@@ -116,41 +101,39 @@ REQUISITOS CRÍTICOS:
 - Linguagem DIRETA e CLARA
 - Evite "muros de texto" - use listas e boxes
 - Total: 1500-2000 palavras BEM DISTRIBUÍDAS`
-              }
-            ],
-            temperature: 0.7,
-            max_tokens: 8000,
-          }),
-        });
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 8000,
+      }),
+    });
 
-        const lessonData = await lessonResponse.json();
-        const lessonContent = lessonData.choices[0].message.content;
+    const lessonData = await lessonResponse.json();
+    const lessonContent = lessonData.choices[0].message.content;
 
-        // Store lesson content
-        const { error: lessonError } = await supabase
-          .from('enem_lessons')
-          .upsert({
-            subject_id: subject.id,
-            subject_name: subject.name,
-            content: lessonContent
-          }, { onConflict: 'subject_id' });
+    // Store lesson content
+    const { error: lessonError } = await supabase
+      .from('enem_lessons')
+      .upsert({
+        subject_id: subject.id,
+        subject_name: subject.name,
+        content: lessonContent
+      }, { onConflict: 'subject_id' });
 
-        if (lessonError) throw lessonError;
+    if (lessonError) throw lessonError;
+    console.log(`✓ Lesson content stored for ${subject.name}`);
 
-        console.log(`✓ Lesson content stored for ${subject.name}`);
-
-        // Generate exam questions using tool calling for reliable JSON output
-        const examRequestBody: any = {
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'Você é um especialista em criar questões de ENEM e vestibulares. Use a ferramenta create_exam_questions para retornar as questões em formato estruturado JSON.',
-            },
-            {
-              role: 'user',
-              content: `Crie 15 questões de múltipla escolha sobre ${subject.name} no estilo ENEM.
+    // Generate exam questions using tool calling
+    const examRequestBody: any = {
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        {
+          role: 'system',
+          content: 'Você é um especialista em criar questões de ENEM e vestibulares. Use a ferramenta create_exam_questions para retornar as questões em formato estruturado JSON.',
+        },
+        {
+          role: 'user',
+          content: `Crie 15 questões de múltipla escolha sobre ${subject.name} no estilo ENEM.
 
 REQUISITOS PARA CADA QUESTÃO:
 - Questões no estilo ENEM (contextualizadas, interdisciplinares)
@@ -159,115 +142,138 @@ REQUISITOS PARA CADA QUESTÃO:
 - Explicação completa e didática
 - Variar dificuldade (5 fáceis, 5 médias, 5 difíceis)
 
-Preencha o campo \'questions\' da ferramenta create_exam_questions com exatamente 15 questões seguindo essas regras.`,
-            },
-          ],
-          tools: [
-            {
-              type: 'function',
-              function: {
-                name: 'create_exam_questions',
-                description: 'Gera questões de múltipla escolha no estilo ENEM.',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    questions: {
-                      type: 'array',
-                      minItems: 15,
-                      maxItems: 15,
-                      items: {
-                        type: 'object',
-                        properties: {
-                          question: { type: 'string' },
-                          options: {
-                            type: 'array',
-                            minItems: 5,
-                            maxItems: 5,
-                            items: { type: 'string' },
-                          },
-                          correct: { type: 'string' },
-                          explanation: { type: 'string' },
-                        },
-                        required: ['question', 'options', 'correct', 'explanation'],
-                        additionalProperties: false,
+Preencha o campo 'questions' da ferramenta create_exam_questions com exatamente 15 questões seguindo essas regras.`,
+        },
+      ],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'create_exam_questions',
+            description: 'Gera questões de múltipla escolha no estilo ENEM.',
+            parameters: {
+              type: 'object',
+              properties: {
+                questions: {
+                  type: 'array',
+                  minItems: 15,
+                  maxItems: 15,
+                  items: {
+                    type: 'object',
+                    properties: {
+                      question: { type: 'string' },
+                      options: {
+                        type: 'array',
+                        minItems: 5,
+                        maxItems: 5,
+                        items: { type: 'string' },
                       },
+                      correct: { type: 'string' },
+                      explanation: { type: 'string' },
                     },
+                    required: ['question', 'options', 'correct', 'explanation'],
+                    additionalProperties: false,
                   },
-                  required: ['questions'],
-                  additionalProperties: false,
                 },
               },
+              required: ['questions'],
+              additionalProperties: false,
             },
-          ],
-          tool_choice: { type: 'function', function: { name: 'create_exam_questions' } },
-          temperature: 0.7,
-          max_tokens: 8000,
-        };
-
-        const examResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify(examRequestBody),
-        });
+        },
+      ],
+      tool_choice: { type: 'function', function: { name: 'create_exam_questions' } },
+      temperature: 0.7,
+      max_tokens: 8000,
+    };
 
-        const examData = await examResponse.json();
-        const toolCalls = examData.choices?.[0]?.message?.tool_calls;
+    const examResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(examRequestBody),
+    });
 
-        if (!toolCalls || toolCalls.length === 0) {
-          throw new Error(`Exam generation did not return tool calls for ${subject.name}`);
-        }
+    const examData = await examResponse.json();
+    const toolCalls = examData.choices?.[0]?.message?.tool_calls;
 
-        const toolCall = toolCalls[0];
-        // Some providers nest arguments under function.arguments, others directly under arguments
-        const rawArgs =
-          (toolCall.function && 'arguments' in toolCall.function ? toolCall.function.arguments : undefined) ||
-          toolCall.arguments;
+    if (!toolCalls || toolCalls.length === 0) {
+      throw new Error(`Exam generation did not return tool calls for ${subject.name}`);
+    }
 
-        if (!rawArgs || typeof rawArgs !== 'string') {
-          throw new Error(`Invalid tool call arguments for ${subject.name}`);
-        }
+    const toolCall = toolCalls[0];
+    const rawArgs =
+      (toolCall.function && 'arguments' in toolCall.function ? toolCall.function.arguments : undefined) ||
+      toolCall.arguments;
 
-        let parsedQuestions;
-        try {
-          const parsedArgs = JSON.parse(rawArgs);
-          parsedQuestions = parsedArgs.questions;
+    if (!rawArgs || typeof rawArgs !== 'string') {
+      throw new Error(`Invalid tool call arguments for ${subject.name}`);
+    }
 
-          if (!Array.isArray(parsedQuestions)) {
-            throw new Error('questions is not an array');
-          }
-        } catch (parseError) {
-          console.error(`Failed to parse exam questions for ${subject.name}:`, parseError);
-          throw new Error(`Failed to parse exam questions JSON for ${subject.name}`);
-        }
+    let parsedQuestions;
+    try {
+      const parsedArgs = JSON.parse(rawArgs);
+      parsedQuestions = parsedArgs.questions;
 
-        // Store exam questions
-        const { error: examError } = await supabase
-          .from('enem_exam_questions')
-          .upsert({
-            subject_id: subject.id,
-            questions: parsedQuestions
-          }, { onConflict: 'subject_id' });
-
-        if (examError) throw examError;
-
-        console.log(`✓ Exam questions stored for ${subject.name}`);
-
-        results.push({
-          subject: subject.name,
-          success: true
-        });
-
-      } catch (error) {
-        console.error(`Error generating content for ${subject.name}:`, error);
-        results.push({
-          subject: subject.name,
-          success: false,
-          error: error.message
-        });
+      if (!Array.isArray(parsedQuestions)) {
+        throw new Error('questions is not an array');
       }
+    } catch (parseError) {
+      console.error(`Failed to parse exam questions for ${subject.name}:`, parseError);
+      throw new Error(`Failed to parse exam questions JSON for ${subject.name}`);
+    }
+
+    // Store exam questions
+    const { error: examError } = await supabase
+      .from('enem_exam_questions')
+      .upsert({
+        subject_id: subject.id,
+        questions: parsedQuestions
+      }, { onConflict: 'subject_id' });
+
+    if (examError) throw examError;
+    console.log(`✓ Exam questions stored for ${subject.name}`);
+
+    return { subject: subject.name, success: true };
+  } catch (error) {
+    console.error(`Error generating content for ${subject.name}:`, error);
+    return { subject: subject.name, success: false, error: error.message };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    console.log('Starting ENEM content population...');
+
+    // Process subjects in batches of 3 to avoid timeout
+    const batchSize = 3;
+    const results = [];
+
+    for (let i = 0; i < subjects.length; i += batchSize) {
+      const batch = subjects.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(subjects.length / batchSize)}`);
+      
+      const batchResults = await Promise.all(
+        batch.map(subject => generateSubjectContent(subject, supabase, LOVABLE_API_KEY))
+      );
+      
+      results.push(...batchResults);
     }
 
     console.log('ENEM content population completed!');
