@@ -491,6 +491,57 @@ export type Database = {
           },
         ]
       }
+      enem_exam_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          questions: Json
+          subject_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          questions: Json
+          subject_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          questions?: Json
+          subject_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      enem_lessons: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          subject_id: string
+          subject_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          subject_id: string
+          subject_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          subject_id?: string
+          subject_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       english_tv_videos: {
         Row: {
           added_by: string | null
