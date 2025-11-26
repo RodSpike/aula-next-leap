@@ -139,53 +139,109 @@ REQUISITOS CRÍTICOS:
 
         console.log(`✓ Lesson content stored for ${subject.name}`);
 
-        // Generate exam questions
-        const examResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { 
-                role: 'system', 
-                content: `Você é um especialista em criar questões de ENEM e vestibulares. Retorne APENAS um array JSON válido, sem markdown, sem explicações adicionais.`
-              },
-              { 
-                role: 'user', 
-                content: `Crie 15 questões de múltipla escolha sobre ${subject.name} no estilo ENEM.
-
-Retorne APENAS este formato JSON (sem \`\`\`json ou qualquer outra marcação):
-[
-  {
-    "question": "Texto completo da questão (pode incluir contexto longo, textos de apoio, etc)",
-    "options": ["A) Alternativa A", "B) Alternativa B", "C) Alternativa C", "D) Alternativa D", "E) Alternativa E"],
-    "correct": "A) Alternativa A",
-    "explanation": "Explicação detalhada da resposta correta e por que as outras estão erradas"
-  }
-]
+        // Generate exam questions using tool calling for reliable JSON output
+        const examRequestBody: any = {
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é um especialista em criar questões de ENEM e vestibulares. Use a ferramenta create_exam_questions para retornar as questões em formato estruturado JSON.',
+            },
+            {
+              role: 'user',
+              content: `Crie 15 questões de múltipla escolha sobre ${subject.name} no estilo ENEM.
 
 REQUISITOS PARA CADA QUESTÃO:
 - Questões no estilo ENEM (contextualizadas, interdisciplinares)
 - 5 alternativas cada (A, B, C, D, E)
 - Textos de apoio quando relevante
 - Explicação completa e didática
-- Variar dificuldade (5 fáceis, 5 médias, 5 difíceis)`
-              }
-            ],
-            temperature: 0.7,
-            max_tokens: 8000,
-          }),
+- Variar dificuldade (5 fáceis, 5 médias, 5 difíceis)
+
+Preencha o campo \'questions\' da ferramenta create_exam_questions com exatamente 15 questões seguindo essas regras.`,
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'create_exam_questions',
+                description: 'Gera questões de múltipla escolha no estilo ENEM.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    questions: {
+                      type: 'array',
+                      minItems: 15,
+                      maxItems: 15,
+                      items: {
+                        type: 'object',
+                        properties: {
+                          question: { type: 'string' },
+                          options: {
+                            type: 'array',
+                            minItems: 5,
+                            maxItems: 5,
+                            items: { type: 'string' },
+                          },
+                          correct: { type: 'string' },
+                          explanation: { type: 'string' },
+                        },
+                        required: ['question', 'options', 'correct', 'explanation'],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ['questions'],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: 'function', function: { name: 'create_exam_questions' } },
+          temperature: 0.7,
+          max_tokens: 8000,
+        };
+
+        const examResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(examRequestBody),
         });
 
         const examData = await examResponse.json();
-        let examQuestions = examData.choices[0].message.content;
-        
-        // Clean up any markdown
-        examQuestions = examQuestions.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        const parsedQuestions = JSON.parse(examQuestions);
+        const toolCalls = examData.choices?.[0]?.message?.tool_calls;
+
+        if (!toolCalls || toolCalls.length === 0) {
+          throw new Error(`Exam generation did not return tool calls for ${subject.name}`);
+        }
+
+        const toolCall = toolCalls[0];
+        // Some providers nest arguments under function.arguments, others directly under arguments
+        const rawArgs =
+          (toolCall.function && 'arguments' in toolCall.function ? toolCall.function.arguments : undefined) ||
+          toolCall.arguments;
+
+        if (!rawArgs || typeof rawArgs !== 'string') {
+          throw new Error(`Invalid tool call arguments for ${subject.name}`);
+        }
+
+        let parsedQuestions;
+        try {
+          const parsedArgs = JSON.parse(rawArgs);
+          parsedQuestions = parsedArgs.questions;
+
+          if (!Array.isArray(parsedQuestions)) {
+            throw new Error('questions is not an array');
+          }
+        } catch (parseError) {
+          console.error(`Failed to parse exam questions for ${subject.name}:`, parseError);
+          throw new Error(`Failed to parse exam questions JSON for ${subject.name}`);
+        }
 
         // Store exam questions
         const { error: examError } = await supabase
