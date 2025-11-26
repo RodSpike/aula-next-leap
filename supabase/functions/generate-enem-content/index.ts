@@ -30,47 +30,59 @@ Crie conteúdo educacional COMPLETO e DETALHADO em português brasileiro.`;
 
 FORMATO OBRIGATÓRIO em HTML:
 <h2>Título Principal</h2>
-<p>Introdução clara e motivadora</p>
+<p>Introdução clara e motivadora (máximo 2 parágrafos)</p>
 
 <h3>1. Conceitos Fundamentais</h3>
-<p>Explicação detalhada dos conceitos básicos</p>
+<p>Breve introdução (1 parágrafo)</p>
 <ul>
-<li><strong>Conceito 1:</strong> Explicação completa com exemplos</li>
-<li><strong>Conceito 2:</strong> Explicação completa com exemplos</li>
+<li><strong>Conceito 1:</strong> Explicação concisa (máximo 3 linhas)</li>
+<li><strong>Conceito 2:</strong> Explicação concisa (máximo 3 linhas)</li>
+<li><strong>Conceito 3:</strong> Explicação concisa (máximo 3 linhas)</li>
 </ul>
 
-<h3>2. Conteúdo Principal</h3>
-<p>Desenvolvimento detalhado do conteúdo</p>
-
 <div class="tip">
-<strong>💡 Dica de Memorização:</strong> Técnica específica para memorizar este conteúdo
+<strong>💡 Dica de Memorização:</strong> Técnica específica e prática
 </div>
 
-<h3>3. Aplicações e Exemplos</h3>
-<p>Exemplos práticos de questões do ENEM</p>
+<h3>2. Desenvolvimento do Conteúdo</h3>
+<p>Parágrafo explicativo (máximo 4 linhas)</p>
+<p>Outro parágrafo complementar (máximo 4 linhas)</p>
 
 <div class="example">
-<strong>📝 Exemplo:</strong> Questão típica do ENEM com resolução passo a passo
+<strong>📝 Exemplo Prático:</strong> Situação concreta do ENEM com resolução clara
 </div>
 
-<h3>4. Resumo e Pontos-Chave</h3>
+<h3>3. Aplicações e Contexto ENEM</h3>
+<p>Como este conteúdo aparece no ENEM (máximo 3 linhas)</p>
+
+<div class="tip">
+<strong>💡 Estratégia para Provas:</strong> Dica específica para resolver questões rapidamente
+</div>
+
+<h3>4. Pontos-Chave para Memorizar</h3>
 <ul>
-<li>Ponto essencial 1</li>
-<li>Ponto essencial 2</li>
-<li>Ponto essencial 3</li>
+<li>Ponto essencial 1 - conciso e direto</li>
+<li>Ponto essencial 2 - conciso e direto</li>
+<li>Ponto essencial 3 - conciso e direto</li>
+<li>Ponto essencial 4 - conciso e direto</li>
 </ul>
 
 <div class="warning">
-<strong>⚠️ Atenção:</strong> Pegadinhas comuns e erros frequentes
+<strong>⚠️ Pegadinhas Comuns:</strong> Lista de erros frequentes dos estudantes
 </div>
 
-REQUISITOS:
-- Mínimo 2000 palavras de conteúdo substantivo
-- Incluir 5+ dicas de memorização
-- Incluir 3+ exemplos práticos
-- Mencionar questões típicas do ENEM
-- Linguagem clara e acessível
-- Estrutura HTML bem formatada`;
+<div class="example">
+<strong>📝 Questão Modelo:</strong> Exemplo de questão ENEM com explicação detalhada da solução
+</div>
+
+REQUISITOS CRÍTICOS:
+- Parágrafos CURTOS (máximo 4-5 linhas cada)
+- Use QUEBRAS VISUAIS frequentes (divs tip/example/warning)
+- Mínimo 5 dicas de memorização em boxes coloridos
+- Mínimo 4 exemplos práticos em boxes
+- Linguagem DIRETA e CLARA
+- Evite "muros de texto" - use listas e boxes
+- Total: 1500-2000 palavras BEM DISTRIBUÍDAS`;
     } else {
       systemPrompt = `Você é um especialista em criar questões de ENEM e vestibulares.
 Retorne APENAS um array JSON válido, sem markdown, sem explicações adicionais.`;
