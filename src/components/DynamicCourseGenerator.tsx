@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, Trash2, Eye, EyeOff } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
 interface GeneratedCourse {
@@ -20,6 +20,8 @@ interface GeneratedCourse {
   admin_only: boolean;
 }
 
+type GenerationStep = 'idle' | 'creating' | 'generating-structure' | 'generating-lessons' | 'saving' | 'complete';
+
 export function DynamicCourseGenerator() {
   const [courseName, setCourseName] = useState("");
   const [courseDescription, setCourseDescription] = useState("");
@@ -27,11 +29,22 @@ export function DynamicCourseGenerator() {
   const [courseType, setCourseType] = useState("custom");
   const [aiChatContext, setAiChatContext] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState<GenerationStep>('idle');
+  const [generationProgress, setGenerationProgress] = useState(0);
   const [existingCourses, setExistingCourses] = useState<GeneratedCourse[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
   const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const stepLabels: Record<GenerationStep, string> = {
+    'idle': '',
+    'creating': 'Criando curso...',
+    'generating-structure': 'Gerando estrutura do curso...',
+    'generating-lessons': 'Gerando conteúdo das aulas...',
+    'saving': 'Salvando no banco de dados...',
+    'complete': 'Concluído!'
+  };
 
   const loadExistingCourses = async () => {
     setLoadingCourses(true);
@@ -61,8 +74,11 @@ export function DynamicCourseGenerator() {
     }
 
     setIsGenerating(true);
+    setGenerationStep('creating');
+    setGenerationProgress(10);
+
     try {
-      // First, create the course in the database
+      // Step 1: Create the course in the database
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .insert({
@@ -71,31 +87,50 @@ export function DynamicCourseGenerator() {
           level: courseLevel,
           course_type: courseType,
           order_index: 0,
-          admin_only: true, // New courses are admin-only by default for review
+          admin_only: true,
         })
         .select()
         .single();
 
       if (courseError) throw courseError;
 
-      // Store AI chat context if provided
-      if (aiChatContext.trim()) {
-        // Store the AI chat context in the course description or a separate field
-        const { error: updateError } = await supabase
-          .from('courses')
-          .update({
-            description: `${courseDescription}\n\n---AI_CHAT_CONTEXT---\n${aiChatContext}`
-          })
-          .eq('id', courseData.id);
+      setGenerationStep('generating-structure');
+      setGenerationProgress(20);
 
-        if (updateError) {
-          console.error('Error storing AI chat context:', updateError);
+      // Step 2: Call edge function to generate content
+      toast({
+        title: "Gerando conteúdo...",
+        description: "Isso pode levar alguns minutos. Aguarde enquanto o AI cria o conteúdo completo do curso.",
+      });
+
+      const { data: generationResult, error: generationError } = await supabase.functions.invoke(
+        'generate-dynamic-course',
+        {
+          body: {
+            courseId: courseData.id,
+            courseName: courseName,
+            courseDescription: courseDescription,
+            aiChatContext: aiChatContext,
+            courseLevel: courseLevel
+          }
         }
+      );
+
+      if (generationError) {
+        console.error('Generation error:', generationError);
+        throw new Error(generationError.message || 'Falha ao gerar conteúdo');
       }
+
+      if (generationResult?.error) {
+        throw new Error(generationResult.error);
+      }
+
+      setGenerationStep('complete');
+      setGenerationProgress(100);
 
       toast({
         title: "Sucesso!",
-        description: `Curso "${courseName}" criado com sucesso! O curso está visível apenas para admins. Revise e publique quando estiver pronto.`,
+        description: `Curso "${courseName}" criado com ${generationResult?.lessonsCreated || 0} aulas e ${generationResult?.totalExercises || 0} exercícios! Revise e publique quando estiver pronto.`,
       });
 
       // Reset form
@@ -109,11 +144,13 @@ export function DynamicCourseGenerator() {
       console.error('Error creating course:', error);
       toast({
         title: "Erro",
-        description: "Falha ao criar curso. Tente novamente.",
+        description: error instanceof Error ? error.message : "Falha ao criar curso. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+      setGenerationStep('idle');
+      setGenerationProgress(0);
     }
   };
 
@@ -126,15 +163,27 @@ export function DynamicCourseGenerator() {
 
     setDeletingCourseId(courseId);
     try {
-      // Delete associated lessons first
-      const { error: lessonsError } = await supabase
+      // Get lesson IDs for this course
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('course_id', courseId);
+
+      if (lessons && lessons.length > 0) {
+        const lessonIds = lessons.map(l => l.id);
+        
+        // Delete exercises for these lessons
+        await supabase
+          .from('exercises')
+          .delete()
+          .in('lesson_id', lessonIds);
+      }
+
+      // Delete lessons
+      await supabase
         .from('lessons')
         .delete()
         .eq('course_id', courseId);
-
-      if (lessonsError) {
-        console.error('Error deleting lessons:', lessonsError);
-      }
 
       // Delete the course
       const { error: courseError } = await supabase
@@ -149,7 +198,6 @@ export function DynamicCourseGenerator() {
         description: `O curso "${courseTitle}" foi excluído com sucesso.`,
       });
 
-      // Reload courses list
       loadExistingCourses();
     } catch (error) {
       console.error('Error deleting course:', error);
@@ -180,7 +228,6 @@ export function DynamicCourseGenerator() {
           : `O curso "${courseTitle}" agora está visível apenas para admins.`,
       });
 
-      // Reload courses list
       loadExistingCourses();
     } catch (error) {
       console.error('Error toggling visibility:', error);
@@ -200,10 +247,10 @@ export function DynamicCourseGenerator() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
-            Criar Novo Curso
+            Criar Novo Curso com Conteúdo Completo
           </CardTitle>
           <CardDescription>
-            Crie um novo curso personalizado com conteúdo e contexto para o AI Chat
+            Crie um curso personalizado com aulas, exercícios e AI tutor gerados automaticamente
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -212,15 +259,16 @@ export function DynamicCourseGenerator() {
               <Label htmlFor="courseName">Nome do Curso *</Label>
               <Input
                 id="courseName"
-                placeholder="Ex: Preparação para Concursos"
+                placeholder="Ex: Violão para Iniciantes"
                 value={courseName}
                 onChange={(e) => setCourseName(e.target.value)}
+                disabled={isGenerating}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="courseLevel">Nível/Categoria</Label>
-              <Select value={courseLevel} onValueChange={setCourseLevel}>
+              <Select value={courseLevel} onValueChange={setCourseLevel} disabled={isGenerating}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o nível" />
                 </SelectTrigger>
@@ -230,6 +278,8 @@ export function DynamicCourseGenerator() {
                   <SelectItem value="Concursos">Concursos</SelectItem>
                   <SelectItem value="Profissional">Profissional</SelectItem>
                   <SelectItem value="Idiomas">Idiomas</SelectItem>
+                  <SelectItem value="Música">Música</SelectItem>
+                  <SelectItem value="Tecnologia">Tecnologia</SelectItem>
                   <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
@@ -240,41 +290,57 @@ export function DynamicCourseGenerator() {
             <Label htmlFor="courseDescription">Descrição do Curso</Label>
             <Textarea
               id="courseDescription"
-              placeholder="Descreva o objetivo e conteúdo do curso..."
+              placeholder="Descreva o objetivo e conteúdo do curso em detalhes para melhor geração de conteúdo..."
               value={courseDescription}
               onChange={(e) => setCourseDescription(e.target.value)}
               rows={3}
+              disabled={isGenerating}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="aiChatContext">Contexto para AI Chat (opcional)</Label>
+            <Label htmlFor="aiChatContext">Contexto para AI Tutor (opcional)</Label>
             <Textarea
               id="aiChatContext"
-              placeholder="Instruções especiais para o tutor AI deste curso. Ex: 'Este curso foca em questões de raciocínio lógico para concursos públicos. O tutor deve usar exemplos práticos de provas anteriores e dar dicas de memorização.'"
+              placeholder="Instruções especiais para o tutor AI deste curso. Ex: 'Este curso foca em técnicas de violão para iniciantes. O tutor deve usar exemplos práticos de músicas populares e dar dicas de posição de mãos.'"
               value={aiChatContext}
               onChange={(e) => setAiChatContext(e.target.value)}
               rows={4}
+              disabled={isGenerating}
             />
             <p className="text-xs text-muted-foreground">
-              Este contexto será usado pelo AI Chat para personalizar as respostas do tutor para alunos deste curso.
+              Este contexto será usado pelo AI Tutor para personalizar as respostas aos alunos deste curso.
             </p>
           </div>
+
+          {isGenerating && (
+            <div className="space-y-2 p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{stepLabels[generationStep]}</span>
+                <span>{generationProgress}%</span>
+              </div>
+              <Progress value={generationProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                A geração de conteúdo pode levar de 1 a 3 minutos. Não feche esta página.
+              </p>
+            </div>
+          )}
 
           <Button
             onClick={handleGenerate}
             disabled={isGenerating || !courseName.trim()}
             className="w-full"
+            size="lg"
           >
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Criando Curso...
+                Gerando Curso Completo...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Criar Curso
+                Criar Curso com Conteúdo Completo
               </>
             )}
           </Button>
