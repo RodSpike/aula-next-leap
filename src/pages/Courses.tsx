@@ -107,18 +107,18 @@ export default function Courses() {
         };
       });
 
-      // Add ENEM courses for admins
+      // Add ENEM courses for all users (now visible to everyone)
       const enemCoursesFormatted = enemCourses.map(course => ({
         id: course.id,
         title: course.title,
         description: course.description || '',
         level: course.level,
         order_index: course.order_index,
-        isUnlocked: isUserAdmin, // ENEM always unlocked for admins
+        isUnlocked: true, // ENEM now unlocked for all users
         lessonsCount: 0,
         completedLessons: 0,
         isCurrentLevel: false,
-        admin_only: course.admin_only || false,
+        admin_only: false, // No longer admin-only
         course_type: course.course_type || 'enem',
       }));
 

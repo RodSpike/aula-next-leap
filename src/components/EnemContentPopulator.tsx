@@ -11,7 +11,7 @@ export function EnemContentPopulator() {
 
   const handlePopulate = async () => {
     const confirmed = window.confirm(
-      "Isso irá gerar todo o conteúdo ENEM (10 matérias com aulas e simulados). Pode levar alguns minutos. Deseja continuar?"
+      "Isso irá gerar todo o conteúdo ENEM (12 matérias com aulas e simulados, incluindo Inglês e Espanhol). Pode levar alguns minutos. Deseja continuar?"
     );
 
     if (!confirmed) return;
@@ -48,7 +48,7 @@ export function EnemContentPopulator() {
           Gerar Conteúdo ENEM
         </CardTitle>
         <CardDescription>
-          Gera e armazena todo o conteúdo das aulas e simulados para todas as 10 matérias do ENEM
+          Gera e armazena todo o conteúdo das aulas e simulados para todas as 12 matérias do ENEM (incluindo Inglês e Espanhol)
         </CardDescription>
       </CardHeader>
       <CardContent>
