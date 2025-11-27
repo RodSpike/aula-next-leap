@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Sparkles, Trash2, Eye, EyeOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 interface GeneratedCourse {
   id: string;
@@ -29,6 +30,7 @@ export function DynamicCourseGenerator() {
   const [existingCourses, setExistingCourses] = useState<GeneratedCourse[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadExistingCourses = async () => {
@@ -69,7 +71,7 @@ export function DynamicCourseGenerator() {
           level: courseLevel,
           course_type: courseType,
           order_index: 0,
-          admin_only: false,
+          admin_only: true, // New courses are admin-only by default for review
         })
         .select()
         .single();
@@ -93,7 +95,7 @@ export function DynamicCourseGenerator() {
 
       toast({
         title: "Sucesso!",
-        description: `Curso "${courseName}" criado com sucesso! Agora você pode adicionar lições e conteúdo.`,
+        description: `Curso "${courseName}" criado com sucesso! O curso está visível apenas para admins. Revise e publique quando estiver pronto.`,
       });
 
       // Reset form
@@ -158,6 +160,37 @@ export function DynamicCourseGenerator() {
       });
     } finally {
       setDeletingCourseId(null);
+    }
+  };
+
+  const handleToggleVisibility = async (courseId: string, courseTitle: string, currentAdminOnly: boolean) => {
+    setTogglingVisibilityId(courseId);
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update({ admin_only: !currentAdminOnly })
+        .eq('id', courseId);
+
+      if (error) throw error;
+
+      toast({
+        title: currentAdminOnly ? "Curso publicado!" : "Curso ocultado",
+        description: currentAdminOnly 
+          ? `O curso "${courseTitle}" agora está visível para todos os usuários.`
+          : `O curso "${courseTitle}" agora está visível apenas para admins.`,
+      });
+
+      // Reload courses list
+      loadExistingCourses();
+    } catch (error) {
+      console.error('Error toggling visibility:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao alterar visibilidade. Verifique se você tem permissão.",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingVisibilityId(null);
     }
   };
 
@@ -270,27 +303,56 @@ export function DynamicCourseGenerator() {
               {existingCourses.map((course) => (
                 <div
                   key={course.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between p-3 border rounded-lg gap-4"
                 >
-                  <div>
-                    <p className="font-medium">{course.title}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{course.title}</p>
+                      {course.admin_only ? (
+                        <Badge variant="secondary" className="text-xs">
+                          <EyeOff className="h-3 w-3 mr-1" />
+                          Admin Only
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="text-xs bg-green-600">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Público
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {course.level} • {course.course_type || 'custom'}
-                      {course.admin_only && ' • Admin Only'}
                     </p>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteCourse(course.id, course.title)}
-                    disabled={deletingCourseId === course.id}
-                  >
-                    {deletingCourseId === course.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={course.admin_only ? "outline" : "secondary"}
+                      size="sm"
+                      onClick={() => handleToggleVisibility(course.id, course.title, course.admin_only)}
+                      disabled={togglingVisibilityId === course.id}
+                      title={course.admin_only ? "Publicar para todos" : "Ocultar (admin only)"}
+                    >
+                      {togglingVisibilityId === course.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : course.admin_only ? (
+                        <Eye className="h-4 w-4" />
+                      ) : (
+                        <EyeOff className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCourse(course.id, course.title)}
+                      disabled={deletingCourseId === course.id}
+                    >
+                      {deletingCourseId === course.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
