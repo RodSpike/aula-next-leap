@@ -30,7 +30,7 @@ async function generateSubjectContent(
   console.log(`Generating content for ${subject.name}...`);
   
   try {
-    // Generate lesson content
+    // Generate lesson content - SIMPLIFIED for speed
     const lessonResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -42,71 +42,29 @@ async function generateSubjectContent(
         messages: [
           { 
             role: 'system', 
-            content: `Você é um especialista em preparação para o ENEM e vestibulares brasileiros. Crie conteúdo educacional COMPLETO e DETALHADO em português brasileiro.`
+            content: `Você é um especialista em ENEM. Crie conteúdo educacional em português brasileiro.`
           },
           { 
             role: 'user', 
-            content: `Crie uma aula COMPLETA sobre ${subject.name} para o ENEM. 
+            content: `Crie uma aula sobre ${subject.name} para o ENEM em HTML.
 
-FORMATO OBRIGATÓRIO em HTML:
-<h2>Título Principal</h2>
-<p>Introdução clara e motivadora (máximo 2 parágrafos)</p>
+Estrutura:
+<h2>Título</h2>
+<p>Introdução breve</p>
+<h3>Conceitos</h3>
+<ul><li>Conceito 1</li><li>Conceito 2</li></ul>
+<div class="tip"><strong>💡 Dica:</strong> texto</div>
+<h3>Conteúdo</h3>
+<p>Explicação</p>
+<div class="example"><strong>📝 Exemplo:</strong> texto</div>
+<h3>Pontos-Chave</h3>
+<ul><li>Ponto 1</li><li>Ponto 2</li></ul>
 
-<h3>1. Conceitos Fundamentais</h3>
-<p>Breve introdução (1 parágrafo)</p>
-<ul>
-<li><strong>Conceito 1:</strong> Explicação concisa (máximo 3 linhas)</li>
-<li><strong>Conceito 2:</strong> Explicação concisa (máximo 3 linhas)</li>
-<li><strong>Conceito 3:</strong> Explicação concisa (máximo 3 linhas)</li>
-</ul>
-
-<div class="tip">
-<strong>💡 Dica de Memorização:</strong> Técnica específica e prática
-</div>
-
-<h3>2. Desenvolvimento do Conteúdo</h3>
-<p>Parágrafo explicativo (máximo 4 linhas)</p>
-<p>Outro parágrafo complementar (máximo 4 linhas)</p>
-
-<div class="example">
-<strong>📝 Exemplo Prático:</strong> Situação concreta do ENEM com resolução clara
-</div>
-
-<h3>3. Aplicações e Contexto ENEM</h3>
-<p>Como este conteúdo aparece no ENEM (máximo 3 linhas)</p>
-
-<div class="tip">
-<strong>💡 Estratégia para Provas:</strong> Dica específica para resolver questões rapidamente
-</div>
-
-<h3>4. Pontos-Chave para Memorizar</h3>
-<ul>
-<li>Ponto essencial 1 - conciso e direto</li>
-<li>Ponto essencial 2 - conciso e direto</li>
-<li>Ponto essencial 3 - conciso e direto</li>
-<li>Ponto essencial 4 - conciso e direto</li>
-</ul>
-
-<div class="warning">
-<strong>⚠️ Pegadinhas Comuns:</strong> Lista de erros frequentes dos estudantes
-</div>
-
-<div class="example">
-<strong>📝 Questão Modelo:</strong> Exemplo de questão ENEM com explicação detalhada da solução
-</div>
-
-REQUISITOS CRÍTICOS:
-- Parágrafos CURTOS (máximo 4-5 linhas cada)
-- Use QUEBRAS VISUAIS frequentes (divs tip/example/warning)
-- Mínimo 5 dicas de memorização em boxes coloridos
-- Mínimo 4 exemplos práticos em boxes
-- Linguagem DIRETA e CLARA
-- Evite "muros de texto" - use listas e boxes
-- Total: 1500-2000 palavras BEM DISTRIBUÍDAS`
+Máximo 800 palavras. Seja direto e prático.`
           }
         ],
         temperature: 0.7,
-        max_tokens: 8000,
+        max_tokens: 3000,
       }),
     });
 
@@ -123,28 +81,19 @@ REQUISITOS CRÍTICOS:
       }, { onConflict: 'subject_id' });
 
     if (lessonError) throw lessonError;
-    console.log(`✓ Lesson content stored for ${subject.name}`);
+    console.log(`✓ Lesson stored for ${subject.name}`);
 
-    // Generate exam questions using tool calling
+    // Generate exam questions - REDUCED to 8 questions
     const examRequestBody: any = {
       model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'system',
-          content: 'Você é um especialista em criar questões de ENEM e vestibulares. Use a ferramenta create_exam_questions para retornar as questões em formato estruturado JSON.',
+          content: 'Você cria questões ENEM. Use a ferramenta create_exam_questions.',
         },
         {
           role: 'user',
-          content: `Crie 15 questões de múltipla escolha sobre ${subject.name} no estilo ENEM.
-
-REQUISITOS PARA CADA QUESTÃO:
-- Questões no estilo ENEM (contextualizadas, interdisciplinares)
-- 5 alternativas cada (A, B, C, D, E)
-- Textos de apoio quando relevante
-- Explicação completa e didática
-- Variar dificuldade (5 fáceis, 5 médias, 5 difíceis)
-
-Preencha o campo 'questions' da ferramenta create_exam_questions com exatamente 15 questões seguindo essas regras.`,
+          content: `Crie 8 questões sobre ${subject.name} no estilo ENEM com 5 alternativas cada.`,
         },
       ],
       tools: [
@@ -152,41 +101,32 @@ Preencha o campo 'questions' da ferramenta create_exam_questions com exatamente 
           type: 'function',
           function: {
             name: 'create_exam_questions',
-            description: 'Gera questões de múltipla escolha no estilo ENEM.',
+            description: 'Gera questões ENEM.',
             parameters: {
               type: 'object',
               properties: {
                 questions: {
                   type: 'array',
-                  minItems: 15,
-                  maxItems: 15,
                   items: {
                     type: 'object',
                     properties: {
                       question: { type: 'string' },
-                      options: {
-                        type: 'array',
-                        minItems: 5,
-                        maxItems: 5,
-                        items: { type: 'string' },
-                      },
+                      options: { type: 'array', items: { type: 'string' } },
                       correct: { type: 'string' },
                       explanation: { type: 'string' },
                     },
                     required: ['question', 'options', 'correct', 'explanation'],
-                    additionalProperties: false,
                   },
                 },
               },
               required: ['questions'],
-              additionalProperties: false,
             },
           },
         },
       ],
       tool_choice: { type: 'function', function: { name: 'create_exam_questions' } },
       temperature: 0.7,
-      max_tokens: 8000,
+      max_tokens: 4000,
     };
 
     const examResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -202,29 +142,24 @@ Preencha o campo 'questions' da ferramenta create_exam_questions com exatamente 
     const toolCalls = examData.choices?.[0]?.message?.tool_calls;
 
     if (!toolCalls || toolCalls.length === 0) {
-      throw new Error(`Exam generation did not return tool calls for ${subject.name}`);
+      throw new Error(`No tool calls for ${subject.name}`);
     }
 
     const toolCall = toolCalls[0];
-    const rawArgs =
-      (toolCall.function && 'arguments' in toolCall.function ? toolCall.function.arguments : undefined) ||
-      toolCall.arguments;
+    const rawArgs = toolCall.function?.arguments || toolCall.arguments;
 
     if (!rawArgs || typeof rawArgs !== 'string') {
-      throw new Error(`Invalid tool call arguments for ${subject.name}`);
+      throw new Error(`Invalid args for ${subject.name}`);
     }
 
     let parsedQuestions;
     try {
       const parsedArgs = JSON.parse(rawArgs);
       parsedQuestions = parsedArgs.questions;
-
-      if (!Array.isArray(parsedQuestions)) {
-        throw new Error('questions is not an array');
-      }
+      if (!Array.isArray(parsedQuestions)) throw new Error('Not array');
     } catch (parseError) {
-      console.error(`Failed to parse exam questions for ${subject.name}:`, parseError);
-      throw new Error(`Failed to parse exam questions JSON for ${subject.name}`);
+      console.error(`Parse error for ${subject.name}:`, parseError);
+      throw new Error(`Parse failed for ${subject.name}`);
     }
 
     // Store exam questions
@@ -236,11 +171,11 @@ Preencha o campo 'questions' da ferramenta create_exam_questions com exatamente 
       }, { onConflict: 'subject_id' });
 
     if (examError) throw examError;
-    console.log(`✓ Exam questions stored for ${subject.name}`);
+    console.log(`✓ Exam stored for ${subject.name}`);
 
     return { subject: subject.name, success: true };
   } catch (error) {
-    console.error(`Error generating content for ${subject.name}:`, error);
+    console.error(`Error for ${subject.name}:`, error);
     return { subject: subject.name, success: false, error: error.message };
   }
 }
@@ -261,36 +196,56 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    console.log('Starting ENEM content population...');
-
-    // Process subjects in batches of 3 to avoid timeout
-    const batchSize = 3;
-    const results = [];
-
-    for (let i = 0; i < subjects.length; i += batchSize) {
-      const batch = subjects.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(subjects.length / batchSize)}`);
-      
-      const batchResults = await Promise.all(
-        batch.map(subject => generateSubjectContent(subject, supabase, LOVABLE_API_KEY))
-      );
-      
-      results.push(...batchResults);
+    // Parse request body for batch index
+    let batchIndex = 0;
+    try {
+      const body = await req.json();
+      batchIndex = body.batchIndex ?? 0;
+    } catch {
+      // No body or invalid JSON, use default
     }
 
-    console.log('ENEM content population completed!');
+    const batchSize = 2; // Process 2 subjects at a time for speed
+    const totalBatches = Math.ceil(subjects.length / batchSize);
+    
+    if (batchIndex >= totalBatches) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'All batches completed', done: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const startIdx = batchIndex * batchSize;
+    const batch = subjects.slice(startIdx, startIdx + batchSize);
+    
+    console.log(`Processing batch ${batchIndex + 1}/${totalBatches}: ${batch.map(s => s.name).join(', ')}`);
+
+    // Process subjects sequentially to avoid rate limits
+    const results = [];
+    for (const subject of batch) {
+      const result = await generateSubjectContent(subject, supabase, LOVABLE_API_KEY);
+      results.push(result);
+    }
+
+    const hasMore = batchIndex + 1 < totalBatches;
+
+    console.log(`Batch ${batchIndex + 1} completed. HasMore: ${hasMore}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'ENEM content populated successfully',
+        batchIndex,
+        totalBatches,
+        hasMore,
+        nextBatch: hasMore ? batchIndex + 1 : null,
+        processedSubjects: batch.map(s => s.name),
         results 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Populate ENEM content error:', error);
+    console.error('Populate ENEM error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
