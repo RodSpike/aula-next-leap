@@ -77,9 +77,10 @@ export default function Courses() {
 
       if (coursesError) throw coursesError;
 
-      // Separate ENEM courses from level courses
+      // Separate courses by type
       const enemCourses = allCoursesData?.filter(c => c.course_type === 'enem') || [];
-      const levelCoursesData = allCoursesData?.filter(c => c.course_type !== 'enem') || [];
+      const customCourses = allCoursesData?.filter(c => c.course_type === 'custom' || (c.course_type !== 'enem' && !levelOrder.includes(c.level))) || [];
+      const levelCoursesData = allCoursesData?.filter(c => c.course_type !== 'enem' && c.course_type !== 'custom' && levelOrder.includes(c.level)) || [];
 
       // Group level courses by level and pick the first course for each level
       const coursesByLevel: { [key: string]: any } = {};
@@ -114,12 +115,27 @@ export default function Courses() {
         description: course.description || '',
         level: course.level,
         order_index: course.order_index,
-        isUnlocked: true, // ENEM now unlocked for all users
+        isUnlocked: true,
         lessonsCount: 0,
         completedLessons: 0,
         isCurrentLevel: false,
-        admin_only: false, // No longer admin-only
+        admin_only: course.admin_only || false,
         course_type: course.course_type || 'enem',
+      }));
+
+      // Add custom courses (created via DynamicCourseGenerator)
+      const customCoursesFormatted = customCourses.map(course => ({
+        id: course.id,
+        title: course.title,
+        description: course.description || '',
+        level: course.level,
+        order_index: course.order_index,
+        isUnlocked: true,
+        lessonsCount: 0,
+        completedLessons: 0,
+        isCurrentLevel: false,
+        admin_only: course.admin_only || false,
+        course_type: course.course_type || 'custom',
       }));
 
       // Get user's current level and progress if logged in
@@ -181,8 +197,8 @@ export default function Courses() {
         levelCourses[0].isUnlocked = true;
       }
 
-      // Combine level courses with ENEM courses
-      const allCourses = [...levelCourses, ...enemCoursesFormatted];
+      // Combine level courses with ENEM and custom courses
+      const allCourses = [...levelCourses, ...enemCoursesFormatted, ...customCoursesFormatted];
 
       setCourses(allCourses);
     } catch (error) {
