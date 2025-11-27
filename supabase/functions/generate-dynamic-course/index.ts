@@ -7,6 +7,52 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Robust JSON parser that handles common AI response issues
+function safeParseJSON(jsonString: string): any {
+  // Remove markdown code blocks
+  let cleaned = jsonString.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  
+  // Try parsing as-is first
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.log('Initial JSON parse failed, attempting cleanup...');
+  }
+  
+  // Remove control characters except newline and tab
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  // Fix common escape issues - replace invalid escapes
+  cleaned = cleaned.replace(/\\([^"\\\/bfnrtu])/g, '$1');
+  
+  // Try again
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.log('Second JSON parse failed, trying more aggressive cleanup...');
+  }
+  
+  // More aggressive cleanup - extract just the array portion
+  const arrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (arrayMatch) {
+    try {
+      return JSON.parse(arrayMatch[0]);
+    } catch (e) {
+      console.log('Array extraction failed');
+    }
+  }
+  
+  // Last resort: try to fix trailing commas
+  cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error('All JSON parse attempts failed:', e);
+    throw new Error('Failed to parse JSON response from AI');
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -48,6 +94,7 @@ Return ONLY a valid JSON array with no markdown formatting or code blocks. Examp
   }
 ]
 
+IMPORTANT: Return ONLY the JSON array, no other text. Make sure all strings are properly escaped.
 Make the lessons practical, engaging, and progressively build knowledge. The content should be in Portuguese if the course name is in Portuguese, otherwise in the appropriate language.`;
 
     console.log('Generating course structure...');
@@ -61,7 +108,7 @@ Make the lessons practical, engaging, and progressively build knowledge. The con
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are a course structure designer. Always return valid JSON arrays only, no markdown formatting.' },
+          { role: 'system', content: 'You are a course structure designer. Always return valid JSON arrays only, no markdown formatting. Escape all special characters properly.' },
           { role: 'user', content: structurePrompt }
         ],
       })
@@ -83,10 +130,8 @@ Make the lessons practical, engaging, and progressively build knowledge. The con
     let lessonsStructure;
     
     try {
-      let content = structureData.choices[0].message.content;
-      // Clean up markdown formatting if present
-      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      lessonsStructure = JSON.parse(content);
+      const content = structureData.choices[0].message.content;
+      lessonsStructure = safeParseJSON(content);
     } catch (e) {
       console.error('Failed to parse lessons structure:', e);
       throw new Error('Failed to generate valid course structure');
@@ -114,7 +159,7 @@ Create detailed educational content in HTML format that includes:
 3. Examples and practical applications
 4. Summary of key points
 
-Also create 5-8 practice exercises in JSON format.
+Also create 5 practice exercises as a JSON array.
 
 Return your response in this exact format:
 
@@ -125,13 +170,20 @@ Return your response in this exact format:
 <exercises>
 [
   {
-    "question": "Question text",
+    "question": "Question text here",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correct_answer": "Option A",
-    "explanation": "Why this is correct"
+    "explanation": "Explanation text"
   }
 ]
 </exercises>
+
+IMPORTANT RULES FOR EXERCISES JSON:
+- Return exactly 5 exercises
+- Use simple, clean JSON with no special characters
+- Do not use backslashes except for valid JSON escapes
+- Each option should be a simple string
+- Make sure the JSON is valid and parseable
 
 Make the content engaging, practical, and appropriate for the course level. Use the same language as the course name (Portuguese if course is in Portuguese).`;
 
@@ -144,7 +196,7 @@ Make the content engaging, practical, and appropriate for the course level. Use 
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
           messages: [
-            { role: 'system', content: 'You are an expert educator creating detailed lesson content. Always follow the exact format requested.' },
+            { role: 'system', content: 'You are an expert educator creating detailed lesson content. Always follow the exact format requested. For JSON, use only simple strings without special escape sequences.' },
             { role: 'user', content: lessonPrompt }
           ],
         })
@@ -160,7 +212,7 @@ Make the content engaging, practical, and appropriate for the course level. Use 
 
       // Parse lesson content and exercises
       let htmlContent = '';
-      let exercises = [];
+      let exercises: any[] = [];
 
       const contentMatch = lessonContent.match(/<lesson_content>([\s\S]*?)<\/lesson_content>/);
       if (contentMatch) {
@@ -173,11 +225,20 @@ Make the content engaging, practical, and appropriate for the course level. Use 
       const exercisesMatch = lessonContent.match(/<exercises>([\s\S]*?)<\/exercises>/);
       if (exercisesMatch) {
         try {
-          let exerciseJson = exercisesMatch[1].trim();
-          exerciseJson = exerciseJson.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-          exercises = JSON.parse(exerciseJson);
+          exercises = safeParseJSON(exercisesMatch[1]);
+          console.log(`Successfully parsed ${exercises.length} exercises for lesson ${i + 1}`);
         } catch (e) {
-          console.error('Failed to parse exercises for lesson', i + 1, e);
+          console.error(`Failed to parse exercises for lesson ${i + 1}:`, e);
+          // Create fallback exercises
+          exercises = [
+            {
+              question: `Review question for ${lesson.title}`,
+              options: ["Option A", "Option B", "Option C", "Option D"],
+              correct_answer: "Option A",
+              explanation: "This is a placeholder exercise. Please review the lesson content."
+            }
+          ];
+          console.log('Using fallback exercise for lesson', i + 1);
         }
       }
 
@@ -218,9 +279,9 @@ Make the content engaging, practical, and appropriate for the course level. Use 
       if (lesson.exercises && lesson.exercises.length > 0) {
         const exercisesToInsert = lesson.exercises.map((ex: any, idx: number) => ({
           lesson_id: lessonData.id,
-          question: ex.question,
-          options: ex.options,
-          correct_answer: ex.correct_answer,
+          question: ex.question || 'Question',
+          options: ex.options || ["A", "B", "C", "D"],
+          correct_answer: ex.correct_answer || ex.options?.[0] || "A",
           explanation: ex.explanation || '',
           exercise_type: 'multiple_choice',
           order_index: idx,
