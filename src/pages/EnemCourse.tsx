@@ -16,6 +16,8 @@ const enemSubjects = [
   { id: 'geografia', name: 'Geografia', icon: Globe, color: 'text-cyan-500' },
   { id: 'filosofia', name: 'Filosofia', icon: Brain, color: 'text-indigo-500' },
   { id: 'sociologia', name: 'Sociologia', icon: Users, color: 'text-pink-500' },
+  { id: 'ingles', name: 'Inglês', icon: Globe, color: 'text-sky-500' },
+  { id: 'espanhol', name: 'Espanhol', icon: Globe, color: 'text-amber-500' },
 ];
 
 export default function EnemCourse() {

@@ -18,6 +18,8 @@ const subjects = [
   { id: 'geografia', name: 'Geografia' },
   { id: 'filosofia', name: 'Filosofia' },
   { id: 'sociologia', name: 'Sociologia' },
+  { id: 'ingles', name: 'Inglês' },
+  { id: 'espanhol', name: 'Espanhol' },
 ];
 
 async function generateSubjectContent(

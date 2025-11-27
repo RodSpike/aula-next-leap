@@ -27,6 +27,8 @@ const subjectNames: Record<string, string> = {
   geografia: 'Geografia',
   filosofia: 'Filosofia',
   sociologia: 'Sociologia',
+  ingles: 'Inglês',
+  espanhol: 'Espanhol',
 };
 
 export default function EnemExam() {
