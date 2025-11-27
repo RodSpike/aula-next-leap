@@ -76,26 +76,17 @@ serve(async (req) => {
 
     console.log(`Starting content generation for course: ${courseName}`);
 
-    // Step 1: Generate course structure (lessons outline)
-    const structurePrompt = `You are an expert course designer. Create a comprehensive course structure for: "${courseName}"
+    // Step 1: Generate course structure (lessons outline) - LIMITED TO 4 LESSONS FOR SPEED
+    const structurePrompt = `You are an expert course designer. Create a course structure for: "${courseName}"
 
 Course Description: ${courseDescription || 'No description provided'}
-Course Level/Category: ${courseLevel || 'General'}
-${aiChatContext ? `Additional Context: ${aiChatContext}` : ''}
+Level: ${courseLevel || 'General'}
+${aiChatContext ? `Context: ${aiChatContext}` : ''}
 
-Create exactly 5-8 lessons for this course. Each lesson should build upon the previous one and cover the topic comprehensively.
+Create exactly 4 lessons. Return ONLY a JSON array:
+[{"title": "Lesson Title", "description": "Brief description", "keyTopics": ["topic1", "topic2"]}]
 
-Return ONLY a valid JSON array with no markdown formatting or code blocks. Example format:
-[
-  {
-    "title": "Lesson Title",
-    "description": "Brief description of what this lesson covers",
-    "keyTopics": ["topic1", "topic2", "topic3"]
-  }
-]
-
-IMPORTANT: Return ONLY the JSON array, no other text. Make sure all strings are properly escaped.
-Make the lessons practical, engaging, and progressively build knowledge. The content should be in Portuguese if the course name is in Portuguese, otherwise in the appropriate language.`;
+Return ONLY the JSON array. Use the same language as the course name.`;
 
     console.log('Generating course structure...');
     
@@ -146,46 +137,24 @@ Make the lessons practical, engaging, and progressively build knowledge. The con
       const lesson = lessonsStructure[i];
       console.log(`Generating content for lesson ${i + 1}: ${lesson.title}`);
 
-      const lessonPrompt = `Create comprehensive lesson content for: "${lesson.title}"
+      const lessonPrompt = `Create lesson content for: "${lesson.title}"
 
 Course: ${courseName}
-Description: ${lesson.description}
-Key Topics: ${lesson.keyTopics?.join(', ') || 'General topics'}
-${aiChatContext ? `Course Context: ${aiChatContext}` : ''}
+Topics: ${lesson.keyTopics?.join(', ') || 'General'}
 
-Create detailed educational content in HTML format that includes:
-1. Introduction and learning objectives
-2. Main content with clear explanations
-3. Examples and practical applications
-4. Summary of key points
-
-Also create 5 practice exercises as a JSON array.
-
-Return your response in this exact format:
+Return in this format:
 
 <lesson_content>
-[Your HTML content here with sections, headers, paragraphs, lists, etc.]
+<h2>Introduction</h2><p>Brief intro</p>
+<h2>Main Content</h2><p>Explanation with examples</p>
+<h2>Summary</h2><p>Key points</p>
 </lesson_content>
 
 <exercises>
-[
-  {
-    "question": "Question text here",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correct_answer": "Option A",
-    "explanation": "Explanation text"
-  }
-]
+[{"question":"Q1","options":["A","B","C","D"],"correct_answer":"A","explanation":"Why A"},{"question":"Q2","options":["A","B","C","D"],"correct_answer":"B","explanation":"Why B"},{"question":"Q3","options":["A","B","C","D"],"correct_answer":"C","explanation":"Why C"}]
 </exercises>
 
-IMPORTANT RULES FOR EXERCISES JSON:
-- Return exactly 5 exercises
-- Use simple, clean JSON with no special characters
-- Do not use backslashes except for valid JSON escapes
-- Each option should be a simple string
-- Make sure the JSON is valid and parseable
-
-Make the content engaging, practical, and appropriate for the course level. Use the same language as the course name (Portuguese if course is in Portuguese).`;
+Use simple JSON. Same language as course name.`;
 
       const lessonResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
