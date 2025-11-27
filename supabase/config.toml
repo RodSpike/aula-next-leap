@@ -147,3 +147,5 @@ verify_jwt = false
 [functions.stripe-payment-history]
 verify_jwt = true
 
+[functions.generate-dynamic-course]
+verify_jwt = false
