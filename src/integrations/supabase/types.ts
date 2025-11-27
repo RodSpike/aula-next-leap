@@ -1806,6 +1806,7 @@ export type Database = {
         Args: { group_uuid: string; user_uuid: string }
         Returns: boolean
       }
+      is_master_admin: { Args: { user_uuid: string }; Returns: boolean }
       search_profiles_public: {
         Args: { search_term: string }
         Returns: {
