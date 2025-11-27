@@ -18,7 +18,8 @@ import { AdminFreeUsers } from "@/components/AdminFreeUsers";
 import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { EnglishTVManager } from "@/components/EnglishTVManager";
 import { EnemContentPopulator } from "@/components/EnemContentPopulator";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard } from "lucide-react";
+import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -694,9 +695,22 @@ export default function AdminPanel() {
                    <ComprehensiveLessonGenerator />
                  </div>
 
-                 <EnemContentPopulator />
+                  <EnemContentPopulator />
 
-                 {/* Bulk regenerate exercises for all lessons */}
+                  {/* Dynamic Course Generator */}
+                  <div className="bg-background/50 p-6 rounded-lg border">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      Criar Cursos Personalizados
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Crie novos cursos com conteúdo personalizado e contexto para o AI Chat do tutor.
+                      Ideal para criar cursos de preparação para concursos, vestibulares específicos, ou outros temas.
+                    </p>
+                    <DynamicCourseGenerator />
+                  </div>
+
+                  {/* Bulk regenerate exercises for all lessons */}
                  <BulkExerciseRegenerator />
                  
                  <div className="bg-background/50 p-6 rounded-lg border">
