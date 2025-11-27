@@ -17,15 +17,17 @@ serve(async (req) => {
 
   try {
     console.log('Function called successfully');
-    const { message, conversation_history, file_data } = await req.json();
+    const { message, conversation_history, file_data, system_prompt } = await req.json();
     console.log('Request parsed successfully');
     
     const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY') ?? '';
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
     console.log('OpenRouter API key exists:', !!openRouterApiKey);
     console.log('OpenAI API key exists:', !!openaiApiKey);
+    console.log('Lovable AI key exists:', !!LOVABLE_API_KEY);
 
-    if (!openRouterApiKey && !openaiApiKey) {
+    if (!openRouterApiKey && !openaiApiKey && !LOVABLE_API_KEY) {
       console.error('No AI provider API key configured');
       return new Response(JSON.stringify({
         error: 'AI service temporarily unavailable. Please try again later.'
@@ -38,12 +40,10 @@ serve(async (req) => {
     console.log('Received message:', message);
     console.log('Conversation history length:', conversation_history?.length || 0);
     console.log('File data received:', !!file_data);
+    console.log('Custom system prompt:', !!system_prompt);
 
-    // Build messages array for OpenAI-compatible format
-    const messages = [
-      {
-        role: 'system',
-        content: `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
+    // Default system prompt for English tutor
+    const defaultSystemPrompt = `Você é um assistente de IA tutor especializado em ensino de inglês para estudantes brasileiros. Seu papel é ajudar usuários a aprender e melhorar suas habilidades em inglês. Você deve:
 
 1. Ser paciente, encorajador e solidário
 2. Fornecer explicações claras sobre gramática, vocabulário e pronunciação
@@ -55,28 +55,27 @@ serve(async (req) => {
 8. Ser envolvente e tornar o aprendizado divertido
 9. Adaptar seu estilo de ensino ao nível do usuário
 10. Fornecer contexto cultural quando relevante
-11. Criar exercícios interativos fazendo perguntas como "Agora vamos fazer um exercício. Qual é..." ou "Você pode me dizer..."
-12. Guiar estudantes através de aprendizado passo a passo com perguntas de acompanhamento
 
 ANÁLISE DE ARQUIVOS:
 - Quando receber um arquivo de texto, analise completamente o conteúdo em inglês
 - Corrija erros de gramática, ortografia e estrutura
 - Explique as regras por trás das correções
 - Sugira melhorias de vocabulário e estilo
-- Para imagens com texto, extraia e analise qualquer texto em inglês visível
-- Forneça feedback detalhado e educativo
-- Sugira exercícios relacionados ao conteúdo do arquivo
-- Identifique padrões de erro para foco de estudo
             
-            FORMATAÇÃO (use Markdown limpo):
-            - Use títulos (#, ##, ###) curtos e claros
-            - Use **negrito** para destacar palavras-chave importantes
-            - Use listas com bullets para passos, dicas e exemplos
-            - Use blocos de código somente para trechos a repetir ou destaque
-            - Evite linhas muito longas; use quebras de linha frequentes
-            - Inclua emojis com moderação para motivação 🎯📚
+FORMATAÇÃO (use Markdown limpo):
+- Use títulos (#, ##, ###) curtos e claros
+- Use **negrito** para destacar palavras-chave importantes
+- Use listas com bullets para passos, dicas e exemplos
+- Evite linhas muito longas; use quebras de linha frequentes
+- Inclua emojis com moderação para motivação 🎯📚
             
-            Sempre responda de forma útil e educacional, com formatação bonita e legível em Markdown.`
+Sempre responda de forma útil e educacional, com formatação bonita e legível em Markdown.`;
+
+    // Build messages array for OpenAI-compatible format
+    const messages = [
+      {
+        role: 'system',
+        content: system_prompt || defaultSystemPrompt
       }
     ];
 
@@ -108,7 +107,6 @@ ANÁLISE DE ARQUIVOS:
     try {
       let aiResponse = '';
       const providerErrors: Array<{ provider: string; status?: number; message: string }> = [];
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
       // 1) OpenRouter (DeepSeek) primary
       if (openRouterApiKey && !aiResponse) {
