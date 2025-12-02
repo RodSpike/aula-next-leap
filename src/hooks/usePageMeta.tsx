@@ -11,7 +11,7 @@ interface PageMetaOptions {
 }
 
 const BASE_URL = 'https://aulaclick.lovable.app';
-const DEFAULT_OG_IMAGE = `${BASE_URL}/navicon.png`;
+const DEFAULT_OG_IMAGE = `${BASE_URL}/og-image.png`;
 
 export const usePageMeta = ({
   title,
