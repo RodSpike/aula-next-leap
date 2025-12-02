@@ -62,6 +62,9 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
+  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const MAX_LISTENING_SECONDS = 30;
 
   // Save speech rate to localStorage
   useEffect(() => {
@@ -191,6 +194,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       console.log('[Speech Tutor] Recognition started');
       setStatus(ConversationStatus.Listening);
       setErrorMessage('');
+      
+      // Set auto-stop timeout
+      listeningTimeoutRef.current = setTimeout(() => {
+        console.log('[Speech Tutor] Timeout reached, stopping...');
+        recognition.stop();
+        setErrorMessage('Tempo limite atingido (30s). Clique em "Falar" para tentar novamente.');
+      }, MAX_LISTENING_SECONDS * 1000);
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -201,6 +211,11 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         const text = lastResult[0].transcript;
         console.log('[Speech Tutor] Final result:', text);
         setInterimText('');
+        // Clear timeout since we got a result
+        if (listeningTimeoutRef.current) {
+          clearTimeout(listeningTimeoutRef.current);
+          listeningTimeoutRef.current = null;
+        }
         // Stop recognition before processing
         recognition.stop();
         processWithAI(text);
@@ -256,6 +271,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
   // Stop listening
   const stopListening = useCallback(() => {
+    if (listeningTimeoutRef.current) {
+      clearTimeout(listeningTimeoutRef.current);
+      listeningTimeoutRef.current = null;
+    }
     if (recognitionRef.current) {
       recognitionRef.current.abort();
       recognitionRef.current = null;
@@ -336,7 +355,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                 </p>
               </div>
 
-              <StatusIndicator status={status} interimText={interimText} />
+              <StatusIndicator status={status} interimText={interimText} maxSeconds={MAX_LISTENING_SECONDS} />
 
               {errorMessage && (
                 <Alert variant="destructive">

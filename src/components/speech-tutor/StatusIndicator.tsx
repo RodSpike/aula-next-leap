@@ -4,9 +4,10 @@ import { ConversationStatus } from '@/types/speech-tutor';
 interface StatusIndicatorProps {
   status: ConversationStatus;
   interimText?: string;
+  maxSeconds?: number;
 }
 
-export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interimText }) => {
+export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interimText, maxSeconds = 30 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Timer for listening duration
@@ -32,6 +33,9 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interi
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const remainingSeconds = maxSeconds - elapsedSeconds;
+  const isLowTime = remainingSeconds <= 10 && remainingSeconds > 0;
 
   const getStatusConfig = () => {
     switch (status) {
@@ -62,10 +66,14 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interi
         </div>
         <span className="text-sm font-medium text-foreground">{config.label}</span>
         
-        {/* Listening timer */}
+        {/* Listening timer with remaining time */}
         {status === ConversationStatus.Listening && (
-          <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-            {formatTime(elapsedSeconds)}
+          <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+            isLowTime 
+              ? 'bg-destructive/20 text-destructive animate-pulse' 
+              : 'bg-muted text-muted-foreground'
+          }`}>
+            {formatTime(Math.max(0, remainingSeconds))}
           </span>
         )}
         
