@@ -53,11 +53,19 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
-  const [speechRate, setSpeechRate] = useState<number>(0.9);
+  const [speechRate, setSpeechRate] = useState<number>(() => {
+    const saved = localStorage.getItem('speechTutorRate');
+    return saved ? parseFloat(saved) : 0.9;
+  });
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
+
+  // Save speech rate to localStorage
+  useEffect(() => {
+    localStorage.setItem('speechTutorRate', speechRate.toString());
+  }, [speechRate]);
 
   // Scroll to bottom when transcript updates
   useEffect(() => {
