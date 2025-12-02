@@ -53,6 +53,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
+  const [interimText, setInterimText] = useState<string>('');
   const [speechRate, setSpeechRate] = useState<number>(() => {
     const saved = localStorage.getItem('speechTutorRate');
     return saved ? parseFloat(saved) : 0.9;
@@ -199,12 +200,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       if (lastResult.isFinal) {
         const text = lastResult[0].transcript;
         console.log('[Speech Tutor] Final result:', text);
+        setInterimText('');
         // Stop recognition before processing
         recognition.stop();
         processWithAI(text);
       } else {
         // Show interim results for user feedback
-        console.log('[Speech Tutor] Interim:', lastResult[0].transcript);
+        const interim = lastResult[0].transcript;
+        console.log('[Speech Tutor] Interim:', interim);
+        setInterimText(interim);
       }
     };
 
@@ -260,6 +264,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     setStatus(ConversationStatus.Idle);
     setIsProcessing(false);
     setIsSpeaking(false);
+    setInterimText('');
   }, []);
 
   // Handle main button click
@@ -331,7 +336,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                 </p>
               </div>
 
-              <StatusIndicator status={status} />
+              <StatusIndicator status={status} interimText={interimText} />
 
               {errorMessage && (
                 <Alert variant="destructive">
