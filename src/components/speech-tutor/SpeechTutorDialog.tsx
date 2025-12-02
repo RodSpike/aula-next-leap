@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ConversationStatus, TranscriptEntry } from '@/types/speech-tutor';
 import { StatusIndicator } from './StatusIndicator';
 import { TranscriptItem } from './TranscriptItem';
-import { AlertCircle, Mic, Square, Volume2, Loader2 } from 'lucide-react';
+import { AlertCircle, Mic, Square, Volume2, Loader2, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +51,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -142,6 +143,9 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       const aiResponse = data?.response || 'Desculpe, não consegui processar. Tente novamente.';
       
+      // Store last tutor response for replay
+      setLastTutorResponse(aiResponse);
+      
       // Add AI response to transcript
       setTranscript(prev => [...prev, { role: 'tutor', text: aiResponse, timestamp: Date.now() }]);
       
@@ -229,6 +233,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     }
   };
 
+  // Replay last tutor response
+  const handleReplay = () => {
+    if (lastTutorResponse && !isSpeaking && !isProcessing) {
+      speakText(lastTutorResponse);
+    }
+  };
+
   // Cleanup on unmount or dialog close
   useEffect(() => {
     return () => {
@@ -301,6 +312,19 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                 {buttonConfig.icon}
                 {buttonConfig.label}
               </Button>
+
+              {lastTutorResponse && (
+                <Button
+                  onClick={handleReplay}
+                  disabled={isSpeaking || isProcessing || status === ConversationStatus.Listening}
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Repetir última resposta
+                </Button>
+              )}
 
               <div className="text-xs text-muted-foreground space-y-1">
                 <p><strong>Exemplos para tentar:</strong></p>
