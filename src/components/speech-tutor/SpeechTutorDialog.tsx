@@ -8,6 +8,7 @@ import { TranscriptItem } from './TranscriptItem';
 import { AlertCircle, Mic, Square, Volume2, Loader2, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 
 // TypeScript declarations for Web Speech API
@@ -52,6 +53,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
+  const [speechRate, setSpeechRate] = useState<number>(0.9);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -104,7 +106,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         utterance.voice = preferredVoice;
       }
 
-      utterance.rate = 0.9;
+      utterance.rate = speechRate;
       utterance.pitch = 1;
 
       utterance.onstart = () => setIsSpeaking(true);
@@ -119,7 +121,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       window.speechSynthesis.speak(utterance);
     });
-  }, []);
+  }, [speechRate]);
 
   // Process user speech with Lovable AI
   const processWithAI = useCallback(async (userText: string) => {
@@ -325,6 +327,26 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                   Repetir última resposta
                 </Button>
               )}
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Velocidade da fala</span>
+                  <span>{speechRate.toFixed(1)}x</span>
+                </div>
+                <Slider
+                  value={[speechRate]}
+                  onValueChange={(value) => setSpeechRate(value[0])}
+                  min={0.5}
+                  max={1.5}
+                  step={0.1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Lento</span>
+                  <span>Normal</span>
+                  <span>Rápido</span>
+                </div>
+              </div>
 
               <div className="text-xs text-muted-foreground space-y-1">
                 <p><strong>Exemplos para tentar:</strong></p>
