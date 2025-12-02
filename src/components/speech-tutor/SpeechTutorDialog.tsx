@@ -1,14 +1,43 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ConversationStatus, TranscriptEntry } from '@/types/speech-tutor';
-import { float32ToPcm16, arrayBufferToBase64 } from '@/utils/speechTutorAudio';
 import { StatusIndicator } from './StatusIndicator';
-import { ControlButton } from './ControlButton';
 import { TranscriptItem } from './TranscriptItem';
-import { AlertCircle, Github } from 'lucide-react';
+import { AlertCircle, Mic, Square, Volume2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+
+// TypeScript declarations for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
 
 interface SpeechTutorDialogProps {
   open: boolean;
@@ -20,447 +49,236 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [status, setStatus] = useState<ConversationStatus>(ConversationStatus.Idle);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const playbackContextRef = useRef<AudioContext | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const setupAcknowledgedRef = useRef<boolean>(false);
-  const intentionalDisconnectRef = useRef<boolean>(false);
-  const reconnectAttemptsRef = useRef<number>(0);
-  const keepaliveIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const transcriptBufferRef = useRef<{ input: string; output: string }>({ input: '', output: '' });
-  const MAX_RECONNECT_ATTEMPTS = 3;
+  const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
 
+  // Scroll to bottom when transcript updates
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [transcript]);
 
-  const stopSession = useCallback(() => {
-    console.log('[Speech Tutor] Stopping session...');
-    
-    // Mark as intentional disconnect
-    intentionalDisconnectRef.current = true;
-    
-    // Clear keepalive
-    if (keepaliveIntervalRef.current) {
-      clearInterval(keepaliveIntervalRef.current);
-      keepaliveIntervalRef.current = null;
+  // Check for SpeechRecognition support
+  const getSpeechRecognition = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setErrorMessage('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      return null;
     }
-    
-    // Stop WebSocket
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'User stopped session');
-      wsRef.current = null;
-    }
-
-    // Stop audio processing
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
-    }
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (playbackContextRef.current) {
-      playbackContextRef.current.close();
-      playbackContextRef.current = null;
-    }
-
-    setupAcknowledgedRef.current = false;
-    reconnectAttemptsRef.current = 0;
-    setStatus(ConversationStatus.Idle);
+    return new SpeechRecognition();
   }, []);
 
-  const playAudioResponse = useCallback(async (base64Audio: string) => {
-    try {
-      // Create playback context with 24kHz sample rate (Gemini output rate)
-      if (!playbackContextRef.current) {
-        playbackContextRef.current = new AudioContext({ sampleRate: 24000 });
+  // Text-to-Speech using browser API
+  const speakText = useCallback((text: string) => {
+    return new Promise<void>((resolve) => {
+      if (!('speechSynthesis' in window)) {
+        console.warn('Speech synthesis not supported');
+        resolve();
+        return;
       }
 
-      // Decode base64 to PCM data
-      const pcmData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0));
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
       
-      // Create WAV file with proper headers for 24kHz PCM
-      const wavData = createWavFile(pcmData, 24000);
+      // Try to detect language and set appropriate voice
+      const isPtBr = /[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(text) || 
+                     /\b(você|não|sim|muito|obrigado|bom|dia|olá)\b/i.test(text);
       
-      // Decode audio data - ensure we have a proper ArrayBuffer
-      const arrayBuffer = new ArrayBuffer(wavData.byteLength);
-      new Uint8Array(arrayBuffer).set(wavData);
-      const audioBuffer = await playbackContextRef.current.decodeAudioData(arrayBuffer);
+      utterance.lang = isPtBr ? 'pt-BR' : 'en-US';
       
-      // Play audio
-      const source = playbackContextRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(playbackContextRef.current.destination);
-      source.start(0);
-      
-      console.log('[Speech Tutor] Playing audio response');
-    } catch (error) {
-      console.error('[Speech Tutor] Error playing audio:', error);
-    }
+      // Try to find a good voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        v.lang.startsWith(isPtBr ? 'pt' : 'en') && 
+        (v.name.includes('Google') || v.name.includes('Microsoft') || v.localService)
+      );
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    });
   }, []);
 
-  const createWavFile = (pcmData: Uint8Array, sampleRate: number): Uint8Array => {
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcmData.length;
+  // Process user speech with Lovable AI
+  const processWithAI = useCallback(async (userText: string) => {
+    setIsProcessing(true);
     
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-    
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    writeString(36, 'data');
-    view.setUint32(40, dataSize, true);
-    
-    // Copy PCM data
-    const wavArray = new Uint8Array(buffer);
-    wavArray.set(pcmData, 44);
-    
-    return wavArray;
-  };
-
-  const startSession = useCallback(async () => {
     try {
-      setStatus(ConversationStatus.Connecting);
-      setErrorMessage('');
-      intentionalDisconnectRef.current = false;
+      // Add user message to transcript
+      setTranscript(prev => [...prev, { role: 'user', text: userText, timestamp: Date.now() }]);
+      
+      // Update conversation history
+      conversationHistoryRef.current.push({ role: 'user', content: userText });
 
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 24000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true
-        } 
+      const { data, error } = await supabase.functions.invoke('speech-tutor-lovable', {
+        body: { 
+          text: userText,
+          conversationHistory: conversationHistoryRef.current
+        }
       });
-      mediaStreamRef.current = stream;
 
-      // Set up audio context
-      const audioContext = new AudioContext({ sampleRate: 24000 });
-      audioContextRef.current = audioContext;
+      if (error) throw error;
 
-      const source = audioContext.createMediaStreamSource(stream);
-      sourceRef.current = source;
+      const aiResponse = data?.response || 'Desculpe, não consegui processar. Tente novamente.';
+      
+      // Add AI response to transcript
+      setTranscript(prev => [...prev, { role: 'tutor', text: aiResponse, timestamp: Date.now() }]);
+      
+      // Update conversation history
+      conversationHistoryRef.current.push({ role: 'assistant', content: aiResponse });
 
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
-
-      // Connect to secure proxy edge function (no API key exposed to frontend)
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error('Supabase URL not configured');
-      }
-
-      // Build correct WebSocket URL for Supabase Edge Functions (Gemini endpoint)
-      let wsFullUrl: string;
-      const projectRefMatch = supabaseUrl.match(/^https?:\/\/([a-zA-Z0-9-]+)\.supabase\.co$/);
-      if (projectRefMatch) {
-        // Production: use functions subdomain (required for WS)
-        const projectRef = projectRefMatch[1];
-        wsFullUrl = `wss://${projectRef}.functions.supabase.co/speech-tutor-gemini`;
-      } else {
-        // Local dev fallback via REST domain
-        const wsProtocol = supabaseUrl.startsWith('https') ? 'wss' : 'ws';
-        const wsUrl = supabaseUrl.replace(/^https?/, wsProtocol);
-        wsFullUrl = `${wsUrl}/functions/v1/speech-tutor-gemini`;
-      }
-
-      const ws = new WebSocket(wsFullUrl);
-      wsRef.current = ws;
-
-      // Connection timeout
-      const connectionTimeout = setTimeout(() => {
-        if (!setupAcknowledgedRef.current && ws.readyState !== WebSocket.CLOSED) {
-          console.error('[Speech Tutor] Connection timeout');
-          ws.close();
-          throw new Error('Connection timeout - server did not respond');
-        }
-      }, 10000); // 10 second timeout
-
-      ws.onopen = () => {
-        console.log('[Speech Tutor] WebSocket connected');
-        // Wait for session.created from Realtime API, then we'll send session.update
-      };
-
-      ws.onmessage = async (event) => {
-        if (event.data instanceof Blob) {
-          // Realtime API sends text frames, but guard anyway
-          return;
-        }
-        if (typeof event.data !== 'string') return;
-
-        try {
-          const data = JSON.parse(event.data as string);
-          console.log('[Speech Tutor] WS message type:', data.type);
-
-          // Handle proxy messages
-          if (data.type === 'proxy.ready') {
-            clearTimeout(connectionTimeout);
-            setupAcknowledgedRef.current = true;
-            setStatus(ConversationStatus.Listening);
-            console.log('[Speech Tutor] Proxy ready, upstream connection established');
-            toast({ title: 'Connected', description: 'Ready to start speaking' });
-            return;
-          }
-
-          if (data.type === 'proxy.error') {
-            console.error('[Speech Tutor] Proxy error:', data);
-            clearTimeout(connectionTimeout);
-            setErrorMessage(data.message || 'Proxy connection error');
-            setStatus(ConversationStatus.Error);
-            return;
-          }
-
-          if (data.type === 'proxy.closed') {
-            console.warn('[Speech Tutor] Proxy closed by upstream:', data);
-            clearTimeout(connectionTimeout);
-            const reason = data.reason || 'Connection closed by server';
-            setErrorMessage(`${reason} (Code: ${data.code})`);
-            setStatus(ConversationStatus.Error);
-            return;
-          }
-
-          // Session lifecycle
-          if (data.type === 'session.created') {
-            clearTimeout(connectionTimeout);
-            // Update default session config (audio in/out, VAD, etc.)
-            const update = {
-              event_id: `evt_${Date.now()}`,
-              type: 'session.update',
-              session: {
-                modalities: ['text', 'audio'],
-                voice: 'alloy',
-                input_audio_format: 'pcm16',
-                output_audio_format: 'pcm16',
-                input_audio_transcription: { model: 'whisper-1' },
-                turn_detection: {
-                  type: 'server_vad',
-                  threshold: 0.5,
-                  prefix_padding_ms: 300,
-                  silence_duration_ms: 1000,
-                },
-                temperature: 0.8,
-                max_response_output_tokens: 'inf',
-                instructions:
-                  'You are a bilingual (PT-BR + EN) speech tutor. Repeat user sentences with natural pronunciation, switching languages seamlessly. Be encouraging and concise.',
-              },
-            };
-            ws.send(JSON.stringify(update));
-            setupAcknowledgedRef.current = true;
-            setStatus(ConversationStatus.Listening);
-            toast({ title: 'Connected', description: 'Start speaking your mixed-language sentences' });
-            return;
-          }
-
-          // Audio stream from model (PCM16 base64 @24kHz)
-          if (data.type === 'response.audio.delta' && data.delta) {
-            await playAudioResponse(data.delta);
-            return;
-          }
-
-          // Transcripts from model
-          if (data.type === 'response.audio_transcript.delta' && data.delta) {
-            transcriptBufferRef.current.output += data.delta;
-            return;
-          }
-
-          // User transcript (if provided by server in future)
-          if (data.type === 'conversation.item.input_audio_transcription.completed' && data.transcript) {
-            transcriptBufferRef.current.input += data.transcript;
-            return;
-          }
-
-          // Response done -> flush transcript buffers
-          if (data.type === 'response.done') {
-            const input = transcriptBufferRef.current.input.trim();
-            const output = transcriptBufferRef.current.output.trim();
-            if (input || output) {
-              setTranscript((prev) => {
-                const appended: TranscriptEntry[] = [
-                  ...(input ? [{ role: 'user' as const, text: input, timestamp: Date.now() }] : []),
-                  ...(output ? [{ role: 'tutor' as const, text: output, timestamp: Date.now() }] : []),
-                ];
-                return [...prev, ...appended];
-              });
-            }
-            transcriptBufferRef.current = { input: '', output: '' };
-            return;
-          }
-        } catch (err) {
-          console.error('[Speech Tutor] Error parsing message', err);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('[Speech Tutor] WebSocket error:', error);
-        clearTimeout(connectionTimeout);
-        setErrorMessage('Connection error occurred');
-        setStatus(ConversationStatus.Error);
-      };
-
-      ws.onclose = (event) => {
-        console.log('[Speech Tutor] WebSocket closed', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          intentional: intentionalDisconnectRef.current
-        });
-        
-        clearTimeout(connectionTimeout);
-        
-        // Clear keepalive
-        if (keepaliveIntervalRef.current) {
-          clearInterval(keepaliveIntervalRef.current);
-          keepaliveIntervalRef.current = null;
-        }
-
-        // If intentional disconnect, do nothing (user stopped it)
-        if (intentionalDisconnectRef.current) {
-          console.log('[Speech Tutor] Intentional disconnect, cleaning up');
-          return;
-        }
-
-        // Handle unexpected disconnect
-        const isNormalClose = event.code === 1000;
-        const isAbnormalClose = event.code === 1006;
-        
-        if (!isNormalClose) {
-          console.error('[Speech Tutor] Unexpected disconnect:', event.code, event.reason);
-          
-          // Improve error message for model/API version issues
-          if (event.code === 1008 && event.reason.includes('not found for API version')) {
-            setErrorMessage('The speech model is incompatible. Please refresh and try again.');
-            setStatus(ConversationStatus.Error);
-            stopSession();
-            return;
-          }
-          
-          // Attempt reconnection if we haven't exceeded max attempts
-          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-            reconnectAttemptsRef.current++;
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 5000);
-            
-            setErrorMessage(`Connection lost. Reconnecting in ${delay/1000}s... (Attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
-            setStatus(ConversationStatus.Error);
-            
-            setTimeout(() => {
-              console.log(`[Speech Tutor] Reconnect attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS}`);
-              startSession();
-            }, delay);
-          } else {
-            setErrorMessage('Connection lost. Maximum reconnection attempts reached.');
-            setStatus(ConversationStatus.Error);
-            stopSession();
-            
-            toast({
-              title: 'Connection Failed',
-              description: 'Unable to maintain connection to the server. Please try again.',
-              variant: 'destructive',
-            });
-          }
-        }
-      };
-
-      // Process audio - only send after setup is acknowledged
-      processor.onaudioprocess = (e) => {
-        if (ws.readyState === WebSocket.OPEN && setupAcknowledgedRef.current) {
-          const inputData = e.inputBuffer.getChannelData(0);
-          const pcmData = float32ToPcm16(inputData);
-          const base64Audio = arrayBufferToBase64(pcmData);
-
-          // OpenAI Realtime: stream PCM16 at 24kHz
-          ws.send(JSON.stringify({
-            type: 'input_audio_buffer.append',
-            audio: base64Audio,
-          }));
-        }
-      };
-
-      source.connect(processor);
-      processor.connect(audioContext.destination);
+      // Speak the response
+      await speakText(aiResponse);
 
     } catch (error: any) {
-      console.error('[Speech Tutor] Error starting session:', error);
-      setErrorMessage(error.message || 'Failed to start session');
-      setStatus(ConversationStatus.Error);
-      stopSession();
-      
+      console.error('[Speech Tutor] AI processing error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to start session',
-        variant: 'destructive',
+        title: 'Erro',
+        description: error.message || 'Falha ao processar sua fala',
+        variant: 'destructive'
       });
+    } finally {
+      setIsProcessing(false);
     }
-  }, [toast, stopSession, playAudioResponse]);
+  }, [speakText, toast]);
 
+  // Start listening
+  const startListening = useCallback(() => {
+    const recognition = getSpeechRecognition();
+    if (!recognition) return;
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'pt-BR'; // Start with Portuguese, handles English too
+    
+    recognition.onstart = () => {
+      setStatus(ConversationStatus.Listening);
+      setErrorMessage('');
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const result = event.results[0];
+      if (result.isFinal) {
+        const text = result[0].transcript;
+        console.log('[Speech Tutor] Recognized:', text);
+        processWithAI(text);
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('[Speech Tutor] Recognition error:', event.error);
+      if (event.error === 'no-speech') {
+        setErrorMessage('Não detectei sua voz. Tente novamente.');
+      } else if (event.error === 'audio-capture') {
+        setErrorMessage('Microfone não encontrado. Verifique as permissões.');
+      } else if (event.error === 'not-allowed') {
+        setErrorMessage('Permissão de microfone negada. Habilite nas configurações do navegador.');
+      }
+      setStatus(ConversationStatus.Error);
+    };
+
+    recognition.onend = () => {
+      if (!isProcessing && !isSpeaking) {
+        setStatus(ConversationStatus.Idle);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [getSpeechRecognition, processWithAI, isProcessing, isSpeaking]);
+
+  // Stop listening
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    window.speechSynthesis.cancel();
+    setStatus(ConversationStatus.Idle);
+    setIsProcessing(false);
+    setIsSpeaking(false);
+  }, []);
+
+  // Handle main button click
   const handleControlClick = () => {
-    if (status === ConversationStatus.Listening) {
-      stopSession();
-    } else if (status === ConversationStatus.Idle || status === ConversationStatus.Error) {
-      startSession();
+    if (status === ConversationStatus.Listening || isProcessing || isSpeaking) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
+  // Cleanup on unmount or dialog close
   useEffect(() => {
     return () => {
-      stopSession();
+      stopListening();
     };
-  }, [stopSession]);
+  }, [stopListening]);
+
+  // Load voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
+  // Get button config
+  const getButtonConfig = () => {
+    if (isProcessing) {
+      return { icon: <Loader2 className="h-5 w-5 animate-spin" />, label: 'Processando...', variant: 'secondary' as const, disabled: true };
+    }
+    if (isSpeaking) {
+      return { icon: <Volume2 className="h-5 w-5" />, label: 'Falando...', variant: 'secondary' as const, disabled: false };
+    }
+    if (status === ConversationStatus.Listening) {
+      return { icon: <Square className="h-4 w-4" />, label: 'Parar', variant: 'destructive' as const, disabled: false };
+    }
+    return { icon: <Mic className="h-5 w-5" />, label: 'Falar', variant: 'default' as const, disabled: false };
+  };
+
+  const buttonConfig = getButtonConfig();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby="speech-tutor-desc" className="max-w-5xl h-[80vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Bilingual Speech Tutor
+            Tutor de Pronúncia Bilíngue
           </DialogTitle>
         </DialogHeader>
-        <p id="speech-tutor-desc" className="sr-only">Real-time bilingual speech tutor with voice input and audio responses.</p>
 
         <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
           {/* Left Panel - Controls */}
           <div className="flex flex-col gap-4">
             <div className="p-6 bg-card rounded-lg border space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Practice Your Pronunciation</h3>
+                <h3 className="text-lg font-semibold mb-2">Pratique sua Pronúncia</h3>
                 <p className="text-sm text-muted-foreground">
-                  Speak sentences mixing Brazilian Portuguese and English. The AI tutor will repeat them back with natural pronunciation.
+                  Fale frases em português, inglês ou misture os dois! O tutor vai repetir com a pronúncia correta e dar dicas.
                 </p>
               </div>
 
@@ -473,46 +291,61 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                 </Alert>
               )}
 
-              <ControlButton status={status} onClick={handleControlClick} />
+              <Button
+                onClick={handleControlClick}
+                disabled={buttonConfig.disabled}
+                variant={buttonConfig.variant}
+                size="lg"
+                className="w-full gap-2"
+              >
+                {buttonConfig.icon}
+                {buttonConfig.label}
+              </Button>
 
-              <div className="pt-4 border-t text-xs text-muted-foreground">
-                <p className="mb-1">Example:</p>
-                <p className="italic">"Eu preciso de help com meu projeto"</p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Exemplos para tentar:</strong></p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>"Hello, how are you?"</li>
+                  <li>"Olá, tudo bem?"</li>
+                  <li>"I want to learn português"</li>
+                  <li>"Eu gosto de coffee"</li>
+                </ul>
               </div>
             </div>
 
-            <div className="p-4 bg-accent/30 rounded-lg flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Powered by Gemini</span>
-              <a 
-                href="https://github.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Github className="h-4 w-4" />
-              </a>
+            <div className="p-4 bg-muted/50 rounded-lg text-sm">
+              <p className="font-medium mb-1">💡 Dica</p>
+              <p className="text-muted-foreground">
+                Clique em "Falar" e diga uma frase. O tutor vai ouvir, processar e responder com feedback de pronúncia.
+              </p>
             </div>
           </div>
 
           {/* Right Panel - Transcript */}
-          <div className="flex flex-col bg-card rounded-lg border">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Conversation</h3>
+          <div className="flex flex-col border rounded-lg overflow-hidden">
+            <div className="p-3 bg-muted/50 border-b">
+              <h3 className="font-semibold">Conversa</h3>
             </div>
             
-            <ScrollArea className="flex-1 p-4">
-              <div ref={scrollRef} className="space-y-4">
-                {transcript.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p className="mb-2">No conversation yet</p>
-                    <p className="text-sm">Start a session and speak to begin</p>
-                  </div>
-                ) : (
-                  transcript.map((entry, index) => (
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              {transcript.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Mic className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Clique em "Falar" para começar</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {transcript.map((entry, index) => (
                     <TranscriptItem key={index} entry={entry} />
-                  ))
-                )}
-              </div>
+                  ))}
+                  {isProcessing && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Processando...</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </ScrollArea>
           </div>
         </div>
