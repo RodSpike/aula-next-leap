@@ -15,9 +15,17 @@ import { PricingSection } from "@/components/PricingSection";
 import { FeaturedCourses } from "@/components/FeaturedCourses";
 import { StudentTestimonials } from "@/components/StudentTestimonials";
 import { useOnlineCounter } from "@/hooks/useOnlineCounter";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Index = () => {
   const onlineCount = useOnlineCounter();
+  
+  usePageMeta({
+    title: 'Aula Click - Aprenda Inglês Online | Cursos de Inglês A1 ao C2',
+    description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Comece seu teste grátis hoje!',
+    keywords: 'curso de inglês online, aprender inglês, aula de inglês, inglês para iniciantes, inglês intermediário, inglês avançado, curso de inglês Brasil',
+    canonicalPath: '/',
+  });
   
   const stats = [
     { icon: Users, label: "Estudantes Online", value: `${onlineCount}` },
@@ -50,12 +58,12 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <Navigation />
       <Hero />
       
       {/* Stats Section */}
-      <section className="py-16 bg-card">
+      <section className="py-16 bg-card" aria-label="Estatísticas da plataforma">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat) => (
@@ -72,30 +80,32 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-20" aria-label="Recursos da plataforma">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <header className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Por que escolher a Aula Click?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Uma plataforma completa de aprendizado online com tudo que você precisa para alcançar seus objetivos.
             </p>
-          </div>
+          </header>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature) => (
-              <Card key={feature.title} className="text-center hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <feature.icon className="h-8 w-8 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <article key={feature.title}>
+                <Card className="text-center hover:shadow-lg transition-shadow duration-300 h-full">
+                  <CardHeader>
+                    <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <feature.icon className="h-8 w-8 text-white" aria-hidden="true" />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </article>
             ))}
           </div>
         </div>
@@ -111,16 +121,16 @@ const Index = () => {
       <StudentTestimonials />
 
       {/* Placement Test Section */}
-      <section className="py-20 bg-card">
+      <section className="py-20 bg-card" aria-label="Teste de nivelamento">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="mb-12">
+          <header className="mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Descubra seu nível de inglês
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Faça nosso teste de nivelamento Cambridge gratuito e descubra exatamente onde você está no seu aprendizado de inglês.
             </p>
-          </div>
+          </header>
           
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8 space-y-6">
@@ -165,7 +175,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-20" aria-label="Chamada para ação">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Card className="bg-gradient-primary text-white p-12">
             <CardContent className="space-y-6">
@@ -198,7 +208,7 @@ const Index = () => {
           </Card>
         </div>
       </section>
-    </div>
+    </main>
   );
 };
 
