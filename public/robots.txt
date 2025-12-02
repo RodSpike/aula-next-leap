@@ -1,8 +1,12 @@
+# Robots.txt for Aula Click
+
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +16,12 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /settings
+Disallow: /profile
+Disallow: /messages
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://aulaclick.lovable.app/sitemap.xml

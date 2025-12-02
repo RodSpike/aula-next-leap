@@ -9,7 +9,16 @@ import { Eye, EyeOff, Mail, Lock, Chrome, Info } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
+
 export default function Login() {
+  usePageMeta({
+    title: 'Login - Aula Click | Acesse sua conta',
+    description: 'Faça login na Aula Click e continue sua jornada de aprendizado de inglês. Acesse seus cursos, exercícios e comunidade.',
+    keywords: 'login aula click, entrar conta, acesso cursos inglês',
+    canonicalPath: '/login',
+    noIndex: true,
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

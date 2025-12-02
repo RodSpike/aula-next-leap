@@ -1,0 +1,28 @@
+{
+  "name": "Aula Click - Aprenda Inglês Online",
+  "short_name": "Aula Click",
+  "description": "Plataforma de aprendizado de inglês online com cursos interativos, comunidade ativa e suporte com IA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/navicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/navicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "language learning"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

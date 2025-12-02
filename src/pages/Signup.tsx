@@ -11,8 +11,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Signup() {
+  usePageMeta({
+    title: 'Criar Conta - Aula Click | 7 Dias Grátis',
+    description: 'Crie sua conta na Aula Click e ganhe 7 dias grátis. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
+    keywords: 'criar conta, cadastro aula click, teste grátis inglês, aprender inglês grátis',
+    canonicalPath: '/signup',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);

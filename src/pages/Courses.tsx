@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, BookOpen, GraduationCap, Trophy, Lock, CheckCircle } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 interface Course {
   id: string;
@@ -38,6 +39,13 @@ const getLevelIcon = (level: string) => {
 };
 
 export default function Courses() {
+  usePageMeta({
+    title: 'Cursos de Inglês Online - Aula Click | Níveis A1 a C2',
+    description: 'Explore nossos cursos de inglês do nível A1 ao C2. Aprenda com lições estruturadas, exercícios práticos e acompanhe seu progresso.',
+    keywords: 'cursos de inglês, inglês A1, inglês A2, inglês B1, inglês B2, inglês C1, inglês C2, aprender inglês online',
+    canonicalPath: '/courses',
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -235,47 +243,49 @@ export default function Courses() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <Navigation />
       
       {/* Header */}
-      <section className="bg-gradient-subtle py-20">
+      <section className="bg-gradient-subtle py-20" aria-label="Cabeçalho dos cursos">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-6">
+          <header className="text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-              English Learning Levels
+              Cursos de Inglês Online
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Progress through structured English courses from A1 to C2. 
-              Complete assessments to unlock new levels.
+              Progrida através dos cursos estruturados de inglês do A1 ao C2. 
+              Complete avaliações para desbloquear novos níveis.
             </p>
             
             {/* Search */}
             <div className="max-w-md mx-auto relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
               <Input
-                placeholder="Search for courses..."
+                placeholder="Buscar cursos..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Buscar cursos"
               />
             </div>
-          </div>
+          </header>
         </div>
       </section>
 
       {/* Level Filters */}
-      <section className="py-8 border-b border-border">
+      <nav className="py-8 border-b border-border" aria-label="Filtros de nível">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3" role="group" aria-label="Filtrar por nível">
             <Button
               variant={selectedLevel === "All" ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedLevel("All")}
               className="flex items-center space-x-2"
+              aria-pressed={selectedLevel === "All"}
             >
-              <BookOpen className="h-4 w-4" />
-              <span>All Levels</span>
+              <BookOpen className="h-4 w-4" aria-hidden="true" />
+              <span>Todos os Níveis</span>
             </Button>
             {levelOrder.map((level) => {
               const Icon = getLevelIcon(level);
@@ -286,22 +296,23 @@ export default function Courses() {
                   size="sm"
                   onClick={() => setSelectedLevel(level)}
                   className="flex items-center space-x-2"
+                  aria-pressed={selectedLevel === level}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                   <span>{level}</span>
                 </Button>
               );
             })}
           </div>
         </div>
-      </section>
+      </nav>
 
       {/* Courses Grid */}
-      <section className="py-12">
+      <section className="py-12" aria-label="Lista de cursos">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-foreground">
-              {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''} found
+              {filteredCourses.length} curso{filteredCourses.length !== 1 ? 's' : ''} encontrado{filteredCourses.length !== 1 ? 's' : ''}
             </h2>
             
             <div className="flex items-center space-x-2">
@@ -314,24 +325,26 @@ export default function Courses() {
           {filteredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <article key={course.id}>
+                  <CourseCard course={course} />
+                </article>
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
+                <Search className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                No courses found
+                Nenhum curso encontrado
               </h3>
               <p className="text-muted-foreground">
-                Try adjusting your search or filters to find courses.
+                Tente ajustar sua busca ou filtros para encontrar cursos.
               </p>
             </div>
           )}
         </div>
       </section>
-    </div>
+    </main>
   );
 }

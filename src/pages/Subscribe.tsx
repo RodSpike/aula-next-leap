@@ -10,8 +10,16 @@ import { Check, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Subscribe() {
+  usePageMeta({
+    title: 'Assinar - Aula Click | 7 Dias Grátis + Acesso Completo',
+    description: 'Assine a Aula Click por apenas R$59,90/mês. 7 dias grátis, acesso a todos os cursos de inglês, tutor com IA e comunidade ativa.',
+    keywords: 'assinatura aula click, plano inglês online, curso inglês mensal, teste grátis inglês',
+    canonicalPath: '/subscribe',
+  });
+
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
