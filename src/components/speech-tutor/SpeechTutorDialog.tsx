@@ -58,18 +58,24 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     const saved = localStorage.getItem('speechTutorRate');
     return saved ? parseFloat(saved) : 0.9;
   });
+  const [maxListeningSeconds, setMaxListeningSeconds] = useState<number>(() => {
+    const saved = localStorage.getItem('speechTutorTimeout');
+    return saved ? parseInt(saved) : 30;
+  });
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const MAX_LISTENING_SECONDS = 30;
 
-  // Save speech rate to localStorage
+  // Save settings to localStorage
   useEffect(() => {
     localStorage.setItem('speechTutorRate', speechRate.toString());
   }, [speechRate]);
+
+  useEffect(() => {
+    localStorage.setItem('speechTutorTimeout', maxListeningSeconds.toString());
+  }, [maxListeningSeconds]);
 
   // Scroll to bottom when transcript updates
   useEffect(() => {
@@ -199,8 +205,8 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       listeningTimeoutRef.current = setTimeout(() => {
         console.log('[Speech Tutor] Timeout reached, stopping...');
         recognition.stop();
-        setErrorMessage('Tempo limite atingido (30s). Clique em "Falar" para tentar novamente.');
-      }, MAX_LISTENING_SECONDS * 1000);
+        setErrorMessage(`Tempo limite atingido (${maxListeningSeconds}s). Clique em "Falar" para tentar novamente.`);
+      }, maxListeningSeconds * 1000);
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -267,7 +273,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       setErrorMessage('Falha ao iniciar reconhecimento de voz. Tente novamente.');
       setStatus(ConversationStatus.Error);
     }
-  }, [getSpeechRecognition, processWithAI]);
+  }, [getSpeechRecognition, processWithAI, maxListeningSeconds]);
 
   // Stop listening
   const stopListening = useCallback(() => {
@@ -355,7 +361,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                 </p>
               </div>
 
-              <StatusIndicator status={status} interimText={interimText} maxSeconds={MAX_LISTENING_SECONDS} />
+              <StatusIndicator status={status} interimText={interimText} maxSeconds={maxListeningSeconds} />
 
               {errorMessage && (
                 <Alert variant="destructive">
@@ -405,6 +411,26 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                   <span>Lento</span>
                   <span>Normal</span>
                   <span>Rápido</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Tempo limite de escuta</span>
+                  <span>{maxListeningSeconds}s</span>
+                </div>
+                <Slider
+                  value={[maxListeningSeconds]}
+                  onValueChange={(value) => setMaxListeningSeconds(value[0])}
+                  min={10}
+                  max={60}
+                  step={5}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>10s</span>
+                  <span>30s</span>
+                  <span>60s</span>
                 </div>
               </div>
 
