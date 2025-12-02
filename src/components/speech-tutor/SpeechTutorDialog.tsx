@@ -182,45 +182,73 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     const recognition = getSpeechRecognition();
     if (!recognition) return;
 
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true; // Keep listening for longer
+    recognition.interimResults = true; // Show interim results for feedback
     recognition.lang = 'pt-BR'; // Start with Portuguese, handles English too
     
     recognition.onstart = () => {
+      console.log('[Speech Tutor] Recognition started');
       setStatus(ConversationStatus.Listening);
       setErrorMessage('');
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = event.results[0];
-      if (result.isFinal) {
-        const text = result[0].transcript;
-        console.log('[Speech Tutor] Recognized:', text);
+      console.log('[Speech Tutor] Got result, results length:', event.results.length);
+      const lastResult = event.results[event.results.length - 1];
+      
+      if (lastResult.isFinal) {
+        const text = lastResult[0].transcript;
+        console.log('[Speech Tutor] Final result:', text);
+        // Stop recognition before processing
+        recognition.stop();
         processWithAI(text);
+      } else {
+        // Show interim results for user feedback
+        console.log('[Speech Tutor] Interim:', lastResult[0].transcript);
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('[Speech Tutor] Recognition error:', event.error);
       if (event.error === 'no-speech') {
-        setErrorMessage('Não detectei sua voz. Tente novamente.');
+        setErrorMessage('Não detectei sua voz. Fale mais perto do microfone.');
       } else if (event.error === 'audio-capture') {
         setErrorMessage('Microfone não encontrado. Verifique as permissões.');
       } else if (event.error === 'not-allowed') {
         setErrorMessage('Permissão de microfone negada. Habilite nas configurações do navegador.');
+      } else if (event.error === 'aborted') {
+        // User or code stopped recognition, not an error
+        console.log('[Speech Tutor] Recognition aborted');
+      } else {
+        setErrorMessage(`Erro de reconhecimento: ${event.error}`);
       }
-      setStatus(ConversationStatus.Error);
+      if (event.error !== 'aborted') {
+        setStatus(ConversationStatus.Error);
+      }
     };
 
     recognition.onend = () => {
-      if (!isProcessing && !isSpeaking) {
-        setStatus(ConversationStatus.Idle);
-      }
+      console.log('[Speech Tutor] Recognition ended');
+      // Only reset to idle if we're not processing or speaking
+      setStatus(prev => {
+        if (prev === ConversationStatus.Listening) {
+          return ConversationStatus.Idle;
+        }
+        return prev;
+      });
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-  }, [getSpeechRecognition, processWithAI, isProcessing, isSpeaking]);
+    
+    try {
+      recognition.start();
+      console.log('[Speech Tutor] Recognition.start() called');
+    } catch (e) {
+      console.error('[Speech Tutor] Failed to start recognition:', e);
+      setErrorMessage('Falha ao iniciar reconhecimento de voz. Tente novamente.');
+      setStatus(ConversationStatus.Error);
+    }
+  }, [getSpeechRecognition, processWithAI]);
 
   // Stop listening
   const stopListening = useCallback(() => {
