@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ConversationStatus } from '@/types/speech-tutor';
 
 interface StatusIndicatorProps {
@@ -7,6 +7,32 @@ interface StatusIndicatorProps {
 }
 
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interimText }) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Timer for listening duration
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (status === ConversationStatus.Listening) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const getStatusConfig = () => {
     switch (status) {
       case ConversationStatus.Idle:
@@ -35,6 +61,13 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, interi
           )}
         </div>
         <span className="text-sm font-medium text-foreground">{config.label}</span>
+        
+        {/* Listening timer */}
+        {status === ConversationStatus.Listening && (
+          <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+            {formatTime(elapsedSeconds)}
+          </span>
+        )}
         
         {/* Audio level bars animation when detecting sound */}
         {isDetectingSound && (
