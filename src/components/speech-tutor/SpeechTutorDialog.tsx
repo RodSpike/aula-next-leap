@@ -108,16 +108,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Try to detect language and set appropriate voice
-      const isPtBr = /[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(text) || 
-                     /\b(você|não|sim|muito|obrigado|bom|dia|olá)\b/i.test(text);
+      // Always use English voice for fluency practice
+      utterance.lang = 'en-US';
       
-      utterance.lang = isPtBr ? 'pt-BR' : 'en-US';
-      
-      // Try to find a good voice
+      // Try to find a good English voice
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => 
-        v.lang.startsWith(isPtBr ? 'pt' : 'en') && 
+        v.lang.startsWith('en') && 
         (v.name.includes('Google') || v.name.includes('Microsoft') || v.localService)
       );
       if (preferredVoice) {
@@ -161,7 +158,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       if (error) throw error;
 
-      const aiResponse = data?.response || 'Desculpe, não consegui processar. Tente novamente.';
+      const aiResponse = data?.response || 'Sorry, I couldn\'t process that. Please try again.';
       
       // Store last tutor response for replay
       setLastTutorResponse(aiResponse);
@@ -194,7 +191,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
     recognition.continuous = true; // Keep listening for longer
     recognition.interimResults = true; // Show interim results for feedback
-    recognition.lang = 'pt-BR'; // Start with Portuguese, handles English too
+    recognition.lang = 'en-US'; // English only for fluency practice
     
     recognition.onstart = () => {
       console.log('[Speech Tutor] Recognition started');
@@ -205,7 +202,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       listeningTimeoutRef.current = setTimeout(() => {
         console.log('[Speech Tutor] Timeout reached, stopping...');
         recognition.stop();
-        setErrorMessage(`Tempo limite atingido (${maxListeningSeconds}s). Clique em "Falar" para tentar novamente.`);
+        setErrorMessage(`Timeout reached (${maxListeningSeconds}s). Click "Speak" to try again.`);
       }, maxListeningSeconds * 1000);
     };
 
@@ -236,16 +233,16 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('[Speech Tutor] Recognition error:', event.error);
       if (event.error === 'no-speech') {
-        setErrorMessage('Não detectei sua voz. Fale mais perto do microfone.');
+        setErrorMessage('No speech detected. Please speak closer to the microphone.');
       } else if (event.error === 'audio-capture') {
-        setErrorMessage('Microfone não encontrado. Verifique as permissões.');
+        setErrorMessage('Microphone not found. Please check your permissions.');
       } else if (event.error === 'not-allowed') {
-        setErrorMessage('Permissão de microfone negada. Habilite nas configurações do navegador.');
+        setErrorMessage('Microphone permission denied. Please enable it in browser settings.');
       } else if (event.error === 'aborted') {
         // User or code stopped recognition, not an error
         console.log('[Speech Tutor] Recognition aborted');
       } else {
-        setErrorMessage(`Erro de reconhecimento: ${event.error}`);
+        setErrorMessage(`Recognition error: ${event.error}`);
       }
       if (event.error !== 'aborted') {
         setStatus(ConversationStatus.Error);
@@ -270,7 +267,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       console.log('[Speech Tutor] Recognition.start() called');
     } catch (e) {
       console.error('[Speech Tutor] Failed to start recognition:', e);
-      setErrorMessage('Falha ao iniciar reconhecimento de voz. Tente novamente.');
+      setErrorMessage('Failed to start speech recognition. Please try again.');
       setStatus(ConversationStatus.Error);
     }
   }, [getSpeechRecognition, processWithAI, maxListeningSeconds]);
@@ -328,15 +325,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   // Get button config
   const getButtonConfig = () => {
     if (isProcessing) {
-      return { icon: <Loader2 className="h-5 w-5 animate-spin" />, label: 'Processando...', variant: 'secondary' as const, disabled: true };
+      return { icon: <Loader2 className="h-5 w-5 animate-spin" />, label: 'Processing...', variant: 'secondary' as const, disabled: true };
     }
     if (isSpeaking) {
-      return { icon: <Volume2 className="h-5 w-5" />, label: 'Falando...', variant: 'secondary' as const, disabled: false };
+      return { icon: <Volume2 className="h-5 w-5" />, label: 'Speaking...', variant: 'secondary' as const, disabled: false };
     }
     if (status === ConversationStatus.Listening) {
-      return { icon: <Square className="h-4 w-4" />, label: 'Parar', variant: 'destructive' as const, disabled: false };
+      return { icon: <Square className="h-4 w-4" />, label: 'Stop', variant: 'destructive' as const, disabled: false };
     }
-    return { icon: <Mic className="h-5 w-5" />, label: 'Falar', variant: 'default' as const, disabled: false };
+    return { icon: <Mic className="h-5 w-5" />, label: 'Speak', variant: 'default' as const, disabled: false };
   };
 
   const buttonConfig = getButtonConfig();
@@ -346,7 +343,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Tutor de Pronúncia Bilíngue
+            English Fluency Practice
           </DialogTitle>
         </DialogHeader>
 
@@ -355,9 +352,9 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           <div className="flex flex-col gap-4">
             <div className="p-6 bg-card rounded-lg border space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Pratique sua Pronúncia</h3>
+                <h3 className="text-lg font-semibold mb-2">Practice Your English</h3>
                 <p className="text-sm text-muted-foreground">
-                  Fale frases em português, inglês ou misture os dois! O tutor vai repetir com a pronúncia correta e dar dicas.
+                  Speak freely in English! Alex will chat with you, correct your pronunciation, and answer any questions about English.
                 </p>
               </div>
 
@@ -390,13 +387,13 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                   className="w-full gap-2"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Repetir última resposta
+                  Replay last response
                 </Button>
               )}
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Velocidade da fala</span>
+                  <span>Speech speed</span>
                   <span>{speechRate.toFixed(1)}x</span>
                 </div>
                 <Slider
@@ -408,15 +405,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                   className="w-full"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>Lento</span>
+                  <span>Slow</span>
                   <span>Normal</span>
-                  <span>Rápido</span>
+                  <span>Fast</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Tempo limite de escuta</span>
+                  <span>Listening timeout</span>
                   <span>{maxListeningSeconds}s</span>
                 </div>
                 <Slider
@@ -435,20 +432,20 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
               </div>
 
               <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>Exemplos para tentar:</strong></p>
+                <p><strong>Try saying:</strong></p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>"Hello, how are you?"</li>
-                  <li>"Olá, tudo bem?"</li>
-                  <li>"I want to learn português"</li>
-                  <li>"Eu gosto de coffee"</li>
+                  <li>"Hello, how are you today?"</li>
+                  <li>"What's the weather like?"</li>
+                  <li>"Can you explain the present perfect tense?"</li>
+                  <li>"I went to the store yesterday"</li>
                 </ul>
               </div>
             </div>
 
             <div className="p-4 bg-muted/50 rounded-lg text-sm">
-              <p className="font-medium mb-1">💡 Dica</p>
+              <p className="font-medium mb-1">💡 Tip</p>
               <p className="text-muted-foreground">
-                Clique em "Falar" e diga uma frase. O tutor vai ouvir, processar e responder com feedback de pronúncia.
+                Click "Speak" and say anything in English. Alex will chat with you, correct mistakes, and help you improve your fluency!
               </p>
             </div>
           </div>
@@ -456,14 +453,14 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           {/* Right Panel - Transcript */}
           <div className="flex flex-col border rounded-lg overflow-hidden">
             <div className="p-3 bg-muted/50 border-b">
-              <h3 className="font-semibold">Conversa</h3>
+              <h3 className="font-semibold">Conversation</h3>
             </div>
             
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               {transcript.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Mic className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Clique em "Falar" para começar</p>
+                  <p>Click "Speak" to start practicing</p>
                 </div>
               ) : (
                 <div className="space-y-3">
