@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Transaction {
   id: string;
@@ -133,10 +133,8 @@ const AdminPaymentHistory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      <div className="container mx-auto px-4 py-8">
+    <AppLayout>
+      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -263,7 +261,7 @@ const AdminPaymentHistory = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 

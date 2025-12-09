@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -185,22 +185,20 @@ export default function LevelTest() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <AppLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading level test...</p>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!test || questions.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <AppLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Level test not available</h1>
@@ -210,13 +208,12 @@ export default function LevelTest() {
             <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <AppLayout>
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {!testCompleted ? (
@@ -347,6 +344,6 @@ export default function LevelTest() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
