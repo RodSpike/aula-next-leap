@@ -19,7 +19,8 @@ import {
   Trophy, 
   Gamepad2, 
   MessageSquare, 
-  Shield, 
+  Shield,
+  BarChart3,
   Settings,
   LogOut,
   Mic,
@@ -270,7 +271,8 @@ export const AppSidebar = () => {
             
             {isAdmin && (
               <NavSection title="Admin" items={[
-                { name: "Painel Admin", href: "/admin", icon: Shield, color: "text-red-500" }
+                { name: "Painel Admin", href: "/admin", icon: Shield, color: "text-red-500" },
+                { name: "Analytics", href: "/admin/analytics", icon: BarChart3, color: "text-emerald-500" }
               ]} />
             )}
           </div>
