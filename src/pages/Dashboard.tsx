@@ -342,8 +342,8 @@ export default function Dashboard() {
 
           {/* Sidebar - 1 column */}
           <div className="space-y-4">
-            <DashboardVideoWidget />
             <DashboardWinner />
+            <DashboardVideoWidget />
             <CurrentWeekLeaderboard />
             <NotificationsPanel />
           </div>
