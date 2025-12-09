@@ -13,6 +13,7 @@ import { FirstTimeUserExperience } from "@/components/FirstTimeUserExperience";
 import { RealtimeNotificationsProvider } from "@/components/RealtimeNotificationsProvider";
 import { ActivityTrackingProvider } from "@/components/ActivityTrackingProvider";
 import { CelebrationProvider } from "@/contexts/CelebrationContext";
+import { SoundPreferencesProvider } from "@/contexts/SoundPreferencesContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -54,8 +55,9 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <BrowserRouter>
-        <AuthProvider>
+      <SoundPreferencesProvider>
+        <BrowserRouter>
+          <AuthProvider>
           <NavigationPersistence />
           <InitializeCourses />
           <RealtimeNotificationsProvider />
@@ -105,8 +107,9 @@ const App = () => (
               </Routes>
             </CelebrationProvider>
           </TooltipProvider>
-        </AuthProvider>
-      </BrowserRouter>
+          </AuthProvider>
+        </BrowserRouter>
+      </SoundPreferencesProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
