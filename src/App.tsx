@@ -10,6 +10,8 @@ import { InitializeCourses } from "@/components/InitializeCourses";
 import { FloatingChatBubble } from "@/components/FloatingChatBubble";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { FirstTimeUserExperience } from "@/components/FirstTimeUserExperience";
+import { RealtimeNotificationsProvider } from "@/components/RealtimeNotificationsProvider";
+import { ActivityTrackingProvider } from "@/components/ActivityTrackingProvider";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -18,6 +20,7 @@ import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import AiChat from "./pages/AiChat";
 import AdminPanel from "./pages/AdminPanel";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -52,6 +55,8 @@ const App = () => (
         <AuthProvider>
           <NavigationPersistence />
           <InitializeCourses />
+          <RealtimeNotificationsProvider />
+          <ActivityTrackingProvider />
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -87,6 +92,7 @@ const App = () => (
               <Route path="/enem-exam/:subjectId" element={<ProtectedRoute><EnemExam /></ProtectedRoute>} />
               <Route path="/admin/payment-history" element={<ProtectedRoute><AdminPaymentHistory /></ProtectedRoute>} />
               <Route path="/click-of-the-week" element={<ProtectedRoute><ClickOfTheWeek /></ProtectedRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
               <Route path="/mascot-preview" element={<MascotPreview />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
