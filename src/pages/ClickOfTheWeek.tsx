@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Heart, Trophy, Clock, ArrowLeft, CheckCircle, XCircle, Zap } from "lucide-react";
 import { useGamification } from "@/hooks/useGamification";
 import ClickLeaderboard from "@/components/click-of-week/ClickLeaderboard";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface Question {
   id: number;
@@ -293,100 +294,110 @@ const ClickOfTheWeek = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (showLeaderboard) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <Button variant="ghost" onClick={() => setShowLeaderboard(false)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-        </Button>
-        <ClickLeaderboard challengeId={challengeId} />
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background p-4">
+          <Button variant="ghost" onClick={() => setShowLeaderboard(false)} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+          </Button>
+          <ClickLeaderboard challengeId={challengeId} />
+        </div>
+      </AppLayout>
     );
   }
 
   if (gameOver && attempt) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-8 text-center space-y-6">
-          <div className="text-6xl">
-            {attempt.score === 50 ? "🏆" : attempt.score >= 40 ? "🎉" : attempt.lives_remaining > 0 ? "✨" : "💪"}
-          </div>
-          <h1 className="text-3xl font-bold">
-            {attempt.score === 50 ? "Perfeito!" : attempt.score >= 40 ? "Excelente!" : "Bom trabalho!"}
-          </h1>
-          <div className="text-5xl font-bold text-primary">{attempt.score}/50</div>
-          <p className="text-muted-foreground">
-            Você ganhou <span className="text-primary font-semibold">{attempt.score * 5} XP</span>
-          </p>
-          <div className="flex flex-col gap-3">
-            <Button onClick={() => setShowLeaderboard(true)}>
-              <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
-              Voltar ao Dashboard
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="max-w-md w-full p-8 text-center space-y-6">
+            <div className="text-6xl">
+              {attempt.score === 50 ? "🏆" : attempt.score >= 40 ? "🎉" : attempt.lives_remaining > 0 ? "✨" : "💪"}
+            </div>
+            <h1 className="text-3xl font-bold">
+              {attempt.score === 50 ? "Perfeito!" : attempt.score >= 40 ? "Excelente!" : "Bom trabalho!"}
+            </h1>
+            <div className="text-5xl font-bold text-primary">{attempt.score}/50</div>
+            <p className="text-muted-foreground">
+              Você ganhou <span className="text-primary font-semibold">{attempt.score * 5} XP</span>
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button onClick={() => setShowLeaderboard(true)}>
+                <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                Voltar ao Dashboard
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!canPlay && cooldownEnd) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-8 text-center space-y-6">
-          <Clock className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Aguarde para jogar novamente</h1>
-          <p className="text-muted-foreground">
-            Você poderá tentar novamente em:
-          </p>
-          <div className="text-4xl font-bold text-primary">
-            {formatCooldown(cooldownEnd)}
-          </div>
-          <Button variant="outline" onClick={() => setShowLeaderboard(true)}>
-            <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
-          </Button>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-            Voltar ao Dashboard
-          </Button>
-        </Card>
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="max-w-md w-full p-8 text-center space-y-6">
+            <Clock className="h-16 w-16 mx-auto text-muted-foreground" />
+            <h1 className="text-2xl font-bold">Aguarde para jogar novamente</h1>
+            <p className="text-muted-foreground">
+              Você poderá tentar novamente em:
+            </p>
+            <div className="text-4xl font-bold text-primary">
+              {formatCooldown(cooldownEnd)}
+            </div>
+            <Button variant="outline" onClick={() => setShowLeaderboard(true)}>
+              <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+              Voltar ao Dashboard
+            </Button>
+          </Card>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!attempt) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full p-8 text-center space-y-6">
-          <Zap className="h-20 w-20 mx-auto text-primary" />
-          <h1 className="text-3xl font-bold">Click of the Week</h1>
-          <p className="text-muted-foreground">
-            Teste seus conhecimentos em inglês! Responda 50 perguntas, mas cuidado - você só tem 3 vidas!
-          </p>
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3].map((i) => (
-              <Heart key={i} className="h-8 w-8 text-destructive fill-destructive" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            <Button size="lg" className="w-full" onClick={startGame}>
-              Começar Desafio
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => setShowLeaderboard(true)}>
-              <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
-            </Button>
-            <Button variant="ghost" className="w-full" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="max-w-lg w-full p-8 text-center space-y-6">
+            <Zap className="h-20 w-20 mx-auto text-primary" />
+            <h1 className="text-3xl font-bold">Click of the Week</h1>
+            <p className="text-muted-foreground">
+              Teste seus conhecimentos em inglês! Responda 50 perguntas, mas cuidado - você só tem 3 vidas!
+            </p>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3].map((i) => (
+                <Heart key={i} className="h-8 w-8 text-destructive fill-destructive" />
+              ))}
+            </div>
+            <div className="space-y-3">
+              <Button size="lg" className="w-full" onClick={startGame}>
+                Começar Desafio
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setShowLeaderboard(true)}>
+                <Trophy className="mr-2 h-4 w-4" /> Ver Ranking
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate('/dashboard')}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </AppLayout>
     );
   }
 
@@ -394,14 +405,17 @@ const ClickOfTheWeek = () => {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Carregando pergunta...</div>
-      </div>
+      <AppLayout showSidebar={false}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-muted-foreground">Carregando pergunta...</div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <AppLayout showSidebar={false}>
+      <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -504,6 +518,7 @@ const ClickOfTheWeek = () => {
         </Card>
       </div>
     </div>
+    </AppLayout>
   );
 };
 
