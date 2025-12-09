@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { gameSounds } from '@/utils/gameSounds';
 
 interface Achievement {
   id: string;
@@ -29,6 +30,13 @@ interface GamificationData {
   selected_badge_id: string | null;
   selected_frame_id: string | null;
 }
+
+// Callback for external celebration triggers (set by CelebrationProvider)
+let celebrationCallback: ((type: string, title?: string, subtitle?: string) => void) | null = null;
+
+export const setCelebrationCallback = (callback: typeof celebrationCallback) => {
+  celebrationCallback = callback;
+};
 
 export const useGamification = () => {
   const { user } = useAuth();
@@ -107,11 +115,20 @@ export const useGamification = () => {
 
       const result = data as any;
       if (result?.leveled_up) {
-        toast({
-          title: '🎉 Você subiu de nível!',
-          description: `Parabéns! Agora você é nível ${result.new_level}`,
-          duration: 5000,
-        });
+        // Play level up sound
+        gameSounds.playLevelUp();
+        
+        // Trigger celebration if callback is set
+        if (celebrationCallback) {
+          celebrationCallback('level_up', `NÍVEL ${result.new_level}!`, 'Você subiu de nível! Continue assim!');
+        } else {
+          // Fallback to toast if no celebration callback
+          toast({
+            title: '🎉 Você subiu de nível!',
+            description: `Parabéns! Agora você é nível ${result.new_level}`,
+            duration: 5000,
+          });
+        }
       }
 
       await fetchGamificationData();
@@ -135,12 +152,24 @@ export const useGamification = () => {
 
       const result = data as any;
       if (result?.unlocked) {
+        // Play achievement sound
+        gameSounds.playAchievement();
+        
         const achievement = achievements.find(a => a.achievements.key === achievementKey);
-        toast({
-          title: '🏆 Conquista Desbloqueada!',
-          description: `${achievement?.achievements.icon} ${achievement?.achievements.name}`,
-          duration: 5000,
-        });
+        const icon = achievement?.achievements.icon || '🏆';
+        const name = achievement?.achievements.name || 'Nova Conquista';
+        
+        // Trigger celebration if callback is set
+        if (celebrationCallback) {
+          celebrationCallback('achievement', 'CONQUISTA DESBLOQUEADA!', `${icon} ${name}`);
+        } else {
+          // Fallback to toast if no celebration callback
+          toast({
+            title: '🏆 Conquista Desbloqueada!',
+            description: `${icon} ${name}`,
+            duration: 5000,
+          });
+        }
       }
 
       await fetchAchievements();

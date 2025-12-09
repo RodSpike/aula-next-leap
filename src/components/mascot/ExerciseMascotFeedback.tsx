@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CupheadFoxMascot, CupheadFoxMood } from './CupheadFoxMascot';
+import { gameSounds } from '@/utils/gameSounds';
 
 interface ExerciseMascotFeedbackProps {
   isCorrect?: boolean | null;
@@ -28,9 +29,11 @@ export const ExerciseMascotFeedback: React.FC<ExerciseMascotFeedbackProps> = ({
         setMood('celebrating');
         setMessage('PERFEITO! Você acertou tudo!');
         setShowCelebration(true);
+        gameSounds.playCelebration();
       } else if (percentage >= 70) {
         setMood('happy');
         setMessage(`Muito bem! ${score}/${total} corretas!`);
+        gameSounds.playCorrect();
       } else if (percentage >= 50) {
         setMood('thinking');
         setMessage('Bom esforço! Continue praticando!');
@@ -42,10 +45,12 @@ export const ExerciseMascotFeedback: React.FC<ExerciseMascotFeedbackProps> = ({
       setMood('celebrating');
       setMessage(getRandomCorrectMessage());
       setShowCelebration(true);
+      gameSounds.playCorrect();
       setTimeout(() => setShowCelebration(false), 2000);
     } else if (isCorrect === false) {
       setMood('thinking');
       setMessage(getRandomIncorrectMessage());
+      gameSounds.playIncorrect();
     } else {
       setMood('thinking');
       setMessage('Pense bem antes de responder!');
