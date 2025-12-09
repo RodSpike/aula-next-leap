@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -637,9 +637,8 @@ export default function AiChat() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center min-h-[50vh]">
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh] animate-fade-in">
           <Card className="w-full max-w-md">
             <CardContent className="text-center p-8">
               <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -653,14 +652,14 @@ export default function AiChat() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={isFullscreen ? "fixed inset-0 z-50 bg-background" : "min-h-screen bg-background"}>
-      {!isFullscreen && <Navigation />}
-      
+    <div className={isFullscreen ? "fixed inset-0 z-50 bg-background" : ""}>
+      <AppLayout showSidebar={!isFullscreen}>
+      <div className="pb-24 md:pb-8 animate-fade-in">
       {!isFullscreen && (
         <section className="bg-gradient-subtle py-12">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -970,9 +969,11 @@ export default function AiChat() {
              <p className="text-xs text-muted-foreground mt-2">
                Faça perguntas em português ou inglês, use reconhecimento de voz automático, ou envie arquivos para análise! Use Enter para enviar.
              </p>
-          </div>
+           </div>
         </Card>
       </div>
+      </div>
+      </AppLayout>
     </div>
   );
 }

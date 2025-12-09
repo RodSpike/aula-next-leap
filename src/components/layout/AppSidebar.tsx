@@ -121,28 +121,30 @@ export const AppSidebar = () => {
     <Link
       to={item.href}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 group relative",
+        "hover:scale-[1.02] active:scale-[0.98]",
         isActive(item.href)
           ? "bg-primary/10 text-primary font-medium shadow-sm"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"
       )}
     >
       <item.icon className={cn(
-        "h-5 w-5 shrink-0 transition-colors",
-        isActive(item.href) ? "text-primary" : item.color
+        "h-5 w-5 shrink-0 transition-all duration-300",
+        isActive(item.href) ? "text-primary" : item.color,
+        "group-hover:scale-110"
       )} />
       {!collapsed && (
         <>
           <span className="flex-1 truncate">{item.name}</span>
           {item.badge && item.badge > 0 && (
-            <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center text-xs">
+            <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center text-xs animate-pulse">
               {item.badge > 99 ? '99+' : item.badge}
             </Badge>
           )}
         </>
       )}
       {collapsed && item.badge && item.badge > 0 && (
-        <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-[10px] text-white flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-[10px] text-white flex items-center justify-center animate-pulse">
           {item.badge > 9 ? '9+' : item.badge}
         </span>
       )}
@@ -165,17 +167,18 @@ export const AppSidebar = () => {
   return (
     <>
       <aside className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-card border-r border-border transition-all duration-300 flex flex-col",
+        "fixed left-0 top-0 z-40 h-screen bg-card border-r border-border flex flex-col",
+        "transition-all duration-300 ease-in-out",
         collapsed ? "w-[72px]" : "w-64"
       )}>
         {/* Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-primary rounded-xl flex items-center justify-center shadow-lg">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 bg-gradient-primary rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
             {!collapsed && (
-              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent animate-fade-in">
                 Aula Click
               </span>
             )}
@@ -183,7 +186,7 @@ export const AppSidebar = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8"
+            className="h-8 w-8 transition-transform duration-300 hover:scale-110"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

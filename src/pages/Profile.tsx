@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -275,31 +275,29 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
+      <AppLayout>
+        <div className="container mx-auto px-4 py-8 animate-fade-in">
+          <div className="text-center">Carregando...</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Profile not found</div>
+      <AppLayout>
+        <div className="container mx-auto px-4 py-8 animate-fade-in">
+          <div className="text-center">Perfil não encontrado</div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   const youtubeId = profile.favorite_song_url ? extractYoutubeId(profile.favorite_song_url) : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <AppLayout>
+      <div className="pb-24 md:pb-8 animate-fade-in">
       
       {/* Profile Header */}
       <div 
@@ -552,6 +550,7 @@ export default function Profile() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

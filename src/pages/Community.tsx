@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { PostInteractions } from "@/components/PostInteractions";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { OnlineStatus } from "@/components/OnlineStatus";
@@ -853,30 +853,29 @@ export default function Community() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center min-h-[50vh]">
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh] animate-fade-in">
           <Card className="w-full max-w-md">
             <CardContent className="text-center p-8">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Join the Community</h3>
+              <h3 className="text-lg font-semibold mb-2">Comunidade de Aprendizado</h3>
               <p className="text-muted-foreground mb-4">
-                Sign in to access community groups and connect with other English learners.
+                Entre para acessar grupos da comunidade e conectar-se com outros estudantes de inglês.
               </p>
             <Button asChild>
-              <Link to="/login">Sign In</Link>
+              <Link to="/login">Entrar</Link>
             </Button>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout>
       <NavigationPersistence />
-      <Navigation />
+      <div className="pb-24 md:pb-8 animate-fade-in">
       
       {/* Header */}
       <section className="relative bg-gradient-hero py-24 overflow-hidden">
@@ -1600,12 +1599,13 @@ export default function Community() {
           />
         )}
 
-         <UserProfilePopup
-           isOpen={isPopupOpen}
-           onOpenChange={setIsPopupOpen}
-           userId={selectedUserId}
-           profile={selectedProfile}
-         />
-       </div>
-     );
-   }
+        <UserProfilePopup
+          isOpen={isPopupOpen}
+          onOpenChange={setIsPopupOpen}
+          userId={selectedUserId}
+          profile={selectedProfile}
+        />
+      </div>
+    </AppLayout>
+  );
+}
