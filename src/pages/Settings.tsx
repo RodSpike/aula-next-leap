@@ -3,7 +3,8 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
-import { CreditCard, Bell, Shield } from "lucide-react";
+import { SoundSettings } from "@/components/settings/SoundSettings";
+import { CreditCard, Bell, Shield, Volume2 } from "lucide-react";
 
 export default function Settings() {
   return (
@@ -17,23 +18,31 @@ export default function Settings() {
           </div>
 
           <Tabs defaultValue="subscription" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="subscription" className="transition-all duration-300 data-[state=active]:scale-105">
                 <CreditCard className="w-4 h-4 mr-2" />
-                Assinatura
+                <span className="hidden sm:inline">Assinatura</span>
+              </TabsTrigger>
+              <TabsTrigger value="sounds" className="transition-all duration-300 data-[state=active]:scale-105">
+                <Volume2 className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Sons</span>
               </TabsTrigger>
               <TabsTrigger value="notifications" className="transition-all duration-300 data-[state=active]:scale-105">
                 <Bell className="w-4 h-4 mr-2" />
-                Notificações
+                <span className="hidden sm:inline">Notificações</span>
               </TabsTrigger>
               <TabsTrigger value="privacy" className="transition-all duration-300 data-[state=active]:scale-105">
                 <Shield className="w-4 h-4 mr-2" />
-                Privacidade
+                <span className="hidden sm:inline">Privacidade</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="subscription" className="space-y-4 animate-fade-in">
               <SubscriptionManager />
+            </TabsContent>
+
+            <TabsContent value="sounds" className="space-y-4 animate-fade-in">
+              <SoundSettings />
             </TabsContent>
 
             <TabsContent value="notifications" className="space-y-4 animate-fade-in">
