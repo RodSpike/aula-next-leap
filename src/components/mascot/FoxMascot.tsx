@@ -27,14 +27,28 @@ export const FoxMascot = ({
     setCurrentMood(mood);
   }, [mood]);
 
-  // Blink animation
+  // Blink animation - smooth transition without flash
   useEffect(() => {
     if (!animate) return;
-    const blinkInterval = setInterval(() => {
+    
+    let blinkTimeout: NodeJS.Timeout;
+    let intervalId: NodeJS.Timeout;
+    
+    const triggerBlink = () => {
       setIsBlinking(true);
-      setTimeout(() => setIsBlinking(false), 150);
-    }, 3000 + Math.random() * 2000);
-    return () => clearInterval(blinkInterval);
+      blinkTimeout = setTimeout(() => setIsBlinking(false), 150);
+      // Schedule next blink
+      const nextBlinkDelay = 3000 + Math.random() * 2000;
+      intervalId = setTimeout(triggerBlink, nextBlinkDelay);
+    };
+    
+    // Start first blink after initial delay
+    intervalId = setTimeout(triggerBlink, 2000 + Math.random() * 1000);
+    
+    return () => {
+      clearTimeout(blinkTimeout);
+      clearTimeout(intervalId);
+    };
   }, [animate]);
 
   const sizeClasses = {
@@ -86,8 +100,9 @@ export const FoxMascot = ({
           ${sizeClasses[size]} 
           ${getMoodAnimation()}
           relative cursor-pointer
-          transition-all duration-300
+          will-change-transform
         `}
+        style={{ transition: 'transform 0.3s ease-out' }}
         onMouseEnter={() => animate && setCurrentMood("excited")}
         onMouseLeave={() => animate && setCurrentMood(mood)}
       >

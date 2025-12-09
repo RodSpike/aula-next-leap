@@ -322,8 +322,8 @@ export default function Course() {
       if (error) throw error;
 
       toast({
-        title: "Lesson Complete!",
-        description: `You scored ${score}%. Great job!`,
+        title: "Lição Completa!",
+        description: `Você acertou ${score}%. Ótimo trabalho!`,
       });
 
       // Gamification: Award XP and achievements
@@ -334,16 +334,78 @@ export default function Course() {
       await updateAchievement('scholar');
       await updateAchievement('master_learner');
 
-      // Reload progress to update stats, but don't change current lesson
-      // This prevents automatic navigation after completing exercises
+      // Reload progress to update stats
       await loadProgress();
+
+      // Check if this is the last lesson and course is complete with passing grade
+      await checkCourseCompletion(score);
     } catch (error) {
       console.error('Error saving progress:', error);
       toast({
-        title: "Error",
-        description: "Failed to save progress",
+        title: "Erro",
+        description: "Falha ao salvar progresso",
         variant: "destructive",
       });
+    }
+  };
+
+  const checkCourseCompletion = async (currentLessonScore: number) => {
+    if (!user || !courseId || !course) return;
+
+    try {
+      // Get all lesson progress for this course
+      const lessonIds = lessons.map(l => l.id);
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_lesson_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('lesson_id', lessonIds);
+
+      if (progressError) throw progressError;
+
+      // Check if all lessons are completed
+      const completedLessons = progressData?.filter(p => p.completed) || [];
+      if (completedLessons.length < lessons.length) return;
+
+      // Calculate average score
+      const totalScore = completedLessons.reduce((sum, p) => sum + (p.score || 0), 0);
+      const averageScore = Math.round(totalScore / completedLessons.length);
+
+      // Check if user passed (70% or higher)
+      if (averageScore >= 70) {
+        // Check if certificate already exists
+        const { data: existingCert } = await supabase
+          .from('certificates')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('course_name', course.title)
+          .eq('certificate_type', 'completion')
+          .maybeSingle();
+
+        if (!existingCert) {
+          // Create certificate
+          const { error: certError } = await supabase
+            .from('certificates')
+            .insert({
+              user_id: user.id,
+              course_name: course.title,
+              certificate_type: 'completion',
+              issued_date: new Date().toISOString()
+            });
+
+          if (certError) throw certError;
+
+          // Award XP for course completion
+          await addXP(100, 'course_completed', `Completed course: ${course.title}`);
+
+          toast({
+            title: "🎉 Parabéns! Curso Concluído!",
+            description: `Você completou o curso "${course.title}" com ${averageScore}% de aproveitamento. Seu certificado está disponível!`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking course completion:', error);
     }
   };
 

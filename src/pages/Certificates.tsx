@@ -3,10 +3,11 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Calendar, Download, Award } from "lucide-react";
+import { Trophy, Calendar, Award } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { CertificatePDF } from "@/components/CertificatePDF";
 
 interface Certificate {
   id: string;
@@ -16,11 +17,17 @@ interface Certificate {
   created_at: string;
 }
 
+interface Profile {
+  display_name: string | null;
+  email: string;
+}
+
 export default function Certificates() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [certificatesLoading, setCertificatesLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,8 +38,24 @@ export default function Certificates() {
   useEffect(() => {
     if (user && !loading) {
       fetchCertificates();
+      fetchProfile();
     }
   }, [user, loading]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('user_id', user!.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const fetchCertificates = async () => {
     try {
@@ -55,7 +78,7 @@ export default function Certificates() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -67,10 +90,14 @@ export default function Certificates() {
       case 'level_advancement':
         return <Trophy className="h-8 w-8 text-yellow-600" />;
       case 'completion':
-        return <Award className="h-8 w-8 text-blue-600" />;
+        return <Award className="h-8 w-8 text-primary" />;
       default:
-        return <Award className="h-8 w-8 text-gray-600" />;
+        return <Award className="h-8 w-8 text-muted-foreground" />;
     }
+  };
+
+  const getStudentName = () => {
+    return profile?.display_name || profile?.email || 'Aluno';
   };
 
   if (loading) {
@@ -80,7 +107,7 @@ export default function Certificates() {
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading certificates...</p>
+            <p className="text-muted-foreground">Carregando certificados...</p>
           </div>
         </div>
       </div>
@@ -96,9 +123,9 @@ export default function Certificates() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Your Certificates</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Seus Certificados</h1>
           <p className="text-muted-foreground">
-            Track your achievements and download your certificates
+            Acompanhe suas conquistas e baixe seus certificados
           </p>
         </div>
 
@@ -128,31 +155,33 @@ export default function Certificates() {
                   <CardTitle className="text-lg">{certificate.course_name}</CardTitle>
                   <Badge variant="secondary" className="mx-auto">
                     {certificate.certificate_type === 'level_advancement' 
-                      ? 'Level Advancement' 
-                      : 'Course Completion'
+                      ? 'Avanço de Nível' 
+                      : 'Conclusão de Curso'
                     }
                   </Badge>
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
                   <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>Issued: {formatDate(certificate.issued_date)}</span>
+                    <span>Emitido: {formatDate(certificate.issued_date)}</span>
                   </div>
                   
-                  <div className="p-4 bg-gradient-primary/10 rounded-lg border border-primary/20">
+                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                     <div className="text-2xl mb-2">🏆</div>
                     <p className="text-sm font-medium">
-                      Congratulations on your achievement!
+                      Parabéns pela sua conquista!
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Certificate earned on {formatDate(certificate.created_at)}
+                      Certificado emitido em {formatDate(certificate.created_at)}
                     </p>
                   </div>
 
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Certificate
-                  </Button>
+                  <CertificatePDF
+                    studentName={getStudentName()}
+                    courseName={certificate.course_name}
+                    completionDate={certificate.issued_date}
+                    score={70}
+                  />
                 </CardContent>
               </Card>
             ))}
@@ -162,17 +191,17 @@ export default function Certificates() {
             <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
               <Award className="h-12 w-12 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">No Certificates Yet</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-4">Nenhum Certificado Ainda</h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Complete courses and advance your English level to earn certificates. 
-              Start learning today!
+              Complete cursos com no mínimo 70% de aproveitamento para receber seus certificados. 
+              Comece a aprender hoje!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button onClick={() => navigate('/courses')}>
-                Browse Courses
+                Ver Cursos
               </Button>
               <Button variant="outline" onClick={() => navigate('/placement-test')}>
-                Take Placement Test
+                Fazer Teste de Nivelamento
               </Button>
             </div>
           </div>
