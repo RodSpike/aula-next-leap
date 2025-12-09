@@ -11,6 +11,7 @@ import {
   Mic, Clock, Award, TrendingUp
 } from "lucide-react";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
 import DashboardWinner from "@/components/click-of-week/DashboardWinner";
 import CurrentWeekLeaderboard from "@/components/click-of-week/CurrentWeekLeaderboard";
 import { useAuth } from "@/hooks/useAuth";
@@ -341,6 +342,7 @@ export default function Dashboard() {
 
           {/* Sidebar - 1 column */}
           <div className="space-y-4">
+            <DashboardVideoWidget />
             <DashboardWinner />
             <CurrentWeekLeaderboard />
             <NotificationsPanel />
