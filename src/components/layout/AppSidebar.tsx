@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useGamification } from "@/hooks/useGamification";
@@ -26,7 +27,9 @@ import {
   Target,
   Home,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sun,
+  Moon
 } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 
@@ -62,6 +65,7 @@ interface NavItem {
 export const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const unreadCount = useUnreadMessages();
   const { gamificationData, getProgressToNextLevel, getXPForNextLevel } = useGamification();
@@ -69,6 +73,12 @@ export const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
 
@@ -268,6 +278,34 @@ export const AppSidebar = () => {
 
         {/* Bottom Actions */}
         <div className="p-3 border-t border-border space-y-2">
+          {/* Theme Toggle */}
+          {mounted && (
+            <Button 
+              variant="ghost" 
+              className={cn(
+                "w-full justify-start gap-2 transition-all duration-300",
+                collapsed && "justify-center px-0"
+              )}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              <div className="relative h-4 w-4">
+                <Sun className={cn(
+                  "h-4 w-4 absolute inset-0 transition-all duration-300",
+                  theme === 'dark' ? "opacity-0 rotate-90 scale-0" : "opacity-100 rotate-0 scale-100"
+                )} />
+                <Moon className={cn(
+                  "h-4 w-4 absolute inset-0 transition-all duration-300",
+                  theme === 'dark' ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-0"
+                )} />
+              </div>
+              {!collapsed && (
+                <span className="transition-all duration-200">
+                  {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+                </span>
+              )}
+            </Button>
+          )}
+
           {user && (
             <Button 
               variant="outline" 

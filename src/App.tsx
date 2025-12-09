@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { InitializeCourses } from "@/components/InitializeCourses";
 import { FloatingChatBubble } from "@/components/FloatingChatBubble";
@@ -46,52 +47,54 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <NavigationPersistence />
-        <InitializeCourses />
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <FloatingChatBubble />
-          <FirstTimeUserExperience />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/welcome" element={<Welcome />} />
-            <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
-            <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
-            <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-            <Route path="/course-management" element={<ProtectedRoute><CourseManagement /></ProtectedRoute>} />
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-            <Route path="/placement-test" element={<ProtectedRoute><PlacementTest /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/course/:courseId" element={<ProtectedRoute><Course /></ProtectedRoute>} />
-            <Route path="/level-test/:fromLevel/:toLevel" element={<ProtectedRoute><LevelTest /></ProtectedRoute>} />
-            <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-            <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
-            <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
-            <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/hangout" element={<ProtectedRoute><ClickHangout /></ProtectedRoute>} />
-            <Route path="/enem-tutor" element={<ProtectedRoute><EnemTutor /></ProtectedRoute>} />
-            <Route path="/enem-course" element={<ProtectedRoute><EnemCourse /></ProtectedRoute>} />
-            <Route path="/enem-lesson/:subjectId" element={<ProtectedRoute><EnemLesson /></ProtectedRoute>} />
-            <Route path="/enem-exam/:subjectId" element={<ProtectedRoute><EnemExam /></ProtectedRoute>} />
-            <Route path="/admin/payment-history" element={<ProtectedRoute><AdminPaymentHistory /></ProtectedRoute>} />
-            <Route path="/click-of-the-week" element={<ProtectedRoute><ClickOfTheWeek /></ProtectedRoute>} />
-            <Route path="/mascot-preview" element={<MascotPreview />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <BrowserRouter>
+        <AuthProvider>
+          <NavigationPersistence />
+          <InitializeCourses />
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <FloatingChatBubble />
+            <FirstTimeUserExperience />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/welcome" element={<Welcome />} />
+              <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+              <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+              <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+              <Route path="/ai-chat" element={<ProtectedRoute><AiChat /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+              <Route path="/course-management" element={<ProtectedRoute><CourseManagement /></ProtectedRoute>} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <Route path="/placement-test" element={<ProtectedRoute><PlacementTest /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/course/:courseId" element={<ProtectedRoute><Course /></ProtectedRoute>} />
+              <Route path="/level-test/:fromLevel/:toLevel" element={<ProtectedRoute><LevelTest /></ProtectedRoute>} />
+              <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+              <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+              <Route path="/chat-test" element={<ProtectedRoute><ChatTest /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/hangout" element={<ProtectedRoute><ClickHangout /></ProtectedRoute>} />
+              <Route path="/enem-tutor" element={<ProtectedRoute><EnemTutor /></ProtectedRoute>} />
+              <Route path="/enem-course" element={<ProtectedRoute><EnemCourse /></ProtectedRoute>} />
+              <Route path="/enem-lesson/:subjectId" element={<ProtectedRoute><EnemLesson /></ProtectedRoute>} />
+              <Route path="/enem-exam/:subjectId" element={<ProtectedRoute><EnemExam /></ProtectedRoute>} />
+              <Route path="/admin/payment-history" element={<ProtectedRoute><AdminPaymentHistory /></ProtectedRoute>} />
+              <Route path="/click-of-the-week" element={<ProtectedRoute><ClickOfTheWeek /></ProtectedRoute>} />
+              <Route path="/mascot-preview" element={<MascotPreview />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
