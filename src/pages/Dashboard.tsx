@@ -14,6 +14,7 @@ import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
 import DashboardWinner from "@/components/click-of-week/DashboardWinner";
 import CurrentWeekLeaderboard from "@/components/click-of-week/CurrentWeekLeaderboard";
+import { DashboardMascot } from "@/components/dashboard/DashboardMascot";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
@@ -196,6 +197,16 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Mascot with contextual message */}
+        <DashboardMascot
+          userName={userProfile?.display_name}
+          level={gamificationData?.current_level}
+          totalXp={gamificationData?.total_xp}
+          hasCompletedPlacementTest={!!userProfile?.cambridge_level}
+          coursesCount={courses.length}
+          recentAchievementsCount={recentAchievements.length}
+        />
 
         {/* Placement Test CTA */}
         {!userProfile?.cambridge_level && !statsLoading && (
