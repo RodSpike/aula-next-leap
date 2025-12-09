@@ -343,6 +343,7 @@ export default function Courses() {
           )}
         </div>
       </section>
-    </main>
+      </div>
+    </AppLayout>
   );
 }
