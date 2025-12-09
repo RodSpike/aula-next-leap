@@ -19,6 +19,7 @@ import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { EnglishTVManager } from "@/components/EnglishTVManager";
 import { EnemContentPopulator } from "@/components/EnemContentPopulator";
 import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
+import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles } from "lucide-react";
 
 interface UserData {
@@ -725,6 +726,9 @@ export default function AdminPanel() {
                  <div className="bg-background/50 p-6 rounded-lg border">
                    <EnglishTVManager />
                  </div>
+
+                 {/* Click of the Week Admin */}
+                 <ClickOfWeekAdmin />
                 
                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
