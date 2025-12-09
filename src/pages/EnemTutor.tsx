@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -169,9 +169,7 @@ Não se preocupe! Erros são parte fundamental do aprendizado. Vamos trabalhar j
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
+    <AppLayout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-6">
@@ -311,6 +309,6 @@ Não se preocupe! Erros são parte fundamental do aprendizado. Vamos trabalhar j
           </div>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 }

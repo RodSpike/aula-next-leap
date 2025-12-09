@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Brain, FileText, Microscope, Globe, Users, Calculator, Atom } from "lucide-react";
@@ -24,9 +24,7 @@ export default function EnemCourse() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
+    <AppLayout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
@@ -81,6 +79,6 @@ export default function EnemCourse() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 }

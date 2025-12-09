@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -115,15 +115,14 @@ export default function EnemExam() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <AppLayout>
         <div className="flex items-center justify-center h-[80vh]">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
             <p className="text-muted-foreground">Carregando simulado...</p>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -132,9 +131,7 @@ export default function EnemExam() {
     const mistakes = getMistakes();
     
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        
+      <AppLayout>
         <div className="max-w-4xl mx-auto px-4 py-8">
           <Card className="mb-6">
             <CardHeader>
@@ -219,16 +216,14 @@ export default function EnemExam() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   const question = questions[currentQuestion];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
+    <AppLayout>
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -295,6 +290,6 @@ export default function EnemExam() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 }
