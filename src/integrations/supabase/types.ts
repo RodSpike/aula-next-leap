@@ -1387,6 +1387,39 @@ export type Database = {
           },
         ]
       }
+      speech_tutor_sessions: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          messages_count: number | null
+          started_at: string
+          user_id: string
+          words_spoken: number | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          messages_count?: number | null
+          started_at?: string
+          user_id: string
+          words_spoken?: number | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          messages_count?: number | null
+          started_at?: string
+          user_id?: string
+          words_spoken?: number | null
+        }
+        Relationships: []
+      }
       study_sessions: {
         Row: {
           course_id: string | null

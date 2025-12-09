@@ -5,11 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ConversationStatus, TranscriptEntry } from '@/types/speech-tutor';
 import { StatusIndicator } from './StatusIndicator';
 import { TranscriptItem } from './TranscriptItem';
-import { AlertCircle, Mic, Square, Volume2, Loader2, RotateCcw } from 'lucide-react';
+import { SpeechTutorStats } from './SpeechTutorStats';
+import { AlertCircle, Mic, Square, Volume2, Loader2, RotateCcw, BarChart3 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 // TypeScript declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -47,6 +50,7 @@ interface SpeechTutorDialogProps {
 
 export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [status, setStatus] = useState<ConversationStatus>(ConversationStatus.Idle);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -54,6 +58,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
   const [interimText, setInterimText] = useState<string>('');
+  const [showStats, setShowStats] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(() => {
     const saved = localStorage.getItem('speechTutorRate');
     return saved ? parseFloat(saved) : 0.9;
@@ -67,6 +72,12 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Session tracking
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStartRef = useRef<Date | null>(null);
+  const messageCountRef = useRef<number>(0);
+  const wordsSpokenRef = useRef<number>(0);
 
   // Save settings to localStorage
   useEffect(() => {
@@ -83,6 +94,68 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [transcript]);
+
+  // Start a new session when dialog opens
+  const startSession = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('speech_tutor_sessions')
+        .insert({
+          user_id: user.id,
+          started_at: new Date().toISOString(),
+          messages_count: 0,
+          words_spoken: 0,
+          duration_seconds: 0
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      sessionIdRef.current = data.id;
+      sessionStartRef.current = new Date();
+      messageCountRef.current = 0;
+      wordsSpokenRef.current = 0;
+    } catch (error) {
+      console.error('Error starting session:', error);
+    }
+  }, [user]);
+
+  // Update session when it ends
+  const endSession = useCallback(async () => {
+    if (!sessionIdRef.current || !sessionStartRef.current || !user) return;
+    
+    try {
+      const endTime = new Date();
+      const durationSeconds = Math.round((endTime.getTime() - sessionStartRef.current.getTime()) / 1000);
+      
+      await supabase
+        .from('speech_tutor_sessions')
+        .update({
+          ended_at: endTime.toISOString(),
+          duration_seconds: durationSeconds,
+          messages_count: messageCountRef.current,
+          words_spoken: wordsSpokenRef.current
+        })
+        .eq('id', sessionIdRef.current);
+      
+      sessionIdRef.current = null;
+      sessionStartRef.current = null;
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+  }, [user]);
+
+  // Handle dialog open/close
+  useEffect(() => {
+    if (open && user) {
+      startSession();
+    } else if (!open && sessionIdRef.current) {
+      endSession();
+    }
+  }, [open, user, startSession, endSession]);
 
   // Check for SpeechRecognition support
   const getSpeechRecognition = useCallback(() => {
@@ -141,6 +214,11 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   // Process user speech with Lovable AI
   const processWithAI = useCallback(async (userText: string) => {
     setIsProcessing(true);
+    
+    // Track words spoken
+    const wordCount = userText.split(/\s+/).filter(w => w.length > 0).length;
+    wordsSpokenRef.current += wordCount;
+    messageCountRef.current += 1;
     
     try {
       // Add user message to transcript
@@ -340,14 +418,28 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             English Fluency Practice
           </DialogTitle>
+          <Button
+            variant={showStats ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowStats(!showStats)}
+            className="gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            {showStats ? 'Practice' : 'Stats'}
+          </Button>
         </DialogHeader>
 
-        <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
+        {showStats ? (
+          <div className="flex-1 overflow-auto p-4">
+            <SpeechTutorStats />
+          </div>
+        ) : (
+          <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
           {/* Left Panel - Controls */}
           <div className="flex flex-col gap-4">
             <div className="p-6 bg-card rounded-lg border space-y-4">
@@ -478,6 +570,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
             </ScrollArea>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
