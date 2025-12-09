@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AchievementsList } from '@/components/gamification/AchievementsList';
 import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { BadgeFrameSelector } from '@/components/gamification/BadgeFrameSelector';
@@ -12,6 +13,7 @@ const Achievements = () => {
   return (
     <AppLayout>
       <main className="container mx-auto px-4 py-8 pb-24 md:pb-8 animate-fade-in">
+        <Breadcrumb />
         <div className="max-w-6xl mx-auto space-y-8">
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5 hover:shadow-lg transition-all duration-300">
             <CardContent className="py-8">
