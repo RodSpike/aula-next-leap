@@ -8,8 +8,12 @@ import { FeaturedCourses } from "@/components/FeaturedCourses";
 import { StudentTestimonials } from "@/components/StudentTestimonials";
 import { CTASection } from "@/components/landing/CTASection";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 const Index = () => {
+  const { user } = useAuth();
+
   usePageMeta({
     title: 'Aula Click - Aprenda Inglês Online | Cursos de Inglês A1 ao C2',
     description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Comece seu teste grátis hoje!',
@@ -17,9 +21,10 @@ const Index = () => {
     canonicalPath: '/',
   });
 
-  return (
-    <main className="min-h-screen bg-background">
-      <Navigation />
+  const content = (
+    <>
+      {/* Only show public Navigation for non-logged users */}
+      {!user && <Navigation />}
       
       {/* Hero Section com Mascote */}
       <HeroSection />
@@ -44,6 +49,23 @@ const Index = () => {
 
       {/* Final CTA */}
       <CTASection />
+    </>
+  );
+
+  // If user is logged in, wrap with AppLayout to show sidebar
+  if (user) {
+    return (
+      <AppLayout>
+        <main className="min-h-screen bg-background">
+          {content}
+        </main>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background">
+      {content}
     </main>
   );
 };
