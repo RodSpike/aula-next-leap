@@ -142,7 +142,7 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {isAdmin && (
+            {user && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -241,6 +241,17 @@ export const Navigation = () => {
                 )}
               </Link>
             ))}
+            {user && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => { setSpeechTutorOpen(true); setIsOpen(false); }}
+                className="gap-2 mx-3"
+              >
+                <Mic className="h-4 w-4" />
+                AI Speech Tutor
+              </Button>
+            )}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">
               {user ? (
                 <>
