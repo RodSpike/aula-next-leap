@@ -336,6 +336,171 @@ export type Database = {
           },
         ]
       }
+      click_of_week_attempts: {
+        Row: {
+          answers: Json
+          challenge_id: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_question: number
+          id: string
+          lives_remaining: number
+          next_attempt_at: string | null
+          score: number
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          challenge_id: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_question?: number
+          id?: string
+          lives_remaining?: number
+          next_attempt_at?: string | null
+          score?: number
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          challenge_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_question?: number
+          id?: string
+          lives_remaining?: number
+          next_attempt_at?: string | null
+          score?: number
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "click_of_week_attempts_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "click_of_week_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      click_of_week_challenges: {
+        Row: {
+          created_at: string
+          difficulty: string
+          id: string
+          is_active: boolean
+          questions: Json
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
+      click_of_week_leaderboard: {
+        Row: {
+          attempts_count: number
+          best_score: number
+          challenge_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts_count?: number
+          best_score?: number
+          challenge_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts_count?: number
+          best_score?: number
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "click_of_week_leaderboard_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "click_of_week_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      click_of_week_winners: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          final_score: number
+          id: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          final_score: number
+          id?: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          final_score?: number
+          id?: string
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "click_of_week_winners_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: true
+            referencedRelation: "click_of_week_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_groups: {
         Row: {
           archived: boolean | null
@@ -1776,6 +1941,7 @@ export type Database = {
         Args: { audit_log_id: string }
         Returns: boolean
       }
+      can_attempt_click_of_week: { Args: { p_user_id: string }; Returns: Json }
       create_admin_post: {
         Args: {
           attachments_param?: Json
@@ -1784,6 +1950,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_current_week_challenge: { Args: never; Returns: string }
       get_nearby_users: {
         Args: { p_proximity_radius?: number; p_user_id: string }
         Returns: {

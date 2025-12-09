@@ -9,6 +9,8 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 import { OngoingChats } from "@/components/OngoingChats";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
+import DashboardWinner from "@/components/click-of-week/DashboardWinner";
+import CurrentWeekLeaderboard from "@/components/click-of-week/CurrentWeekLeaderboard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -408,6 +410,8 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             <NotificationsPanel />
+            <DashboardWinner />
+            <CurrentWeekLeaderboard />
           </div>
           <div className="lg:col-span-2 space-y-6">
             <Card>
