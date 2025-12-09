@@ -319,6 +319,11 @@ All colors MUST be HSL for consistency and theming.
     75% { transform: rotate(-20deg); }
   }
 
+  @keyframes wag {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
   @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
