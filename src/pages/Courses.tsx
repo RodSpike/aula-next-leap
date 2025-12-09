@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,22 +230,20 @@ export default function Courses() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <AppLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading courses...</p>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <Navigation />
-      
+    <AppLayout>
+      <div className="pb-24 md:pb-8">
       {/* Header */}
       <section className="bg-gradient-subtle py-20" aria-label="Cabeçalho dos cursos">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
