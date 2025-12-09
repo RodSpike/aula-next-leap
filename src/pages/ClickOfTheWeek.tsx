@@ -45,6 +45,7 @@ const ClickOfTheWeek = () => {
   const [isCorrect, setIsCorrect] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [displayedQuestionIndex, setDisplayedQuestionIndex] = useState<number>(0);
 
   useEffect(() => {
     if (user) {
@@ -109,6 +110,7 @@ const ClickOfTheWeek = () => {
         answers: attemptData.answers as number[],
         completed: attemptData.completed
       });
+      setDisplayedQuestionIndex(attemptData.current_question);
     }
 
     await loadQuestions(challengeId);
@@ -155,6 +157,7 @@ const ClickOfTheWeek = () => {
         answers: [],
         completed: false
       });
+      setDisplayedQuestionIndex(0);
 
       await updateAchievement('click_first_attempt');
     } catch (error) {
@@ -164,10 +167,10 @@ const ClickOfTheWeek = () => {
   };
 
   const handleAnswer = async (answerIndex: number) => {
-    if (!attempt || showResult || !questions[attempt.current_question]) return;
+    if (!attempt || showResult || !questions[displayedQuestionIndex]) return;
 
     setSelectedAnswer(answerIndex);
-    const currentQuestion = questions[attempt.current_question];
+    const currentQuestion = questions[displayedQuestionIndex];
     const correct = answerIndex === currentQuestion.correct_answer;
     setIsCorrect(correct);
     setShowResult(true);
@@ -277,6 +280,7 @@ const ClickOfTheWeek = () => {
   const nextQuestion = () => {
     setSelectedAnswer(null);
     setShowResult(false);
+    setDisplayedQuestionIndex(prev => prev + 1);
   };
 
   const formatCooldown = (endDate: Date) => {
@@ -386,7 +390,7 @@ const ClickOfTheWeek = () => {
     );
   }
 
-  const currentQuestion = questions[attempt.current_question];
+  const currentQuestion = questions[displayedQuestionIndex];
 
   if (!currentQuestion) {
     return (
@@ -420,10 +424,10 @@ const ClickOfTheWeek = () => {
         {/* Progress */}
         <div className="space-y-1">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Pergunta {attempt.current_question + 1} de 50</span>
-            <span>{Math.round((attempt.current_question / 50) * 100)}%</span>
+            <span>Pergunta {displayedQuestionIndex + 1} de 50</span>
+            <span>{Math.round(((displayedQuestionIndex + 1) / 50) * 100)}%</span>
           </div>
-          <Progress value={(attempt.current_question / 50) * 100} />
+          <Progress value={((displayedQuestionIndex + 1) / 50) * 100} />
         </div>
 
         {/* Question Card */}
