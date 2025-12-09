@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,24 +102,21 @@ export default function Certificates() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
+      <AppLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Carregando certificados...</p>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
+    <AppLayout>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -207,6 +204,6 @@ export default function Certificates() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }

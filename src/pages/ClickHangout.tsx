@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, MessageSquare } from "lucide-react";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import VirtualCampusMap from "@/components/hangout/VirtualCampusMap";
 import RoomChatInterface from "@/components/hangout/RoomChatInterface";
 import ProximityVoiceChat from "@/components/hangout/ProximityVoiceChat";
@@ -359,8 +359,7 @@ const ClickHangout = () => {
   }
 
   return (
-    <>
-      <Navigation />
+    <AppLayout>
       <div className="min-h-screen bg-background p-4">
         <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
@@ -463,7 +462,7 @@ const ClickHangout = () => {
         userId={selectedUserId}
         profile={selectedProfile}
       />
-    </>
+    </AppLayout>
   );
 };
 
