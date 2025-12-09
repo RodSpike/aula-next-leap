@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Play, Sparkles, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { FoxMascot } from "@/components/mascot/FoxMascot";
+import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
 import { GamificationStats } from "./GamificationStats";
 
 export const HeroSection = () => {
@@ -87,8 +87,8 @@ export const HeroSection = () => {
           {/* Right Content - Mascot */}
           <div className="flex-1 flex flex-col items-center gap-8">
             <div className="relative">
-              {/* Fox Mascot with message */}
-              <FoxMascot 
+              {/* Cuphead Fox Mascot with message */}
+              <CupheadFoxMascot 
                 mood="waving" 
                 size="xl" 
                 message="Oi! Eu sou o Click! Bora aprender? 🇬🇧" 

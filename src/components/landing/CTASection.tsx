@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronRight, CheckCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { FoxMascot } from "@/components/mascot/FoxMascot";
+import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
 
 export const CTASection = () => {
   const benefits = [
@@ -30,7 +30,7 @@ export const CTASection = () => {
           {/* Fox Mascot */}
           <div className="flex justify-center">
             <div className="bg-white/10 backdrop-blur-sm rounded-full p-4">
-              <FoxMascot mood="celebrating" size="lg" />
+              <CupheadFoxMascot mood="celebrating" size="lg" />
             </div>
           </div>
 

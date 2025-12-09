@@ -1,4 +1,4 @@
-import { FoxMascot } from "@/components/mascot/FoxMascot";
+import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
 
 const steps = [
   {
@@ -90,7 +90,7 @@ export const HowItWorksSection = () => {
 
         {/* Fox Mascot CTA */}
         <div className="mt-16 flex flex-col items-center gap-6">
-          <FoxMascot mood="excited" size="lg" message="Bora começar? É grátis! 🎮" />
+          <CupheadFoxMascot mood="excited" size="lg" message="Bora começar? É grátis! 🎮" />
         </div>
       </div>
     </section>
