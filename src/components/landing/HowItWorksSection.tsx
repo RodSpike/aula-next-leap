@@ -1,4 +1,4 @@
-import { ClickMascot } from "@/components/mascot/ClickMascot";
+import { FoxMascot } from "@/components/mascot/FoxMascot";
 
 const steps = [
   {
@@ -88,9 +88,9 @@ export const HowItWorksSection = () => {
           </div>
         </div>
 
-        {/* Mascot CTA */}
+        {/* Fox Mascot CTA */}
         <div className="mt-16 flex flex-col items-center gap-6">
-          <ClickMascot mood="excited" size="lg" message="Bora começar? É grátis! 🎮" />
+          <FoxMascot mood="excited" size="lg" message="Bora começar? É grátis! 🎮" />
         </div>
       </div>
     </section>
