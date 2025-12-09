@@ -152,3 +152,9 @@ verify_jwt = false
 
 [functions.speech-tutor-lovable]
 verify_jwt = false
+
+[functions.generate-click-of-week]
+verify_jwt = false
+
+[functions.generate-weekly-challenge]
+verify_jwt = false
