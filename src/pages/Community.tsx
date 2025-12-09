@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { PostInteractions } from "@/components/PostInteractions";
 import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { OnlineStatus } from "@/components/OnlineStatus";
@@ -876,8 +877,11 @@ export default function Community() {
     <AppLayout>
       <NavigationPersistence />
       <div className="pb-24 md:pb-8 animate-fade-in">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <Breadcrumb />
+        </div>
       
-      {/* Header */}
+        {/* Header */}
       <section className="relative bg-gradient-hero py-24 overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">

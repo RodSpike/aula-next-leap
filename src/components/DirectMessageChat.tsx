@@ -127,24 +127,34 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
   const fetchMessages = async () => {
     if (!groupId) return;
 
+    // Optimized: fetch messages with profiles in a single query using sender_id join
     const { data } = await supabase
       .from('group_chat_messages')
-      .select('id, content, created_at, sender_id, is_system_message')
+      .select(`
+        id, 
+        content, 
+        created_at, 
+        sender_id, 
+        is_system_message
+      `)
       .eq('group_id', groupId)
       .order('created_at', { ascending: true });
 
     if (data) {
-      const messagesWithProfiles = await Promise.all(
-        data.map(async (msg) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username, avatar_url')
-            .eq('user_id', msg.sender_id)
-            .single();
+      // Batch fetch all unique profiles at once
+      const uniqueSenderIds = [...new Set(data.map(m => m.sender_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, username, avatar_url')
+        .in('user_id', uniqueSenderIds);
 
-          return { ...msg, sender_profile: profile };
-        })
-      );
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      const messagesWithProfiles = data.map(msg => ({
+        ...msg,
+        sender_profile: profileMap.get(msg.sender_id)
+      }));
+      
       setMessages(messagesWithProfiles);
     }
   };
@@ -153,16 +163,39 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
     e.preventDefault();
     if (!newMessage.trim() || !user || !groupId) return;
 
+    const messageContent = newMessage.trim();
+    setNewMessage(''); // Clear immediately for better UX
+
+    // Optimistic update - add message to UI immediately
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      sender_id: user.id,
+      sender_profile: {
+        display_name: user.email?.split('@')[0],
+        avatar_url: undefined
+      }
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+
     const { error } = await supabase
       .from('group_chat_messages')
       .insert({
         group_id: groupId,
         sender_id: user.id,
-        content: newMessage.trim()
+        content: messageContent
       });
 
-    if (!error) {
-      setNewMessage('');
+    if (error) {
+      // Rollback on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      setNewMessage(messageContent);
+      toast({
+        title: "Erro ao enviar mensagem",
+        description: "Tente novamente",
+        variant: "destructive"
+      });
     }
   };
 

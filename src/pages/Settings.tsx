@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubscriptionManager } from "@/components/SubscriptionManager";
@@ -8,6 +9,7 @@ export default function Settings() {
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-8 pb-24 md:pb-8 animate-fade-in">
+        <Breadcrumb />
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Configurações</h1>

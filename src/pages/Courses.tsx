@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -231,11 +233,9 @@ export default function Courses() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading courses...</p>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+          <Breadcrumb />
+          <PageSkeleton variant="cards" />
         </div>
       </AppLayout>
     );
@@ -244,8 +244,12 @@ export default function Courses() {
   return (
     <AppLayout>
       <div className="pb-24 md:pb-8">
-      {/* Header */}
-      <section className="bg-gradient-subtle py-20" aria-label="Cabeçalho dos cursos">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <Breadcrumb />
+        </div>
+
+        {/* Header */}
+        <section className="bg-gradient-subtle py-20" aria-label="Cabeçalho dos cursos">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <header className="text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">

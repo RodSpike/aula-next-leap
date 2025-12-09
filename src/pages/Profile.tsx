@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -298,8 +299,11 @@ export default function Profile() {
   return (
     <AppLayout>
       <div className="pb-24 md:pb-8 animate-fade-in">
+        <div className="container mx-auto px-4 pt-4">
+          <Breadcrumb items={[{ label: profile.display_name || profile.username || 'Perfil' }]} />
+        </div>
       
-      {/* Profile Header */}
+        {/* Profile Header */}
       <div 
         className="relative h-64 bg-gradient-to-br from-primary to-secondary"
         style={{
