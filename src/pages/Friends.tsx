@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -453,30 +453,29 @@ export default function Friends() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center min-h-[50vh]">
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh] animate-fade-in">
           <Card className="w-full max-w-md">
             <CardContent className="text-center p-8">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Friends Network</h3>
+              <h3 className="text-lg font-semibold mb-2">Rede de Amigos</h3>
               <p className="text-muted-foreground mb-4">
-                Connect with other learners and practice together!
+                Conecte-se com outros estudantes e pratique juntos!
               </p>
               <Button asChild>
-                <Link to="/login">Log In</Link>
+                <Link to="/login">Entrar</Link>
               </Button>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <AppLayout>
+      <div className="pb-24 md:pb-8 animate-fade-in">
       
       {/* Header */}
       <section className="bg-gradient-hero py-20">
@@ -729,6 +728,7 @@ export default function Friends() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { Navigation } from "@/components/Navigation";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { UnifiedChatInterface } from "@/components/UnifiedChatInterface";
 import { DirectMessageChat } from "@/components/DirectMessageChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,29 +44,27 @@ export default function Messages() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="flex items-center justify-center min-h-[70vh]">
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[70vh] animate-fade-in">
           <div className="text-center space-y-4">
             <MessageCircle className="h-16 w-16 mx-auto text-muted-foreground" />
-            <h2 className="text-2xl font-bold">Messages</h2>
+            <h2 className="text-2xl font-bold">Mensagens</h2>
             <p className="text-muted-foreground">
-              Sign in to view your messages
+              Faça login para ver suas mensagens
             </p>
             <Button asChild>
-              <Link to="/login">Sign In</Link>
+              <Link to="/login">Entrar</Link>
             </Button>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (showDirectChat && friendData) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="h-[calc(100vh-4rem)]">
+      <AppLayout>
+        <div className="h-[calc(100vh-4rem)] pb-24 md:pb-0 animate-fade-in">
           <DirectMessageChat
             friendId={friendData.id}
             friendName={friendData.name}
@@ -78,14 +76,15 @@ export default function Messages() {
             }}
           />
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <UnifiedChatInterface />
-    </div>
+    <AppLayout>
+      <div className="pb-24 md:pb-0 animate-fade-in">
+        <UnifiedChatInterface />
+      </div>
+    </AppLayout>
   );
 }

@@ -146,22 +146,22 @@ export default function Dashboard() {
     badge?: string;
   }) => (
     <Link to={href}>
-      <Card className="group hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2 hover:border-primary/30 h-full">
+      <Card className="group hover:shadow-xl hover:scale-[1.03] transition-all duration-300 cursor-pointer border-2 hover:border-primary/30 h-full animate-fade-in">
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0`}>
+            <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
               <Icon className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-foreground truncate">{title}</h3>
                 {badge && (
-                  <Badge variant="secondary" className="text-xs">{badge}</Badge>
+                  <Badge variant="secondary" className="text-xs animate-pulse">{badge}</Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
           </div>
         </CardContent>
       </Card>
@@ -267,11 +267,11 @@ export default function Dashboard() {
                     ? (course.completedLessons / course.totalLessons) * 100 
                     : 0;
                   
-                  return (
-                    <Card key={course.id} className="hover:shadow-md transition-shadow">
+                    return (
+                    <Card key={course.id} className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${courses.indexOf(course) * 100}ms` }}>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center transition-transform duration-300 hover:scale-110">
                             <BookOpen className="h-6 w-6 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -282,13 +282,13 @@ export default function Dashboard() {
                               </Badge>
                             </div>
                             <div className="flex items-center gap-3">
-                              <Progress value={progress} className="flex-1 h-2" />
+                              <Progress value={progress} className="flex-1 h-2 transition-all duration-500" />
                               <span className="text-xs text-muted-foreground whitespace-nowrap">
                                 {course.completedLessons}/{course.totalLessons}
                               </span>
                             </div>
                           </div>
-                          <Button size="sm" variant="ghost" asChild>
+                          <Button size="sm" variant="ghost" asChild className="transition-transform duration-300 hover:scale-110">
                             <Link to={`/course/${course.id}`}>
                               <Play className="h-4 w-4" />
                             </Link>
