@@ -124,6 +124,90 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   }, [user]);
 
   // Update session when it ends
+  // Update achievements based on cumulative stats
+  const updateSpeechTutorAchievements = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Get total stats from all sessions
+      const { data: sessions, error } = await supabase
+        .from('speech_tutor_sessions')
+        .select('duration_seconds, messages_count, words_spoken')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      const totalSessions = sessions?.length || 0;
+      const totalMinutes = Math.floor((sessions?.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) || 0) / 60);
+      const totalMessages = sessions?.reduce((sum, s) => sum + (s.messages_count || 0), 0) || 0;
+      const totalWords = sessions?.reduce((sum, s) => sum + (s.words_spoken || 0), 0) || 0;
+      
+      // Session-based achievements
+      const sessionAchievements = [
+        { key: 'speech_first_session', requirement: 1 },
+        { key: 'speech_5_sessions', requirement: 5 },
+        { key: 'speech_25_sessions', requirement: 25 },
+        { key: 'speech_50_sessions', requirement: 50 },
+      ];
+      
+      for (const ach of sessionAchievements) {
+        if (totalSessions >= ach.requirement) {
+          await supabase.rpc('update_achievement_progress', {
+            p_user_id: user.id,
+            p_achievement_key: ach.key,
+            p_increment: totalSessions
+          });
+        }
+      }
+      
+      // Time-based achievements (in minutes)
+      const timeAchievements = [
+        { key: 'speech_10_minutes', requirement: 10 },
+        { key: 'speech_30_minutes', requirement: 30 },
+        { key: 'speech_60_minutes', requirement: 60 },
+        { key: 'speech_180_minutes', requirement: 180 },
+        { key: 'speech_300_minutes', requirement: 300 },
+      ];
+      
+      for (const ach of timeAchievements) {
+        if (totalMinutes >= ach.requirement) {
+          await supabase.rpc('update_achievement_progress', {
+            p_user_id: user.id,
+            p_achievement_key: ach.key,
+            p_increment: totalMinutes
+          });
+        }
+      }
+      
+      // Message-based achievement
+      if (totalMessages >= 100) {
+        await supabase.rpc('update_achievement_progress', {
+          p_user_id: user.id,
+          p_achievement_key: 'speech_100_messages',
+          p_increment: totalMessages
+        });
+      }
+      
+      // Word-based achievements
+      const wordAchievements = [
+        { key: 'speech_500_words', requirement: 500 },
+        { key: 'speech_1000_words', requirement: 1000 },
+      ];
+      
+      for (const ach of wordAchievements) {
+        if (totalWords >= ach.requirement) {
+          await supabase.rpc('update_achievement_progress', {
+            p_user_id: user.id,
+            p_achievement_key: ach.key,
+            p_increment: totalWords
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating achievements:', error);
+    }
+  }, [user]);
+
   const endSession = useCallback(async () => {
     if (!sessionIdRef.current || !sessionStartRef.current || !user) return;
     
@@ -141,12 +225,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
         })
         .eq('id', sessionIdRef.current);
       
+      // Update achievements after session ends
+      await updateSpeechTutorAchievements();
+      
       sessionIdRef.current = null;
       sessionStartRef.current = null;
     } catch (error) {
       console.error('Error ending session:', error);
     }
-  }, [user]);
+  }, [user, updateSpeechTutorAchievements]);
 
   // Handle dialog open/close
   useEffect(() => {
