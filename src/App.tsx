@@ -44,6 +44,7 @@ import EnemLesson from "./pages/EnemLesson";
 import EnemExam from "./pages/EnemExam";
 import ClickOfTheWeek from "./pages/ClickOfTheWeek";
 import MascotPreview from "./pages/MascotPreview";
+import PixelMascotPreview from "./pages/PixelMascotPreview";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/click-of-the-week" element={<ProtectedRoute><ClickOfTheWeek /></ProtectedRoute>} />
               <Route path="/admin/analytics" element={<ProtectedRoute><AdminAnalytics /></ProtectedRoute>} />
               <Route path="/mascot-preview" element={<MascotPreview />} />
+              <Route path="/pixel-mascot-preview" element={<PixelMascotPreview />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
