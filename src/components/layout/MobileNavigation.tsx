@@ -164,7 +164,7 @@ export const MobileNavigation = () => {
             </SheetTrigger>
             <SheetContent 
               side="bottom" 
-              className="h-auto max-h-[60vh] rounded-t-xl pb-20 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
+              className="h-auto max-h-[85vh] rounded-t-xl pb-8 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
             >
               <SheetHeader className="animate-fade-in">
                 <SheetTitle>Mais opções</SheetTitle>
