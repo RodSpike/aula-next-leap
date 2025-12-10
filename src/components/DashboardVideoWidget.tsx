@@ -99,7 +99,7 @@ export const DashboardVideoWidget = () => {
     setShowFullFeed(true);
     toast({
       title: "🎬 English TV Aberta!",
-      description: "Use ⬆️⬇️ para navegar entre os vídeos",
+      description: "Arraste ⬅️ para próximo ou ➡️ para voltar",
     });
   };
 
