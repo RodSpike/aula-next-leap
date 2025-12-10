@@ -117,7 +117,7 @@ export const DashboardMascot = ({
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-foreground text-lg" style={{ fontFamily: "serif" }}>
-            Click diz:
+            Clicky diz:
           </p>
           <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
             {message}

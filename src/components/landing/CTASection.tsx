@@ -1,53 +1,37 @@
 import { Button } from "@/components/ui/button";
-import { ChevronRight, CheckCircle, Sparkles } from "lucide-react";
+import { ChevronRight, CheckCircle, GraduationCap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
 
 export const CTASection = () => {
   const benefits = [
-    "7 dias grátis para testar tudo",
+    "7 dias grátis para testar",
     "Cancele quando quiser",
-    "Acesso a todos os cursos",
-    "Comunidade exclusiva",
-    "Tutor com IA 24/7"
+    "Todos os cursos inclusos",
+    "Tutor IA + Professores reais"
   ];
 
   return (
     <section className="py-20 relative overflow-hidden" aria-label="Chamada para ação">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-secondary opacity-95" />
-      
-      {/* Floating elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 text-4xl animate-bounce opacity-30">🎯</div>
-        <div className="absolute top-20 right-20 text-3xl animate-bounce delay-300 opacity-30">📚</div>
-        <div className="absolute bottom-10 left-1/4 text-4xl animate-bounce delay-500 opacity-30">🏆</div>
-        <div className="absolute bottom-20 right-1/4 text-3xl animate-bounce delay-700 opacity-30">⭐</div>
-      </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center space-y-8">
-          {/* Fox Mascot */}
-          <div className="flex justify-center">
-            <div className="bg-white/10 backdrop-blur-sm rounded-full p-4">
-              <CupheadFoxMascot mood="celebrating" size="lg" />
-            </div>
-          </div>
-
-          {/* Badge */}
+          {/* Professional badge */}
           <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium text-white">
-            <Sparkles className="h-4 w-4" />
-            <span>Oferta especial - Comece grátis hoje!</span>
+            <GraduationCap className="h-4 w-4" />
+            <span>Comece sua jornada hoje</span>
           </div>
 
-          {/* Main heading */}
+          {/* Main heading - professional */}
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white">
-            Pronto para dominar o inglês? 🚀
+            Pronto para dominar o inglês?
           </h2>
 
           <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-            Junte-se a mais de 10.000 estudantes que já transformaram seu inglês 
-            com a Aula Click. Sua jornada começa agora!
+            Junte-se a estudantes de todas as idades que estão transformando seu inglês 
+            com uma metodologia que combina <strong>tecnologia de IA</strong> e <strong>professores qualificados</strong>.
           </p>
 
           {/* Benefits */}
@@ -61,6 +45,16 @@ export const CTASection = () => {
                 <span className="text-sm text-white">{benefit}</span>
               </div>
             ))}
+          </div>
+
+          {/* Subtle mascot */}
+          <div className="flex justify-center items-center gap-4 py-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <CupheadFoxMascot mood="happy" size="sm" />
+            </div>
+            <p className="text-white/80 text-sm text-left max-w-xs">
+              <strong className="text-white">Clicky</strong> estará com você em cada etapa do seu aprendizado!
+            </p>
           </div>
 
           {/* CTA Buttons */}

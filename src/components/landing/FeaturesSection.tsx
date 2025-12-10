@@ -83,8 +83,8 @@ export const FeaturesSection = () => {
           </h2>
           
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Combinamos ciência do aprendizado com gamificação para tornar 
-            seu estudo de inglês eficiente E divertido! 🎯
+            Combinamos metodologia comprovada, tecnologia de IA e professores reais 
+            para um aprendizado eficiente e envolvente.
           </p>
         </header>
 
