@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { ChevronRight, CheckCircle, GraduationCap } from "lucide-react";
+import { ChevronRight, CheckCircle, GraduationCap, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
+import { useAuth } from "@/hooks/useAuth";
 
 export const CTASection = () => {
+  const { user } = useAuth();
   const benefits = [
     "7 dias grátis para testar",
     "Cancele quando quiser",
@@ -59,27 +61,43 @@ export const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Button 
-              size="xl" 
-              className="bg-white text-primary hover:bg-white/90 shadow-xl text-lg group"
-              asChild
-            >
-              <Link to="/signup">
-                Começar Teste Grátis de 7 Dias
-                <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="xl" 
-              className="bg-transparent border-white text-white hover:bg-white/10"
-              asChild
-            >
-              <Link to="/login">
-                Já tenho uma conta
-              </Link>
-            </Button>
+            {user ? (
+              <Button 
+                size="xl" 
+                className="bg-white text-primary hover:bg-white/90 shadow-xl text-lg group"
+                asChild
+              >
+                <Link to="/dashboard">
+                  <LayoutDashboard className="mr-2 h-5 w-5" />
+                  Ir para Dashboard
+                  <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  size="xl" 
+                  className="bg-white text-primary hover:bg-white/90 shadow-xl text-lg group"
+                  asChild
+                >
+                  <Link to="/signup">
+                    Começar Teste Grátis de 7 Dias
+                    <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="xl" 
+                  className="bg-transparent border-white text-white hover:bg-white/10"
+                  asChild
+                >
+                  <Link to="/login">
+                    Já tenho uma conta
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Trust badge */}
