@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [recentAchievements, setRecentAchievements] = useState<any[]>([]);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -63,19 +64,43 @@ export default function Dashboard() {
     try {
       setStatsLoading(true);
       
+      // Check if user is admin
+      const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
+      const isMasterAdmin = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
+      
+      const { data: hasAdminRole } = await supabase.rpc('has_role', {
+        _user_id: user!.id,
+        _role: 'admin'
+      });
+      
+      const adminUser = isMasterAdmin || hasAdminRole === true;
+      setIsAdmin(adminUser);
+      
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user!.id)
         .maybeSingle();
       
-      setUserProfile(profile);
+      // If admin and no cambridge_level, auto-set to C2
+      if (adminUser && !profile?.cambridge_level) {
+        await supabase
+          .from('profiles')
+          .update({ cambridge_level: 'C2' })
+          .eq('user_id', user!.id);
+        
+        setUserProfile({ ...profile, cambridge_level: 'C2' });
+      } else {
+        setUserProfile(profile);
+      }
       
-      if (profile?.cambridge_level) {
+      const effectiveLevel = adminUser && !profile?.cambridge_level ? 'C2' : profile?.cambridge_level;
+      
+      if (effectiveLevel) {
         const { data: levelCourses } = await supabase
           .from('courses')
           .select('*')
-          .eq('level', profile.cambridge_level)
+          .eq('level', effectiveLevel)
           .order('order_index');
         
         if (levelCourses) {
@@ -210,8 +235,8 @@ export default function Dashboard() {
           recentAchievementsCount={recentAchievements.length}
         />
 
-        {/* Placement Test CTA */}
-        {!userProfile?.cambridge_level && !statsLoading && (
+        {/* Placement Test CTA - Only for non-admin users */}
+        {!userProfile?.cambridge_level && !statsLoading && !isAdmin && (
           <Card className="border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row md:items-center gap-4">

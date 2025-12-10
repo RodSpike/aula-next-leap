@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, 
   Settings, Mic, UserCircle, Medal, Gamepad2, Moon, Sun,
-  Shield, BarChart3, CreditCard, GraduationCap, Tv, Users2
+  Shield, BarChart3, CreditCard, GraduationCap, Tv, Users2, ClipboardCheck
 } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 import { useTheme } from "next-themes";
@@ -76,6 +76,7 @@ export const MobileNavigation = () => {
     { name: "Gerenciar Cursos", href: "/course-management", icon: GraduationCap },
     { name: "English TV", href: "/admin", icon: Tv },
     { name: "Usuários Free", href: "/admin", icon: Users2 },
+    { name: "Teste de Nível", href: "/placement-test?admin_preview=true", icon: ClipboardCheck },
   ];
 
   const isActive = (path: string) => location.pathname === path;
