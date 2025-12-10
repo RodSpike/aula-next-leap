@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, BookOpen, Edit, Trash2 } from "lucide-react";
+import { Plus, BookOpen, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
 import { CourseLessonEnhancer } from "@/components/CourseLessonEnhancer";
@@ -24,6 +25,7 @@ interface Course {
   level: string;
   order_index: number;
   lessons_count: number;
+  admin_only: boolean;
 }
 
 export default function CourseManagement() {
@@ -103,6 +105,7 @@ export default function CourseManagement() {
         level: course.level,
         order_index: course.order_index,
         lessons_count: course.lessons?.[0]?.count || 0,
+        admin_only: course.admin_only || false,
       }));
 
       setCourses(formatted);
@@ -190,6 +193,33 @@ export default function CourseManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete course",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCourseVisibility = async (courseId: string, currentAdminOnly: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("courses")
+        .update({ admin_only: !currentAdminOnly })
+        .eq("id", courseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Visibilidade atualizada",
+        description: !currentAdminOnly 
+          ? "Curso agora está oculto para usuários" 
+          : "Curso agora está visível para todos",
+      });
+
+      fetchCourses();
+    } catch (error: any) {
+      console.error("Error toggling visibility:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Falha ao atualizar visibilidade",
         variant: "destructive",
       });
     }
@@ -296,53 +326,76 @@ export default function CourseManagement() {
             <div key={level} className="mb-8">
               <h2 className="text-2xl font-bold mb-4">Level {level}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {levelCourses.map((course) => (
-                  <Card key={course.id} className="hover:shadow-lg transition-all">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            {course.title}
-                          </CardTitle>
+                  {levelCourses.map((course) => (
+                    <Card key={course.id} className={`hover:shadow-lg transition-all ${course.admin_only ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              {course.title}
+                              {course.admin_only && (
+                                <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded-full">
+                                  Oculto
+                                </span>
+                              )}
+                            </CardTitle>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {course.description || "No description"}
-                      </p>
-                      
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{course.lessons_count} lessons</span>
-                      </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {course.description || "No description"}
+                        </p>
+                        
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <span>{course.lessons_count} lessons</span>
+                        </div>
 
-                      <CourseLessonEnhancer 
-                        courseId={course.id} 
-                        courseName={course.title}
-                      />
+                        {/* Visibility Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            {course.admin_only ? (
+                              <EyeOff className="h-4 w-4 text-yellow-600" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-green-600" />
+                            )}
+                            <span className="text-sm">
+                              {course.admin_only ? 'Oculto para usuários' : 'Visível para todos'}
+                            </span>
+                          </div>
+                          <Switch
+                            checked={!course.admin_only}
+                            onCheckedChange={() => toggleCourseVisibility(course.id, course.admin_only)}
+                          />
+                        </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => navigate(`/course/${course.id}`)}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteCourse(course.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <CourseLessonEnhancer 
+                          courseId={course.id} 
+                          courseName={course.title}
+                        />
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => navigate(`/course/${course.id}`)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteCourse(course.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </div>
           );
