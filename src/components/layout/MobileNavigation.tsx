@@ -111,24 +111,30 @@ export const MobileNavigation = () => {
                 )}
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-auto max-h-[50vh] rounded-t-xl">
-              <SheetHeader>
+            <SheetContent 
+              side="bottom" 
+              className="h-auto max-h-[50vh] rounded-t-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
+            >
+              <SheetHeader className="animate-fade-in">
                 <SheetTitle>Mais opções</SheetTitle>
               </SheetHeader>
               <div className="grid grid-cols-3 gap-4 py-4">
-                {moreItems.map((item) => (
+                {moreItems.map((item, index) => (
                   <Link
                     key={item.href}
                     to={item.href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-lg transition-colors",
+                      "flex flex-col items-center justify-center p-4 rounded-lg transition-all duration-200 hover:scale-105",
                       isActive(item.href)
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted"
                     )}
+                    style={{
+                      animation: moreOpen ? `fade-in 0.3s ease-out ${index * 0.05}s both` : undefined
+                    }}
                   >
-                    <item.icon className="h-6 w-6 mb-2" />
+                    <item.icon className="h-6 w-6 mb-2 transition-transform duration-200" />
                     <span className="text-xs font-medium text-center">{item.name}</span>
                   </Link>
                 ))}
