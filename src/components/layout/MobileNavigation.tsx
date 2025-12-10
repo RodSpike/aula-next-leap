@@ -21,6 +21,7 @@ export const MobileNavigation = () => {
   ];
 
   const moreItems = [
+    { name: "IA Chat", href: "/ai-chat", icon: MessageCircle },
     { name: "Conquistas", href: "/achievements", icon: Trophy },
     { name: "Click da Semana", href: "/click-of-the-week", icon: Gamepad2 },
     { name: "Amigos", href: "/friends", icon: UserCircle },
@@ -113,12 +114,12 @@ export const MobileNavigation = () => {
             </SheetTrigger>
             <SheetContent 
               side="bottom" 
-              className="h-auto max-h-[50vh] rounded-t-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
+              className="h-auto max-h-[60vh] rounded-t-xl pb-20 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom"
             >
               <SheetHeader className="animate-fade-in">
                 <SheetTitle>Mais opções</SheetTitle>
               </SheetHeader>
-              <div className="grid grid-cols-3 gap-4 py-4">
+              <div className="grid grid-cols-3 gap-4 py-4 pb-6">
                 {moreItems.map((item, index) => (
                   <Link
                     key={item.href}
