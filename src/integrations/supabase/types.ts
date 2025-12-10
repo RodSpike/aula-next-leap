@@ -707,6 +707,27 @@ export type Database = {
         }
         Relationships: []
       }
+      english_tv_video_likes: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: []
+      }
       english_tv_videos: {
         Row: {
           added_by: string | null

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Volume2, VolumeX, ThumbsUp, Eye, Play, Pause } from "lucide-react";
+import { X, Volume2, VolumeX, ThumbsUp, Eye, Play, Pause, Heart } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface VideoData {
   id: string;
@@ -30,9 +33,49 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
 }) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
-  const [touchStart, setTouchStart] = useState(0);
+  const [touchStartY, setTouchStartY] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [userId, setUserId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Get user and their likes
+  useEffect(() => {
+    const fetchUserAndLikes = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        
+        // Fetch user's likes
+        const { data: userLikes } = await supabase
+          .from('english_tv_video_likes')
+          .select('video_id')
+          .eq('user_id', user.id);
+        
+        if (userLikes) {
+          setLikedVideos(new Set(userLikes.map(l => l.video_id)));
+        }
+      }
+      
+      // Fetch like counts for all videos
+      const videoIds = videos.map(v => v.id);
+      const { data: allLikes } = await supabase
+        .from('english_tv_video_likes')
+        .select('video_id');
+      
+      if (allLikes) {
+        const counts: Record<string, number> = {};
+        allLikes.forEach(like => {
+          counts[like.video_id] = (counts[like.video_id] || 0) + 1;
+        });
+        setLikeCounts(counts);
+      }
+    };
+    
+    fetchUserAndLikes();
+  }, [videos]);
 
   // Initialize starting index from startVideoId
   useEffect(() => {
@@ -82,14 +125,70 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   }, [nextVideo, previousVideo, onClose]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientY);
+    setTouchStartY(e.touches[0].clientY);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEnd = e.changedTouches[0].clientY;
-    const diff = touchStart - touchEnd;
-    if (Math.abs(diff) > 50) {
-      diff > 0 ? nextVideo() : previousVideo();
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffY = touchStartY - touchEndY;
+    
+    // Swipe up = next video, Swipe down = previous video
+    if (Math.abs(diffY) > 50) {
+      if (diffY > 0) {
+        nextVideo();
+      } else {
+        previousVideo();
+      }
+    }
+  };
+
+  const handleLikeVideo = async () => {
+    if (!userId) {
+      toast({
+        title: "Login necessário",
+        description: "Faça login para curtir vídeos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const currentVideo = videos[currentVideoIndex];
+    if (!currentVideo) return;
+
+    const isLiked = likedVideos.has(currentVideo.id);
+
+    try {
+      if (isLiked) {
+        // Remove like
+        await supabase
+          .from('english_tv_video_likes')
+          .delete()
+          .eq('user_id', userId)
+          .eq('video_id', currentVideo.id);
+
+        setLikedVideos(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(currentVideo.id);
+          return newSet;
+        });
+        setLikeCounts(prev => ({
+          ...prev,
+          [currentVideo.id]: Math.max((prev[currentVideo.id] || 1) - 1, 0)
+        }));
+      } else {
+        // Add like
+        await supabase
+          .from('english_tv_video_likes')
+          .insert({ user_id: userId, video_id: currentVideo.id });
+
+        setLikedVideos(prev => new Set([...prev, currentVideo.id]));
+        setLikeCounts(prev => ({
+          ...prev,
+          [currentVideo.id]: (prev[currentVideo.id] || 0) + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
     }
   };
 
@@ -189,6 +288,26 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
 
         {/* Controls */}
         <div className="absolute bottom-4 right-4 flex flex-col gap-3">
+          <Button
+            onClick={handleLikeVideo}
+            className={cn(
+              "backdrop-blur-sm w-12 h-12 rounded-full border-0 transition-all duration-300",
+              likedVideos.has(currentVideo.id)
+                ? "bg-red-500 hover:bg-red-600 scale-110"
+                : "bg-black/50 hover:bg-black/70"
+            )}
+            size="icon"
+          >
+            <Heart 
+              className={cn(
+                "w-5 h-5 transition-all duration-300",
+                likedVideos.has(currentVideo.id) && "fill-white"
+              )} 
+            />
+          </Button>
+          <div className="text-white text-xs text-center -mt-2">
+            {likeCounts[currentVideo.id] || 0}
+          </div>
           <Button
             onClick={() => setIsMuted(!isMuted)}
             className="bg-black/50 backdrop-blur-sm w-12 h-12 rounded-full border-0"

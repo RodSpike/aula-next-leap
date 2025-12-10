@@ -4,14 +4,19 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, Settings, Mic, UserCircle, Medal, Gamepad2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, Settings, Mic, UserCircle, Medal, Gamepad2, Moon, Sun } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
+import { useTheme } from "next-themes";
 
 export const MobileNavigation = () => {
   const location = useLocation();
   const unreadCount = useUnreadMessages();
   const [moreOpen, setMoreOpen] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  
+  const isDark = theme === "dark";
 
   const navItems = [
     { name: "Home", href: "/dashboard", icon: Home },
@@ -119,7 +124,7 @@ export const MobileNavigation = () => {
               <SheetHeader className="animate-fade-in">
                 <SheetTitle>Mais opções</SheetTitle>
               </SheetHeader>
-              <div className="grid grid-cols-3 gap-4 py-4 pb-6">
+              <div className="grid grid-cols-3 gap-4 py-4">
                 {moreItems.map((item, index) => (
                   <Link
                     key={item.href}
@@ -139,6 +144,27 @@ export const MobileNavigation = () => {
                     <span className="text-xs font-medium text-center">{item.name}</span>
                   </Link>
                 ))}
+              </div>
+              
+              {/* Dark Mode Toggle */}
+              <div 
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 mb-6"
+                style={{
+                  animation: moreOpen ? `fade-in 0.3s ease-out ${moreItems.length * 0.05}s both` : undefined
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  {isDark ? (
+                    <Moon className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Sun className="h-5 w-5 text-amber-500" />
+                  )}
+                  <span className="text-sm font-medium">Modo Escuro</span>
+                </div>
+                <Switch
+                  checked={isDark}
+                  onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                />
               </div>
             </SheetContent>
           </Sheet>
