@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Volume2, VolumeX, ThumbsUp, Eye, Play, Pause, Heart } from "lucide-react";
+import { X, Volume2, VolumeX, ThumbsUp, Eye, Play, Pause, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -342,8 +342,24 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
           </div>
         </div>
 
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-          ⬅️ Arraste para navegar ➡️
+        {/* Navigation Buttons */}
+        <div className="absolute top-1/2 left-2 transform -translate-y-1/2 z-10">
+          <Button
+            onClick={previousVideo}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-12 h-12 border-0"
+            size="icon"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+        </div>
+        <div className="absolute top-1/2 right-20 transform -translate-y-1/2 z-10">
+          <Button
+            onClick={nextVideo}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-12 h-12 border-0"
+            size="icon"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </Button>
         </div>
 
         {/* Next Video Preview */}
