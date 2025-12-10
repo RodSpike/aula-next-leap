@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Play, ChevronRight, GraduationCap, Users, Bot, BookOpen } from "lucide-react";
+import { Play, ChevronRight, GraduationCap, Users, Bot, BookOpen, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
+import { useAuth } from "@/hooks/useAuth";
 
 export const HeroSection = () => {
+  const { user } = useAuth();
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden pt-20" aria-label="Seção principal">
       {/* Background decorations - more subtle */}
@@ -77,19 +79,31 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button variant="hero" size="xl" asChild className="group text-lg">
-                <Link to="/signup">
-                  Começar Teste Grátis
-                  <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              
-              <Button variant="outline" size="xl" asChild className="group">
-                <Link to="/courses">
-                  <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Conhecer Cursos
-                </Link>
-              </Button>
+              {user ? (
+                <Button variant="hero" size="xl" asChild className="group text-lg">
+                  <Link to="/dashboard">
+                    <LayoutDashboard className="mr-2 h-5 w-5" />
+                    Ir para Dashboard
+                    <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="hero" size="xl" asChild className="group text-lg">
+                    <Link to="/signup">
+                      Começar Teste Grátis
+                      <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+                  
+                  <Button variant="outline" size="xl" asChild className="group">
+                    <Link to="/courses">
+                      <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                      Conhecer Cursos
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Social Proof - professional */}
