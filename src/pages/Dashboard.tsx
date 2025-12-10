@@ -15,6 +15,7 @@ import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
 import DashboardWinner from "@/components/click-of-week/DashboardWinner";
 import CurrentWeekLeaderboard from "@/components/click-of-week/CurrentWeekLeaderboard";
 import { DashboardMascot } from "@/components/dashboard/DashboardMascot";
+import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [courses, setCourses] = useState<CourseProgress[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [recentAchievements, setRecentAchievements] = useState<any[]>([]);
+  const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -249,14 +251,27 @@ export default function Dashboard() {
             href="/community"
             color="bg-gradient-to-br from-purple-500 to-pink-500"
           />
-          <QuickActionCard
-            title="AI Speech Tutor"
-            description="Pratique conversação com IA"
-            icon={Mic}
-            href="#"
-            color="bg-gradient-to-br from-blue-500 to-cyan-500"
-          />
+          <div onClick={() => setSpeechTutorOpen(true)}>
+            <Card className="group hover:shadow-xl hover:scale-[1.03] transition-all duration-300 cursor-pointer border-2 hover:border-primary/30 h-full animate-fade-in">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                    <Mic className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground truncate">AI Speech Tutor</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">Pratique conversação com IA</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        <SpeechTutorDialog open={speechTutorOpen} onOpenChange={setSpeechTutorOpen} />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
