@@ -31,7 +31,8 @@ export const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
       {/* Main Content */}
       <main className={cn(
         "min-h-screen transition-all duration-300",
-        shouldShowSidebar && !isMobile && "md:pl-64"
+        shouldShowSidebar && !isMobile && "md:pl-64",
+        shouldShowSidebar && isMobile && "pb-20" // Add padding for mobile nav
       )}>
         {children}
       </main>
