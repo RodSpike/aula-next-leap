@@ -508,7 +508,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            English Fluency Practice
+            ClickAI - Fluência em Inglês
           </DialogTitle>
           <Button
             variant={showStats ? "default" : "outline"}

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { CheckCircle, XCircle, Trophy } from "lucide-react";
 import { useGamification } from "@/hooks/useGamification";
 import { ExerciseMascotFeedback } from "@/components/mascot/ExerciseMascotFeedback";
@@ -31,8 +30,14 @@ interface ExerciseActivityProps {
 }
 
 export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, onComplete }) => {
+  // Filter to keep only multiple choice exercises (exclude fill_blank/open text)
+  const multipleChoiceExercises = exercises.filter(ex => {
+    const type = ex.type || ex.exercise_type || 'multiple_choice';
+    return type === 'multiple_choice' && Array.isArray(ex.options) && ex.options.length > 0;
+  });
+
   const [currentExercise, setCurrentExercise] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<string[]>(new Array(exercises.length).fill(''));
+  const [userAnswers, setUserAnswers] = useState<string[]>(new Array(multipleChoiceExercises.length).fill(''));
   const [showResults, setShowResults] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
@@ -69,12 +74,12 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
     setShowAnswerFeedback(false);
     setLastAnswerCorrect(null);
     
-    if (currentExercise < exercises.length - 1) {
+    if (currentExercise < multipleChoiceExercises.length - 1) {
       setCurrentExercise(currentExercise + 1);
     } else {
       setShowResults(true);
       const score = calculateScore();
-      const totalPoints = exercises.length;
+      const totalPoints = multipleChoiceExercises.length;
       
       // Gamification: Award XP based on score
       const xpPerCorrect = 5;
@@ -96,18 +101,15 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
 
   const calculateScore = () => {
     return userAnswers.reduce((score, answer, index) => {
-      const correct = exercises[index].correct_answer ?? '';
-      const hasOptions = Array.isArray(exercises[index].options) && exercises[index].options.length > 0;
-      const isCorrect = hasOptions
-        ? answer === correct
-        : (answer || '').trim().toLowerCase() === correct.trim().toLowerCase();
+      const correct = multipleChoiceExercises[index]?.correct_answer ?? '';
+      const isCorrect = answer === correct;
       return isCorrect ? score + 1 : score;
     }, 0);
   };
 
-  if (!exercises || exercises.length === 0) return null;
+  if (!multipleChoiceExercises || multipleChoiceExercises.length === 0) return null;
 
-  const exercise = exercises[currentExercise];
+  const exercise = multipleChoiceExercises[currentExercise];
   const score = calculateScore();
 
   return (
@@ -127,7 +129,7 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
             Practice Exercises
-            <Badge variant="outline">{currentExercise + 1} / {exercises.length}</Badge>
+            <Badge variant="outline">{currentExercise + 1} / {multipleChoiceExercises.length}</Badge>
           </CardTitle>
         </CardHeader>
 
@@ -145,48 +147,36 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
                 <p className="text-lg">{exercise.question}</p>
               </div>
 
-              {exercise.options && exercise.options.length > 0 ? (
-                <RadioGroup 
-                  value={userAnswers[currentExercise]} 
-                  onValueChange={handleAnswer}
-                  className="space-y-2"
-                  disabled={showAnswerFeedback}
-                >
-                  {exercise.options.map((option, index) => {
-                    const isSelected = userAnswers[currentExercise] === option;
-                    const isCorrectOption = showAnswerFeedback && option === exercise.correct_answer;
-                    const isWrongSelection = showAnswerFeedback && isSelected && !lastAnswerCorrect;
-                    
-                    return (
-                      <div 
-                        key={index} 
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 ${
-                          isCorrectOption ? 'bg-green-500/20 border-2 border-green-500' :
-                          isWrongSelection ? 'bg-red-500/20 border-2 border-red-500' :
-                          ''
-                        }`}
-                      >
-                        <RadioGroupItem value={option} id={`option-${index}`} />
-                        <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                          {option}
-                        </Label>
-                        {isCorrectOption && <CheckCircle className="h-5 w-5 text-green-500" />}
-                        {isWrongSelection && <XCircle className="h-5 w-5 text-red-500" />}
-                      </div>
-                    );
-                  })}
-                </RadioGroup>
-              ) : (
-                <Input
-                  value={userAnswers[currentExercise]}
-                  onChange={(e) => handleAnswer(e.target.value)}
-                  placeholder="Digite sua resposta"
-                  disabled={showAnswerFeedback}
-                  className={showAnswerFeedback ? (
-                    lastAnswerCorrect ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'
-                  ) : ''}
-                />
-              )}
+              <RadioGroup 
+                value={userAnswers[currentExercise]} 
+                onValueChange={handleAnswer}
+                className="space-y-2"
+                disabled={showAnswerFeedback}
+              >
+                {exercise.options.map((option, index) => {
+                  const isSelected = userAnswers[currentExercise] === option;
+                  const isCorrectOption = showAnswerFeedback && option === exercise.correct_answer;
+                  const isWrongSelection = showAnswerFeedback && isSelected && !lastAnswerCorrect;
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-300 ${
+                        isCorrectOption ? 'bg-green-500/20 border-2 border-green-500' :
+                        isWrongSelection ? 'bg-red-500/20 border-2 border-red-500' :
+                        ''
+                      }`}
+                    >
+                      <RadioGroupItem value={option} id={`option-${index}`} />
+                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                        {option}
+                      </Label>
+                      {isCorrectOption && <CheckCircle className="h-5 w-5 text-green-500" />}
+                      {isWrongSelection && <XCircle className="h-5 w-5 text-red-500" />}
+                    </div>
+                  );
+                })}
+              </RadioGroup>
 
               <Button 
                 onClick={nextExercise}
@@ -196,7 +186,7 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
                 {showAnswerFeedback ? (
                   lastAnswerCorrect ? '✓ Correto!' : '✗ Incorreto...'
                 ) : (
-                  currentExercise === exercises.length - 1 ? 'Finalizar' : 'Próximo'
+                  currentExercise === multipleChoiceExercises.length - 1 ? 'Finalizar' : 'Próximo'
                 )}
               </Button>
             </>
@@ -207,23 +197,20 @@ export const ExerciseActivity: React.FC<ExerciseActivityProps> = ({ exercises, o
                 <ExerciseMascotFeedback 
                   isComplete={true}
                   score={score}
-                  total={exercises.length}
+                  total={multipleChoiceExercises.length}
                 />
               </div>
 
               <div className="text-center space-y-4">
-                <h3 className="text-xl font-bold">Pontuação: {score}/{exercises.length}</h3>
+                <h3 className="text-xl font-bold">Pontuação: {score}/{multipleChoiceExercises.length}</h3>
                 <p className="text-muted-foreground">Revise suas respostas abaixo</p>
               </div>
               
               <div className="space-y-3">
-                {exercises.map((ex, idx) => {
+                {multipleChoiceExercises.map((ex, idx) => {
                   const userAns = userAnswers[idx] || '';
                   const correct = ex.correct_answer || '';
-                  const hasOptions = Array.isArray(ex.options) && ex.options.length > 0;
-                  const isCorrect = hasOptions
-                    ? userAns === correct
-                    : userAns.trim().toLowerCase() === correct.trim().toLowerCase();
+                  const isCorrect = userAns === correct;
                   return (
                     <div key={idx} className={`p-3 rounded-md border-2 transition-all ${
                       isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'
