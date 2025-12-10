@@ -309,17 +309,17 @@ export const AppSidebar = () => {
           )}
 
           {user && (
-            <Button 
-              variant="outline" 
-              className={cn(
-                "w-full justify-start gap-2 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 hover:bg-primary/15",
-                collapsed && "justify-center px-0"
-              )}
-              onClick={() => setSpeechTutorOpen(true)}
-            >
-              <Mic className="h-4 w-4 text-primary" />
-              {!collapsed && <span>ClickAI</span>}
-            </Button>
+          <Button 
+            variant="outline" 
+            className={cn(
+              "w-full justify-start gap-2 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 hover:bg-primary/15",
+              collapsed && "justify-center px-0"
+            )}
+            onClick={() => setSpeechTutorOpen(true)}
+          >
+            <Mic className="h-4 w-4 text-primary" />
+            {!collapsed && <span>AI Speech Tutor</span>}
+          </Button>
           )}
           
           <Button 

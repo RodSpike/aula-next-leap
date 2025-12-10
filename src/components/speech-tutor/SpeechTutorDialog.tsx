@@ -508,7 +508,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            ClickAI - Fluência em Inglês
+            AI Speech Tutor - Fluência em Inglês
           </DialogTitle>
           <Button
             variant={showStats ? "default" : "outline"}
@@ -533,7 +533,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
               <div>
                 <h3 className="text-lg font-semibold mb-2">Practice Your English</h3>
                 <p className="text-sm text-muted-foreground">
-                  Speak freely in English! Alex will chat with you, correct your pronunciation, and answer any questions about English.
+                  Speak freely in English! ClickAI will chat with you, correct your pronunciation, and answer any questions about English.
                 </p>
               </div>
 
@@ -624,7 +624,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
             <div className="p-4 bg-muted/50 rounded-lg text-sm">
               <p className="font-medium mb-1">💡 Tip</p>
               <p className="text-muted-foreground">
-                Click "Speak" and say anything in English. Alex will chat with you, correct mistakes, and help you improve your fluency!
+                Click "Speak" and say anything in English. ClickAI will chat with you, correct mistakes, and help you improve your fluency!
               </p>
             </div>
           </div>
