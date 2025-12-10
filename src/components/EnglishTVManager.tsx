@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, ExternalLink, Plus, Video } from "lucide-react";
@@ -18,7 +17,6 @@ interface EnglishTVVideo {
 export const EnglishTVManager = () => {
   const [videos, setVideos] = useState<EnglishTVVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedVideoId, setSelectedVideoId] = useState<string>("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const { toast } = useToast();
 
@@ -122,7 +120,6 @@ export const EnglishTVManager = () => {
         description: "Vídeo removido com sucesso"
       });
 
-      setSelectedVideoId("");
       fetchVideos();
     } catch (error) {
       console.error('Error deleting video:', error);
@@ -133,8 +130,6 @@ export const EnglishTVManager = () => {
       });
     }
   };
-
-  const selectedVideo = videos.find(v => v.id === selectedVideoId);
 
   if (loading) {
     return <div className="text-center py-8">Carregando...</div>;
@@ -173,68 +168,67 @@ export const EnglishTVManager = () => {
         </div>
 
         {/* Video List */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label className="text-sm font-medium">
             Vídeos Cadastrados ({videos.length})
           </label>
-          <Select value={selectedVideoId} onValueChange={setSelectedVideoId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um vídeo para visualizar" />
-            </SelectTrigger>
-            <SelectContent>
+          
+          {videos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum vídeo cadastrado ainda
+            </div>
+          ) : (
+            <div className="space-y-3">
               {videos.map((video) => (
-                <SelectItem key={video.id} value={video.id}>
-                  {video.title || `Vídeo ${video.video_id}`}
-                </SelectItem>
+                <Card key={video.id} className="overflow-hidden">
+                  <div className="flex gap-4 p-4">
+                    {/* Thumbnail */}
+                    <a 
+                      href={video.youtube_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 relative group"
+                    >
+                      <img
+                        src={`https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`}
+                        alt={video.title || 'Video thumbnail'}
+                        className="w-32 h-20 object-cover rounded-md border"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                        <ExternalLink className="w-6 h-6 text-white" />
+                      </div>
+                    </a>
+                    
+                    {/* Video Info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">
+                        {video.title || `Vídeo ${video.video_id}`}
+                      </h4>
+                      <p className="text-xs text-muted-foreground font-mono mt-1 truncate">
+                        ID: {video.video_id}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {video.youtube_url}
+                      </p>
+                    </div>
+                    
+                    {/* Delete Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteVideo(video.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
         </div>
-
-        {/* Selected Video Actions */}
-        {selectedVideo && (
-          <Card className="bg-muted/50">
-            <CardContent className="pt-6 space-y-4">
-              <div>
-                <p className="text-sm font-medium mb-1">ID do Vídeo:</p>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {selectedVideo.video_id}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium mb-1">URL Completa:</p>
-                <p className="text-sm text-muted-foreground break-all">
-                  {selectedVideo.youtube_url}
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => window.open(selectedVideo.youtube_url, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Assistir no YouTube
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteVideo(selectedVideo.id)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Remover
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {videos.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhum vídeo cadastrado ainda
-          </div>
-        )}
       </CardContent>
     </Card>
   );
