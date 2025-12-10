@@ -32,7 +32,8 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   onVideoWatched
 }) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [touchStartX, setTouchStartX] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -86,24 +87,38 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   }, [startVideoId, videos]);
 
   const nextVideo = useCallback(() => {
-    setCurrentVideoIndex((prev) => {
-      const nextIndex = (prev + 1) % videos.length;
-      // mark current as watched
-      const current = videos[prev];
-      if (current && !watchedVideos.includes(current.id)) {
-        onVideoWatched(current.id);
-      }
-      return nextIndex;
-    });
-    setIsPlaying(true);
-    setHasError(false);
-  }, [videos, watchedVideos, onVideoWatched]);
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      setCurrentVideoIndex((prev) => {
+        const nextIndex = (prev + 1) % videos.length;
+        // mark current as watched
+        const current = videos[prev];
+        if (current && !watchedVideos.includes(current.id)) {
+          onVideoWatched(current.id);
+        }
+        return nextIndex;
+      });
+      setIsPlaying(true);
+      setHasError(false);
+      
+      setTimeout(() => setIsTransitioning(false), 300);
+    }, 150);
+  }, [videos, watchedVideos, onVideoWatched, isTransitioning]);
 
   const previousVideo = useCallback(() => {
-    setCurrentVideoIndex((prev) => (prev - 1 + videos.length) % videos.length);
-    setIsPlaying(true);
-    setHasError(false);
-  }, [videos.length]);
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      setCurrentVideoIndex((prev) => (prev - 1 + videos.length) % videos.length);
+      setIsPlaying(true);
+      setHasError(false);
+      
+      setTimeout(() => setIsTransitioning(false), 300);
+    }, 150);
+  }, [videos.length, isTransitioning]);
 
   // Keyboard controls
   useEffect(() => {
@@ -196,7 +211,7 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
 
   // Simple YouTube embed URL to avoid postMessage security issues
   const getYouTubeUrl = (videoId: string) => {
-    const baseParams = `autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&rel=0&modestbranding=1&playsinline=1`;
+    const baseParams = `autoplay=1&mute=${isMuted ? 1 : 0}&rel=0&modestbranding=1&playsinline=1`;
     return `https://www.youtube.com/embed/${videoId}?${baseParams}`;
   };
 
@@ -233,7 +248,10 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
         onTouchEnd={handleTouchEnd}
       >
         {/* Current Video */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black">
+        <div className={cn(
+          "absolute inset-0 flex items-center justify-center bg-black transition-all duration-300",
+          isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"
+        )}>
           <div className="w-full h-full relative">
             {hasError ? (
               <div className="flex flex-col items-center justify-center h-full text-white">
