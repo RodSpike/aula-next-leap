@@ -33,7 +33,7 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
 }) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
-  const [touchStartY, setTouchStartY] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
@@ -125,16 +125,16 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
   }, [nextVideo, previousVideo, onClose]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartY(e.touches[0].clientY);
+    setTouchStartX(e.touches[0].clientX);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const diffY = touchStartY - touchEndY;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diffX = touchStartX - touchEndX;
     
-    // Swipe up = next video, Swipe down = previous video
-    if (Math.abs(diffY) > 50) {
-      if (diffY > 0) {
+    // Swipe left = next video, Swipe right = previous video
+    if (Math.abs(diffX) > 50) {
+      if (diffX > 0) {
         nextVideo();
       } else {
         previousVideo();
@@ -342,9 +342,8 @@ export const EnglishTVFullFeed: React.FC<EnglishTVFullFeedProps> = ({
           </div>
         </div>
 
-        {/* Navigation Hints */}
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-          ⬆️ Arraste para navegar ⬇️
+          ⬅️ Arraste para navegar ➡️
         </div>
 
         {/* Next Video Preview */}
