@@ -6,7 +6,8 @@ import {
   Flame,
   Target,
   Gamepad2,
-  Mic
+  Mic,
+  Award
 } from "lucide-react";
 import { GamifiedFeatureCard } from "./GamifiedFeatureCard";
 import { Link } from "react-router-dom";
@@ -66,6 +67,13 @@ export const FeaturesSection = () => {
       title: "Metas Diárias",
       description: "Defina suas metas de estudo e acompanhe seu progresso com gráficos e estatísticas!",
       color: "success" as const,
+    },
+    {
+      icon: Award,
+      title: "Certificados",
+      description: "Receba certificados oficiais ao completar cada curso e comprove seu conhecimento!",
+      color: "info" as const,
+      badge: "📜",
     },
   ];
 
