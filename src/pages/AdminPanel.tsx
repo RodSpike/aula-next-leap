@@ -21,7 +21,8 @@ import { EnemContentPopulator } from "@/components/EnemContentPopulator";
 import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
 import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award } from "lucide-react";
+import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -731,6 +732,9 @@ export default function AdminPanel() {
 
                  {/* Certificate Preview */}
                  <CertificatePreview />
+
+                 {/* Placement Test Manager */}
+                 <PlacementTestManager />
                 
                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
