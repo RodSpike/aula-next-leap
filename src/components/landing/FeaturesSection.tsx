@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { GamifiedFeatureCard } from "./GamifiedFeatureCard";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export const FeaturesSection = () => {
+  const { user } = useAuth();
   const features = [
     {
       icon: BookOpen,
@@ -101,19 +103,21 @@ export const FeaturesSection = () => {
           ))}
         </div>
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-16">
-          <p className="text-muted-foreground mb-4">
-            E muito mais! Descubra todas as funcionalidades criando sua conta grátis 🚀
-          </p>
-          <Link 
-            to="/signup"
-            className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
-          >
-            Criar Conta Grátis
-            <span className="text-xl">→</span>
-          </Link>
-        </div>
+        {/* Bottom CTA - only show for non-logged users */}
+        {!user && (
+          <div className="text-center mt-16">
+            <p className="text-muted-foreground mb-4">
+              E muito mais! Descubra todas as funcionalidades criando sua conta grátis 🚀
+            </p>
+            <Link 
+              to="/signup"
+              className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
+            >
+              Criar Conta Grátis
+              <span className="text-xl">→</span>
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
