@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, BookOpen, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, BookOpen, Edit, Trash2, Eye, EyeOff, FlaskConical, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { BulkLessonEnhancer } from "@/components/BulkLessonEnhancer";
@@ -316,90 +317,193 @@ export default function CourseManagement() {
           </Card>
         )}
 
-        {/* Group courses by level */}
-        {["A1", "A2", "B1", "B2", "C1", "C2"].map((level) => {
-          const levelCourses = courses.filter((c) => c.level === level);
-          
-          if (levelCourses.length === 0) return null;
-
-          return (
-            <div key={level} className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">Level {level}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {levelCourses.map((course) => (
-                    <Card key={course.id} className={`hover:shadow-lg transition-all ${course.admin_only ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              {course.title}
-                              {course.admin_only && (
-                                <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded-full">
-                                  Oculto
-                                </span>
-                              )}
-                            </CardTitle>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {course.description || "No description"}
-                        </p>
-                        
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>{course.lessons_count} lessons</span>
-                        </div>
-
-                        {/* Visibility Toggle */}
-                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            {course.admin_only ? (
-                              <EyeOff className="h-4 w-4 text-yellow-600" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-green-600" />
-                            )}
-                            <span className="text-sm">
-                              {course.admin_only ? 'Oculto para usuários' : 'Visível para todos'}
-                            </span>
-                          </div>
-                          <Switch
-                            checked={!course.admin_only}
-                            onCheckedChange={() => toggleCourseVisibility(course.id, course.admin_only)}
-                          />
-                        </div>
-
-                        <CourseLessonEnhancer 
-                          courseId={course.id} 
-                          courseName={course.title}
-                        />
-
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => navigate(`/course/${course.id}`)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteCourse(course.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <Card className="border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-yellow-500/20">
+                <FlaskConical className="h-6 w-6 text-yellow-600" />
               </div>
+              <div>
+                <p className="text-2xl font-bold">{courses.filter(c => c.admin_only).length}</p>
+                <p className="text-sm text-muted-foreground">Cursos em Beta (Ocultos)</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-green-500/30 bg-green-500/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-green-500/20">
+                <Globe className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{courses.filter(c => !c.admin_only).length}</p>
+                <p className="text-sm text-muted-foreground">Cursos Publicados</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Beta Courses Section */}
+        {courses.filter(c => c.admin_only).length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <FlaskConical className="h-6 w-6 text-yellow-600" />
+              <h2 className="text-2xl font-bold">Cursos em Beta</h2>
+              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                Visível apenas para admins
+              </Badge>
             </div>
-          );
-        })}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.filter(c => c.admin_only).map((course) => (
+                <Card key={course.id} className="hover:shadow-lg transition-all border-yellow-500/50 bg-yellow-500/5">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <BookOpen className="h-4 w-4" />
+                          {course.title}
+                          <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
+                            {course.level}
+                          </Badge>
+                        </CardTitle>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {course.description || "No description"}
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{course.lessons_count} lessons</span>
+                    </div>
+
+                    {/* Publish Button */}
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={() => toggleCourseVisibility(course.id, course.admin_only)}
+                    >
+                      <Globe className="h-4 w-4 mr-2" />
+                      Publicar Curso
+                    </Button>
+
+                    <CourseLessonEnhancer 
+                      courseId={course.id} 
+                      courseName={course.title}
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => navigate(`/course/${course.id}`)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteCourse(course.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Published Courses Section */}
+        {courses.filter(c => !c.admin_only).length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <Globe className="h-6 w-6 text-green-600" />
+              <h2 className="text-2xl font-bold">Cursos Publicados</h2>
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                Visível para todos os usuários
+              </Badge>
+            </div>
+            
+            {/* Group published courses by level */}
+            {["A1", "A2", "B1", "B2", "C1", "C2", "ENEM", "Custom"].map((level) => {
+              const levelCourses = courses.filter((c) => !c.admin_only && c.level === level);
+              
+              if (levelCourses.length === 0) return null;
+
+              return (
+                <div key={level} className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4 text-muted-foreground">Level {level}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {levelCourses.map((course) => (
+                      <Card key={course.id} className="hover:shadow-lg transition-all border-green-500/20">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <BookOpen className="h-4 w-4" />
+                                {course.title}
+                                <Badge variant="outline" className="text-xs bg-green-500/20 text-green-600 border-green-500/30">
+                                  Publicado
+                                </Badge>
+                              </CardTitle>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {course.description || "No description"}
+                          </p>
+                          
+                          <div className="flex items-center justify-between text-sm text-muted-foreground">
+                            <span>{course.lessons_count} lessons</span>
+                          </div>
+
+                          {/* Hide Button */}
+                          <Button 
+                            variant="outline"
+                            className="w-full border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
+                            onClick={() => toggleCourseVisibility(course.id, course.admin_only)}
+                          >
+                            <EyeOff className="h-4 w-4 mr-2" />
+                            Ocultar Curso
+                          </Button>
+
+                          <CourseLessonEnhancer 
+                            courseId={course.id} 
+                            courseName={course.title}
+                          />
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => navigate(`/course/${course.id}`)}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteCourse(course.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {courses.length === 0 && (
           <Card>
