@@ -249,7 +249,7 @@ export const Navigation = () => {
                 className="gap-2 mx-3"
               >
                 <Mic className="h-4 w-4" />
-                AI Speech Tutor
+                ClickAI
               </Button>
             )}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">

@@ -318,7 +318,7 @@ export const AppSidebar = () => {
               onClick={() => setSpeechTutorOpen(true)}
             >
               <Mic className="h-4 w-4 text-primary" />
-              {!collapsed && <span>AI Speech Tutor</span>}
+              {!collapsed && <span>ClickAI</span>}
             </Button>
           )}
           

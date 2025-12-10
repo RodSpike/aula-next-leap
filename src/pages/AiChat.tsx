@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { detectPortuguese, hasPortugueseMixed } from "@/utils/portugueseDetection";
-import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2, Award } from "lucide-react";
+import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2, Award, Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { EnhancedChatInput } from "@/components/enhanced/EnhancedChatInput";
 import { useVoiceRecognition } from "@/components/enhanced/VoiceRecognition";
@@ -74,6 +74,7 @@ export default function AiChat() {
   });
   const [translationInfo, setTranslationInfo] = useState<TranslationInfo | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -519,6 +520,24 @@ export default function AiChat() {
     setAudioState(prev => ({ ...prev, selectedVoice: voiceName }));
   };
 
+  const copyMessageToClipboard = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      toast({
+        title: 'Copiado!',
+        description: 'Mensagem copiada para a área de transferência.',
+      });
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível copiar a mensagem.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !user) return;
 
@@ -821,6 +840,19 @@ export default function AiChat() {
                                 title="Ouvir resposta"
                               >
                                 <Volume2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyMessageToClipboard(message.id, message.content)}
+                                className="h-6 w-6 p-0"
+                                title="Copiar mensagem"
+                              >
+                                {copiedMessageId === message.id ? (
+                                  <Check className="h-3 w-3 text-green-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
                               </Button>
                               {availableVoices.length > 0 && (
                                 <select
