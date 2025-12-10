@@ -1114,6 +1114,36 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_test_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          questions: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          questions: Json
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          questions?: Json
+          version_number?: number
+        }
+        Relationships: []
+      }
       post_comments: {
         Row: {
           content: string

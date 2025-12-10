@@ -8,7 +8,7 @@ import { TranscriptItem } from './TranscriptItem';
 import { SpeechTutorStats } from './SpeechTutorStats';
 import { AlertCircle, Mic, Square, Volume2, Loader2, RotateCcw, BarChart3 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -635,7 +635,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
               <h3 className="font-semibold">Conversation</h3>
             </div>
             
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            <div 
+              ref={scrollRef}
+              className="flex-1 p-4 overflow-y-auto max-h-[50vh] scroll-smooth"
+            >
               {transcript.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
                   <Mic className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -654,7 +657,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
                   )}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
         </div>
         )}
