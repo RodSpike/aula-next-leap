@@ -38,8 +38,8 @@ const Index = () => {
       {/* How It Works */}
       <HowItWorksSection />
 
-      {/* Pricing Section */}
-      <PricingSection />
+      {/* Pricing Section - only show for non-logged users */}
+      {!user && <PricingSection />}
 
       {/* Featured Courses */}
       <FeaturedCourses />
