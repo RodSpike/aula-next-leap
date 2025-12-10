@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Heart, Trophy, Clock, ArrowLeft, CheckCircle, XCircle, Zap } from "lucide-react";
+import { Heart, Trophy, Clock, ArrowLeft, CheckCircle, XCircle, Zap, Home } from "lucide-react";
 import { useGamification } from "@/hooks/useGamification";
 import ClickLeaderboard from "@/components/click-of-week/ClickLeaderboard";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ExerciseMascotFeedback } from "@/components/mascot/ExerciseMascotFeedback";
 
 interface Question {
   id: number;
@@ -419,8 +420,9 @@ const ClickOfTheWeek = () => {
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="gap-2">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Dashboard</span>
           </Button>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
@@ -499,14 +501,18 @@ const ClickOfTheWeek = () => {
             })}
           </div>
 
+          {/* Mascot Feedback */}
           {showResult && (
-            <div className={`p-4 rounded-lg ${isCorrect ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-              <p className={`font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                {isCorrect ? '✓ Correto!' : '✗ Incorreto'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {currentQuestion.explanation}
-              </p>
+            <div className="flex flex-col items-center gap-4">
+              <ExerciseMascotFeedback 
+                isCorrect={isCorrect} 
+                className="scale-90"
+              />
+              <div className={`p-4 rounded-lg w-full ${isCorrect ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                <p className="text-sm text-muted-foreground">
+                  {currentQuestion.explanation}
+                </p>
+              </div>
             </div>
           )}
 
