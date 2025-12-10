@@ -1,22 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, Settings, Mic, UserCircle, Medal, Gamepad2, Moon, Sun } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, 
+  Settings, Mic, UserCircle, Medal, Gamepad2, Moon, Sun,
+  Shield, BarChart3, CreditCard, GraduationCap, Tv, Users2
+} from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 import { useTheme } from "next-themes";
 
 export const MobileNavigation = () => {
   const location = useLocation();
   const unreadCount = useUnreadMessages();
+  const { user } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { theme, setTheme } = useTheme();
   
   const isDark = theme === "dark";
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      // Check if master admin
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.email === 'rodspike2k8@gmail.com') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // Check role in database
+      const { data } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      setIsAdmin(!!data);
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const navItems = [
     { name: "Home", href: "/dashboard", icon: Home },
@@ -34,8 +69,18 @@ export const MobileNavigation = () => {
     { name: "Configurações", href: "/settings", icon: Settings },
   ];
 
+  const adminItems = [
+    { name: "Painel Admin", href: "/admin", icon: Shield },
+    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    { name: "Pagamentos", href: "/admin/payments", icon: CreditCard },
+    { name: "Gerenciar Cursos", href: "/course-management", icon: GraduationCap },
+    { name: "English TV", href: "/admin", icon: Tv },
+    { name: "Usuários Free", href: "/admin", icon: Users2 },
+  ];
+
   const isActive = (path: string) => location.pathname === path;
   const isMoreActive = moreItems.some(item => location.pathname === item.href);
+  const isAdminActive = adminItems.some(item => location.pathname === item.href);
 
   return (
     <>
@@ -146,11 +191,45 @@ export const MobileNavigation = () => {
                 ))}
               </div>
               
+              {/* Admin Section - Only visible to admins */}
+              {isAdmin && (
+                <>
+                  <Separator className="my-4" />
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 px-2 mb-3">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-primary">Área Admin</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {adminItems.map((item, index) => (
+                        <Link
+                          key={`${item.href}-${item.name}`}
+                          to={item.href}
+                          onClick={() => setMoreOpen(false)}
+                          className={cn(
+                            "flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 hover:scale-105 border border-primary/20",
+                            isActive(item.href)
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-primary/5"
+                          )}
+                          style={{
+                            animation: moreOpen ? `fade-in 0.3s ease-out ${(moreItems.length + index) * 0.05}s both` : undefined
+                          }}
+                        >
+                          <item.icon className="h-5 w-5 mb-1.5 transition-transform duration-200" />
+                          <span className="text-[10px] font-medium text-center leading-tight">{item.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              
               {/* Dark Mode Toggle */}
               <div 
-                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 mb-6"
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 mb-6 mt-4"
                 style={{
-                  animation: moreOpen ? `fade-in 0.3s ease-out ${moreItems.length * 0.05}s both` : undefined
+                  animation: moreOpen ? `fade-in 0.3s ease-out ${(moreItems.length + (isAdmin ? adminItems.length : 0)) * 0.05}s both` : undefined
                 }}
               >
                 <div className="flex items-center gap-3">
