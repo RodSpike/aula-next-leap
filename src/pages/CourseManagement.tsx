@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, BookOpen, Edit, Trash2, Eye, EyeOff, FlaskConical, Globe } from "lucide-react";
+import { Plus, BookOpen, Edit, Trash2, Eye, EyeOff, FlaskConical, Globe, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,17 @@ import { BulkAudioGenerator } from "@/components/BulkAudioGenerator";
 import { SeedDataButton } from "@/components/SeedDataButton";
 import { BulkExerciseRegenerator } from "@/components/BulkExerciseRegenerator";
 import { EnemContentPopulator } from "@/components/EnemContentPopulator";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 interface Course {
   id: string;
   title: string;
@@ -41,6 +51,13 @@ export default function CourseManagement() {
     title: "",
     description: "",
     level: "A1",
+  });
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [courseToPublish, setCourseToPublish] = useState<Course | null>(null);
+  const [confirmChecks, setConfirmChecks] = useState({
+    reviewedContent: false,
+    reviewedExercises: false,
+    testedAiTutor: false,
   });
 
   useEffect(() => {
@@ -199,32 +216,71 @@ export default function CourseManagement() {
     }
   };
 
-  const toggleCourseVisibility = async (courseId: string, currentAdminOnly: boolean) => {
+  const openPublishConfirm = (course: Course) => {
+    setCourseToPublish(course);
+    setConfirmChecks({
+      reviewedContent: false,
+      reviewedExercises: false,
+      testedAiTutor: false,
+    });
+    setPublishConfirmOpen(true);
+  };
+
+  const confirmPublish = async () => {
+    if (!courseToPublish) return;
+    
     try {
       const { error } = await supabase
         .from("courses")
-        .update({ admin_only: !currentAdminOnly })
+        .update({ admin_only: false })
+        .eq("id", courseToPublish.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Curso Publicado!",
+        description: `"${courseToPublish.title}" agora está visível para todos os usuários`,
+      });
+
+      setPublishConfirmOpen(false);
+      setCourseToPublish(null);
+      fetchCourses();
+    } catch (error: any) {
+      console.error("Error publishing course:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Falha ao publicar curso",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const hideCourse = async (courseId: string) => {
+    try {
+      const { error } = await supabase
+        .from("courses")
+        .update({ admin_only: true })
         .eq("id", courseId);
 
       if (error) throw error;
 
       toast({
-        title: "Visibilidade atualizada",
-        description: !currentAdminOnly 
-          ? "Curso agora está oculto para usuários" 
-          : "Curso agora está visível para todos",
+        title: "Curso Ocultado",
+        description: "Curso agora está oculto para usuários",
       });
 
       fetchCourses();
     } catch (error: any) {
-      console.error("Error toggling visibility:", error);
+      console.error("Error hiding course:", error);
       toast({
         title: "Erro",
-        description: error.message || "Falha ao atualizar visibilidade",
+        description: error.message || "Falha ao ocultar curso",
         variant: "destructive",
       });
     }
   };
+
+  const allChecksComplete = confirmChecks.reviewedContent && confirmChecks.reviewedExercises && confirmChecks.testedAiTutor;
 
   if (loading) {
     return (
@@ -381,7 +437,7 @@ export default function CourseManagement() {
                     {/* Publish Button */}
                     <Button 
                       className="w-full bg-green-600 hover:bg-green-700"
-                      onClick={() => toggleCourseVisibility(course.id, course.admin_only)}
+                      onClick={() => openPublishConfirm(course)}
                     >
                       <Globe className="h-4 w-4 mr-2" />
                       Publicar Curso
@@ -466,7 +522,7 @@ export default function CourseManagement() {
                           <Button 
                             variant="outline"
                             className="w-full border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
-                            onClick={() => toggleCourseVisibility(course.id, course.admin_only)}
+                            onClick={() => hideCourse(course.id)}
                           >
                             <EyeOff className="h-4 w-4 mr-2" />
                             Ocultar Curso
@@ -520,6 +576,91 @@ export default function CourseManagement() {
             </CardContent>
           </Card>
         )}
+
+        {/* Publish Confirmation Dialog */}
+        <AlertDialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                Confirmar Publicação
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-left">
+                Você está prestes a publicar o curso <strong>"{courseToPublish?.title}"</strong> para todos os usuários.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Por favor, confirme que você revisou os seguintes itens:
+              </p>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Checkbox 
+                    id="reviewedContent"
+                    checked={confirmChecks.reviewedContent}
+                    onCheckedChange={(checked) => 
+                      setConfirmChecks(prev => ({ ...prev, reviewedContent: !!checked }))
+                    }
+                  />
+                  <label 
+                    htmlFor="reviewedContent" 
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Revisei todo o conteúdo das lições
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Checkbox 
+                    id="reviewedExercises"
+                    checked={confirmChecks.reviewedExercises}
+                    onCheckedChange={(checked) => 
+                      setConfirmChecks(prev => ({ ...prev, reviewedExercises: !!checked }))
+                    }
+                  />
+                  <label 
+                    htmlFor="reviewedExercises" 
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Revisei todos os exercícios
+                  </label>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Checkbox 
+                    id="testedAiTutor"
+                    checked={confirmChecks.testedAiTutor}
+                    onCheckedChange={(checked) => 
+                      setConfirmChecks(prev => ({ ...prev, testedAiTutor: !!checked }))
+                    }
+                  />
+                  <label 
+                    htmlFor="testedAiTutor" 
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    Testei o AI Tutor do curso
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCourseToPublish(null)}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmPublish}
+                disabled={!allChecksComplete}
+                className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Publicar Curso
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
