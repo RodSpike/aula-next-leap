@@ -23,11 +23,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessChecked, setAccessChecked] = useState(false);
 
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
         setLoading(false);
+        setAccessChecked(true);
         return;
       }
 
@@ -49,6 +51,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
+          setAccessChecked(true);
           return; // Admins have permanent free access - skip all other checks
         }
 
@@ -61,6 +64,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           console.log('[ProtectedRoute] User has admin-granted free access');
           setSubscriptionStatus({ subscribed: true });
           setLoading(false);
+          setAccessChecked(true);
           return;
         }
 
@@ -101,13 +105,18 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         setSubscriptionStatus({ subscribed: false });
       } finally {
         setLoading(false);
+        setAccessChecked(true);
       }
     };
 
+    // Reset state when user changes to prevent stale data
+    setAccessChecked(false);
+    setLoading(true);
     checkAccess();
   }, [user]);
 
-  if (authLoading || loading) {
+  // Always show loading spinner until access check is complete
+  if (authLoading || loading || !accessChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
