@@ -553,14 +553,35 @@ export default function Course() {
                         <span>Course Progress</span>
                         <span>{Math.round(progress)}%</span>
                       </div>
-                      <Progress value={progress} />
+                      {/* Custom progress bar like dashboard */}
+                      <div className="relative h-5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${progress}%`,
+                            background: progress === 100 
+                              ? 'linear-gradient(to right, hsl(142, 76%, 36%), hsl(142, 76%, 46%))'
+                              : 'linear-gradient(to right, hsl(142, 76%, 36%), hsl(142, 71%, 45%))'
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-medium text-foreground drop-shadow-sm">
+                            {Math.round(progress)}%
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className="text-sm text-muted-foreground">
-                      <p>Lesson {currentLessonIndex + 1} of {lessons.length}</p>
-                      <p className="font-medium text-foreground mt-1">
-                        {currentLesson?.title}
-                      </p>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div>
+                        <p>Lesson {currentLessonIndex + 1} of {lessons.length}</p>
+                        <p className="font-medium text-foreground mt-1">
+                          {currentLesson?.title}
+                        </p>
+                      </div>
+                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
+                        {Object.values(lessonProgress).filter(score => score >= 70).length}/{lessons.length}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
