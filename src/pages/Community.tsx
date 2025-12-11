@@ -40,7 +40,8 @@ import {
   MoreVertical,
   Edit2,
   Archive,
-  Trash2
+  Trash2,
+  GraduationCap
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ClickableUserProfile } from "@/components/ClickableUserProfile";
@@ -86,6 +87,7 @@ interface GroupPost {
     avatar_url?: string;
   } | null;
   is_admin?: boolean;
+  is_teacher?: boolean;
 }
 
 export default function Community() {
@@ -407,10 +409,16 @@ export default function Community() {
           _role: 'admin'
         });
 
+        // Check if user is teacher
+        const { data: teacherData } = await supabase.rpc('is_teacher', {
+          user_uuid: post.user_id
+        });
+
         posts.push({
           ...post,
           profiles: profileData || { display_name: 'Unknown User', avatar_url: null },
-          is_admin: adminData === true
+          is_admin: adminData === true,
+          is_teacher: teacherData === true
         });
       }
 
@@ -1403,6 +1411,12 @@ export default function Community() {
                                     <Badge variant="secondary" className="text-xs">
                                       <Settings className="h-3 w-3 mr-1" />
                                       Admin
+                                    </Badge>
+                                  )}
+                                  {post.is_teacher && (
+                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                      <GraduationCap className="h-3 w-3 mr-1" />
+                                      Teacher
                                     </Badge>
                                   )}
                                 </div>
