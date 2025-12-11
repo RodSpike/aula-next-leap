@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { detectPortuguese, hasPortugueseMixed } from "@/utils/portugueseDetection";
 import { Send, Bot, User, Loader2, MessageSquare, Maximize, Minimize, X, Mic, MicOff, Upload, FileText, Play, Pause, Square, Volume2, Award, Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -51,6 +52,12 @@ export default function AiChat() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { trackAIChat } = useActivityTracking();
+
+  usePageMeta({
+    title: 'AI Chat - Aula Click | Tutor de Inglês com IA',
+    description: 'Converse com nosso tutor de inglês com IA. Tire dúvidas, pratique conversação e melhore seu inglês de forma interativa.',
+    keywords: 'ai chat, tutor ia, inteligência artificial, inglês, conversação, prática'
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);

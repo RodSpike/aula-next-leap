@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -23,6 +22,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from 'react-qr-code';
@@ -60,6 +60,12 @@ export default function Friends() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+
+  usePageMeta({
+    title: 'Amigos - Aula Click | Conecte-se com Outros Alunos',
+    description: 'Adicione amigos, envie mensagens e pratique inglês juntos na Aula Click. Construa sua rede de aprendizado.',
+    keywords: 'amigos, conexões, rede social, prática inglês, alunos'
+  });
   
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);

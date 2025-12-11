@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { UnifiedChatInterface } from "@/components/UnifiedChatInterface";
 import { DirectMessageChat } from "@/components/DirectMessageChat";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Button } from "@/components/ui/button";
 import { Link, useSearchParams } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
@@ -10,6 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function Messages() {
   const { user } = useAuth();
+
+  usePageMeta({
+    title: 'Mensagens - Aula Click | Suas Conversas',
+    description: 'Veja suas mensagens e converse com amigos e colegas na Aula Click.',
+    keywords: 'mensagens, chat, conversas, amigos'
+  });
   const [searchParams] = useSearchParams();
   const [showDirectChat, setShowDirectChat] = useState(false);
   const [friendData, setFriendData] = useState<{

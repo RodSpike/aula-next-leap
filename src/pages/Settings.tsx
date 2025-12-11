@@ -7,10 +7,17 @@ import { SubscriptionManager } from "@/components/SubscriptionManager";
 import { SoundSettings } from "@/components/settings/SoundSettings";
 import { CreditCard, Bell, Shield, Volume2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
   const { user } = useAuth();
+
+  usePageMeta({
+    title: 'Configurações - Aula Click | Gerenciar Conta',
+    description: 'Gerencie suas configurações de conta, assinatura e preferências na Aula Click.',
+    keywords: 'configurações, conta, assinatura, preferências'
+  });
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   useEffect(() => {
