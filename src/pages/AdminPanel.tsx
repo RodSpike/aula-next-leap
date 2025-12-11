@@ -22,7 +22,7 @@ import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
 import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
 import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText } from "lucide-react";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -37,6 +37,7 @@ interface UserData {
   groups_joined: number;
   certificates: number;
   is_admin?: boolean;
+  is_teacher?: boolean;
 }
 
 interface GroupData {
@@ -326,6 +327,56 @@ export default function AdminPanel() {
     }
   };
 
+  const handlePromoteTeacher = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('admin_promote_to_teacher', {
+        target_user_id: userId,
+        admin_description: 'User promoted to teacher via Admin Panel'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário promovido a Professor.",
+      });
+
+      // Refresh users list
+      fetchAllUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro", 
+        description: error.message || "Falha ao promover usuário a professor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDemoteTeacher = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('admin_demote_from_teacher', {
+        target_user_id: userId,
+        admin_description: 'User demoted from teacher via Admin Panel'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Professor removido.",
+      });
+
+      // Refresh users list
+      fetchAllUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro", 
+        description: error.message || "Falha ao remover professor",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDeletePost = async (postId: string) => {
     try {
       const { error } = await supabase.rpc('admin_delete_post', {
@@ -495,6 +546,10 @@ export default function AdminPanel() {
           const { data: hasAdminRole } = await supabase
             .rpc('user_has_admin_role', { user_uuid: profile.user_id });
 
+          // Check if user has teacher role
+          const { data: hasTeacherRole } = await supabase
+            .rpc('is_teacher', { user_uuid: profile.user_id });
+
           // Get role details for promoted_by info
           const { data: adminRole } = await supabase
             .from('user_roles')
@@ -541,7 +596,8 @@ export default function AdminPanel() {
             study_hours: Math.round(studyHours * 10) / 10,
             groups_joined: groupsJoined || 0,
             certificates: certificates || 0,
-            is_admin: !!hasAdminRole
+            is_admin: !!hasAdminRole,
+            is_teacher: !!hasTeacherRole
           };
         })
       );
@@ -813,6 +869,9 @@ export default function AdminPanel() {
                                   {userData.is_admin && (
                                     <Shield className="h-4 w-4 text-yellow-500" />
                                   )}
+                                  {userData.is_teacher && (
+                                    <GraduationCap className="h-4 w-4 text-blue-500" />
+                                  )}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Joined: {new Date(userData.created_at).toLocaleDateString()}
@@ -918,6 +977,86 @@ export default function AdminPanel() {
                                     </DialogFooter>
                                   </DialogContent>
                                 </Dialog>
+                              )}
+                              
+                              {/* Teacher promotion/demotion - only for master admin */}
+                              {MASTER_ADMIN_EMAILS.includes(currentUserEmail) && (
+                                userData.is_teacher ? (
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="text-blue-600 border-blue-300"
+                                        onClick={() => setSelectedUser(userData)}
+                                      >
+                                        <GraduationCap className="h-4 w-4 mr-1" />
+                                        Remover Teacher
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Remover Teacher</DialogTitle>
+                                        <DialogDescription>
+                                          Tem certeza que deseja remover {userData.display_name || userData.email} do cargo de Professor?
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <DialogFooter>
+                                        <Button 
+                                          variant="outline" 
+                                          onClick={() => setSelectedUser(null)}
+                                        >
+                                          Cancelar
+                                        </Button>
+                                        <Button 
+                                          onClick={() => {
+                                            handleDemoteTeacher(userData.user_id);
+                                            setSelectedUser(null);
+                                          }}
+                                        >
+                                          Remover
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+                                ) : (
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedUser(userData)}
+                                      >
+                                        <GraduationCap className="h-4 w-4 mr-1" />
+                                        Teacher
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Promover a Professor</DialogTitle>
+                                        <DialogDescription>
+                                          Tem certeza que deseja promover {userData.display_name || userData.email} a Professor? Professores têm um badge visível na comunidade e no Hangout.
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <DialogFooter>
+                                        <Button 
+                                          variant="outline" 
+                                          onClick={() => setSelectedUser(null)}
+                                        >
+                                          Cancelar
+                                        </Button>
+                                        <Button 
+                                          onClick={() => {
+                                            handlePromoteTeacher(userData.user_id);
+                                            setSelectedUser(null);
+                                          }}
+                                        >
+                                          Promover
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+                                )
                               )}
                               
                               {/* Delete button for master admin or non-admin deletion */}

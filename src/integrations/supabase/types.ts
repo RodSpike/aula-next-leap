@@ -2051,7 +2051,15 @@ export type Database = {
         Args: { admin_description?: string; target_user_id: string }
         Returns: boolean
       }
+      admin_demote_from_teacher: {
+        Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
       admin_demote_user: {
+        Args: { admin_description?: string; target_user_id: string }
+        Returns: boolean
+      }
+      admin_promote_to_teacher: {
         Args: { admin_description?: string; target_user_id: string }
         Returns: boolean
       }
@@ -2108,6 +2116,7 @@ export type Database = {
         Returns: boolean
       }
       is_master_admin: { Args: { user_uuid: string }; Returns: boolean }
+      is_teacher: { Args: { user_uuid: string }; Returns: boolean }
       search_profiles_public: {
         Args: { search_term: string }
         Returns: {
