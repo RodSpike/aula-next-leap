@@ -1114,6 +1114,56 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_test_attempts: {
+        Row: {
+          answers: Json
+          completed_at: string
+          correct_answers: number
+          created_at: string
+          final_level: string
+          id: string
+          score: number | null
+          started_at: string
+          total_questions: number
+          user_id: string
+          version_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string
+          correct_answers: number
+          created_at?: string
+          final_level: string
+          id?: string
+          score?: number | null
+          started_at?: string
+          total_questions: number
+          user_id: string
+          version_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string
+          correct_answers?: number
+          created_at?: string
+          final_level?: string
+          id?: string
+          score?: number | null
+          started_at?: string
+          total_questions?: number
+          user_id?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_test_attempts_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "placement_test_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       placement_test_versions: {
         Row: {
           created_at: string

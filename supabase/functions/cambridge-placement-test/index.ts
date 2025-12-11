@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, userId, userAnswer, questionIndex, askedQuestions, correctAnswer, currentLevel } = await req.json();
+    const { action, userId, userAnswer, questionIndex, askedQuestions, correctAnswer, currentLevel, answersHistory, startedAt } = await req.json();
     
     if (!geminiApiKey) {
       throw new Error('Gemini API key not configured');
@@ -92,6 +92,10 @@ Return ONLY a JSON object with this exact format:
         throw new Error('Failed to parse AI response as JSON');
       }
 
+      // Add startedAt timestamp for tracking
+      questionData.startedAt = new Date().toISOString();
+      questionData.answersHistory = [];
+
       return new Response(JSON.stringify(questionData), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -100,6 +104,19 @@ Return ONLY a JSON object with this exact format:
     if (action === 'next' && userAnswer && questionIndex !== undefined) {
       // Evaluate if the user's answer was correct
       const isCorrect = userAnswer === correctAnswer;
+      
+      // Build updated answers history
+      const updatedAnswersHistory = [
+        ...(answersHistory || []),
+        {
+          questionNumber: questionIndex,
+          question: askedQuestions?.[askedQuestions.length - 1] || '',
+          userAnswer,
+          correctAnswer,
+          isCorrect,
+          level: currentLevel || 'A2'
+        }
+      ];
       
       // Evaluate answer and generate next question using Gemini
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
@@ -200,7 +217,10 @@ Otherwise, return a completely new question with appropriate difficulty:
         throw new Error('Failed to parse AI response as JSON');
       }
 
-      // If this is a final assessment, save to user profile and auto-join community group
+      // Always include answers history in response
+      result.answersHistory = updatedAnswersHistory;
+
+      // If this is a final assessment, save to user profile, auto-join community group, and save test attempt
       if (result.finalAssessment && userId) {
         try {
           const { error: profileError } = await supabase
@@ -210,6 +230,31 @@ Otherwise, return a completely new question with appropriate difficulty:
             
           if (profileError) {
             console.error('Profile update error:', profileError);
+          }
+
+          // Save the test attempt with full answer history
+          const correctAnswers = updatedAnswersHistory.filter((a: any) => a.isCorrect).length;
+          const score = updatedAnswersHistory.length > 0 
+            ? Math.round((correctAnswers / updatedAnswersHistory.length) * 100) 
+            : 0;
+
+          const { error: attemptError } = await supabase
+            .from('placement_test_attempts')
+            .insert({
+              user_id: userId,
+              final_level: result.level,
+              score,
+              total_questions: updatedAnswersHistory.length,
+              correct_answers: correctAnswers,
+              answers: updatedAnswersHistory,
+              started_at: startedAt || new Date().toISOString(),
+              completed_at: new Date().toISOString()
+            });
+
+          if (attemptError) {
+            console.error('Test attempt save error:', attemptError);
+          } else {
+            console.log('Test attempt saved successfully');
           }
 
           // Auto-join appropriate community group based on level
