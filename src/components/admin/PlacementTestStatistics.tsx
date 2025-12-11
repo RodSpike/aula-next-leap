@@ -21,10 +21,11 @@ import {
   Loader2,
   User,
   GraduationCap,
-  CheckCircle,
   XCircle,
   TrendingUp,
-  Calendar
+  FileText,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,9 +42,11 @@ interface UserWithLevel {
 interface TestAttempt {
   id: string;
   user_id: string;
-  score: number;
-  passed: boolean;
-  answers: any;
+  final_level: string;
+  score: number | null;
+  total_questions: number;
+  correct_answers: number;
+  answers: any[];
   completed_at: string;
 }
 
@@ -54,10 +57,12 @@ export function PlacementTestStatistics() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithLevel | null>(null);
+  const [selectedAttempt, setSelectedAttempt] = useState<TestAttempt | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [levelStats, setLevelStats] = useState<Record<string, number>>({});
+  const [userAttempts, setUserAttempts] = useState<Record<string, TestAttempt[]>>({});
 
   useEffect(() => {
     fetchUsersWithLevels();
@@ -77,20 +82,41 @@ export function PlacementTestStatistics() {
 
   const fetchUsersWithLevels = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch users with levels
+      const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('user_id, display_name, email, cambridge_level, created_at')
         .not('cambridge_level', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (usersError) throw usersError;
 
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+      // Fetch all test attempts
+      const { data: attemptsData, error: attemptsError } = await supabase
+        .from('placement_test_attempts')
+        .select('*')
+        .order('completed_at', { ascending: false });
+
+      if (attemptsError) {
+        console.error('Error fetching attempts:', attemptsError);
+      }
+
+      // Group attempts by user
+      const attemptsByUser: Record<string, TestAttempt[]> = {};
+      (attemptsData || []).forEach((attempt: any) => {
+        if (!attemptsByUser[attempt.user_id]) {
+          attemptsByUser[attempt.user_id] = [];
+        }
+        attemptsByUser[attempt.user_id].push(attempt);
+      });
+      setUserAttempts(attemptsByUser);
+
+      setUsers(usersData || []);
+      setFilteredUsers(usersData || []);
 
       // Calculate level statistics
       const stats: Record<string, number> = {};
-      (data || []).forEach(user => {
+      (usersData || []).forEach(user => {
         const level = user.cambridge_level || 'Unknown';
         stats[level] = (stats[level] || 0) + 1;
       });
@@ -113,16 +139,46 @@ export function PlacementTestStatistics() {
     setAiAnalysis(null);
 
     try {
-      // For now, we'll create mock question results based on level
-      // In a real scenario, this would come from stored test attempts
-      const mockQuestionResults = generateMockResults(user.cambridge_level);
+      // Get real test attempt data
+      const attempts = userAttempts[user.user_id] || [];
+      const latestAttempt = attempts[0];
+
+      let questionResults: any[] = [];
+      
+      if (latestAttempt && Array.isArray(latestAttempt.answers)) {
+        // Use real answer data
+        questionResults = latestAttempt.answers.map((answer: any) => ({
+          question: answer.question || 'N/A',
+          userAnswer: answer.userAnswer,
+          correctAnswer: answer.correctAnswer,
+          isCorrect: answer.isCorrect,
+          level: answer.level || 'N/A'
+        }));
+        setSelectedAttempt(latestAttempt);
+      } else {
+        // No real data available - inform admin
+        toast({
+          title: 'Dados limitados',
+          description: 'Este usuário fez o teste antes do sistema de histórico. A análise será baseada apenas no nível.',
+        });
+        // Generate minimal context
+        questionResults = [{
+          question: 'Dados históricos não disponíveis',
+          userAnswer: 'N/A',
+          correctAnswer: 'N/A',
+          isCorrect: false,
+          level: user.cambridge_level || 'N/A'
+        }];
+        setSelectedAttempt(null);
+      }
 
       const { data, error } = await supabase.functions.invoke('analyze-user-performance', {
         body: {
           userId: user.user_id,
           displayName: user.display_name,
           cambridgeLevel: user.cambridge_level,
-          questionResults: mockQuestionResults
+          questionResults,
+          hasRealData: !!latestAttempt
         }
       });
 
@@ -142,53 +198,6 @@ export function PlacementTestStatistics() {
     }
   };
 
-  // Generate mock results based on level for demonstration
-  const generateMockResults = (level: string | null) => {
-    const levelQuestions: Record<string, any[]> = {
-      'A1': [
-        { question: "I _____ a student.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "A1" },
-        { question: "She _____ to school.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "A1" },
-        { question: "They _____ English.", userAnswer: "A", correctAnswer: "C", isCorrect: false, level: "A2" },
-      ],
-      'A2': [
-        { question: "I _____ breakfast every morning.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "A2" },
-        { question: "She _____ working when I called.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "A2" },
-        { question: "If I _____ rich, I would travel.", userAnswer: "A", correctAnswer: "B", isCorrect: false, level: "B1" },
-        { question: "They have _____ to Paris.", userAnswer: "C", correctAnswer: "C", isCorrect: true, level: "A2" },
-      ],
-      'B1': [
-        { question: "If I had known, I _____ you.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "B1" },
-        { question: "She suggested _____ early.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "B1" },
-        { question: "The book _____ by millions.", userAnswer: "C", correctAnswer: "C", isCorrect: true, level: "B1" },
-        { question: "I wish I _____ more time.", userAnswer: "A", correctAnswer: "B", isCorrect: false, level: "B2" },
-        { question: "He denied _____ the window.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "B1" },
-      ],
-      'B2': [
-        { question: "Had I known, I _____ differently.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "B2" },
-        { question: "The more I study, _____ I learn.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "B2" },
-        { question: "It's high time you _____ a decision.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "B2" },
-        { question: "Scarcely _____ arrived when it started raining.", userAnswer: "C", correctAnswer: "B", isCorrect: false, level: "C1" },
-        { question: "She couldn't help _____ at the joke.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "B2" },
-      ],
-      'C1': [
-        { question: "Not until later _____ the truth.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C1" },
-        { question: "Little _____ that he would succeed.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "C1" },
-        { question: "So engrossed _____ in her work.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C1" },
-        { question: "Were it not for your help, I _____.", userAnswer: "C", correctAnswer: "C", isCorrect: true, level: "C1" },
-        { question: "Under no circumstances _____ this information.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C1" },
-      ],
-      'C2': [
-        { question: "Seldom _____ such eloquence.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C2" },
-        { question: "Be that as it may, _____.", userAnswer: "B", correctAnswer: "B", isCorrect: true, level: "C2" },
-        { question: "Notwithstanding _____, we proceeded.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C2" },
-        { question: "In no way _____ acceptable.", userAnswer: "C", correctAnswer: "C", isCorrect: true, level: "C2" },
-        { question: "Never before _____ witnessed.", userAnswer: "A", correctAnswer: "A", isCorrect: true, level: "C2" },
-      ],
-    };
-
-    return levelQuestions[level || 'A2'] || levelQuestions['A2'];
-  };
-
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
       'A1': 'bg-emerald-500',
@@ -199,6 +208,11 @@ export function PlacementTestStatistics() {
       'C2': 'bg-pink-500',
     };
     return colors[level] || 'bg-gray-500';
+  };
+
+  const hasRealData = (userId: string) => {
+    const attempts = userAttempts[userId];
+    return attempts && attempts.length > 0 && Array.isArray(attempts[0].answers) && attempts[0].answers.length > 0;
   };
 
   return (
@@ -265,49 +279,70 @@ export function PlacementTestStatistics() {
         ) : (
           <ScrollArea className="h-[400px]">
             <div className="space-y-2 pr-4">
-              {filteredUsers.map(user => (
-                <div 
-                  key={user.user_id}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <User className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">
-                          {user.display_name || 'Sem nome'}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <Badge className={`${getLevelColor(user.cambridge_level || '')} text-white`}>
-                          {user.cambridge_level}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(user.created_at), 'dd/MM/yy', { locale: ptBR })}
-                        </p>
+              {filteredUsers.map(user => {
+                const hasData = hasRealData(user.user_id);
+                const attempts = userAttempts[user.user_id] || [];
+                const latestAttempt = attempts[0];
+                
+                return (
+                  <div 
+                    key={user.user_id}
+                    className="p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate flex items-center gap-2">
+                            {user.display_name || 'Sem nome'}
+                            {hasData ? (
+                              <span title="Dados de respostas disponíveis">
+                                <FileText className="h-3 w-3 text-green-500" />
+                              </span>
+                            ) : (
+                              <span title="Sem dados históricos">
+                                <AlertCircle className="h-3 w-3 text-yellow-500" />
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {user.email}
+                          </p>
+                          {latestAttempt && (
+                            <p className="text-xs text-muted-foreground">
+                              {latestAttempt.correct_answers}/{latestAttempt.total_questions} corretas 
+                              ({latestAttempt.score ? `${latestAttempt.score}%` : 'N/A'})
+                            </p>
+                          )}
+                        </div>
                       </div>
                       
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAnalyzeUser(user)}
-                        className="gap-1"
-                      >
-                        <Sparkles className="h-3 w-3" />
-                        Analisar
-                      </Button>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <Badge className={`${getLevelColor(user.cambridge_level || '')} text-white`}>
+                            {user.cambridge_level}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(user.created_at), 'dd/MM/yy', { locale: ptBR })}
+                          </p>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAnalyzeUser(user)}
+                          className="gap-1"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Analisar
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         )}
@@ -322,13 +357,23 @@ export function PlacementTestStatistics() {
               </DialogTitle>
               <DialogDescription>
                 {selectedUser && (
-                  <span className="flex items-center gap-2 mt-1">
-                    <User className="h-4 w-4" />
-                    {selectedUser.display_name || selectedUser.email}
-                    <Badge className={`${getLevelColor(selectedUser.cambridge_level || '')} text-white ml-2`}>
-                      {selectedUser.cambridge_level}
-                    </Badge>
-                  </span>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <span className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedUser.display_name || selectedUser.email}
+                      <Badge className={`${getLevelColor(selectedUser.cambridge_level || '')} text-white ml-2`}>
+                        {selectedUser.cambridge_level}
+                      </Badge>
+                    </span>
+                    {selectedAttempt && (
+                      <span className="text-xs flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {selectedAttempt.correct_answers}/{selectedAttempt.total_questions} respostas corretas
+                        ({selectedAttempt.score}%)
+                        • Teste em {format(new Date(selectedAttempt.completed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </span>
+                    )}
+                  </div>
                 )}
               </DialogDescription>
             </DialogHeader>
