@@ -104,34 +104,61 @@ export function WelcomeBackProvider({ children }: { children: React.ReactNode })
 
   // Show on initial login/session start when user reaches a protected route
   useEffect(() => {
-    // Wait for auth and suggestion to be ready
-    if (authLoading || suggestionLoading) return;
+    console.log('[WelcomeBack] Effect triggered:', {
+      user: !!user,
+      authLoading,
+      suggestionLoading,
+      isProtectedRoute,
+      hasShownThisSession,
+      suggestion: !!suggestion,
+      pathname: location.pathname
+    });
+
+    // Wait for auth to be ready
+    if (authLoading) {
+      console.log('[WelcomeBack] Still loading auth...');
+      return;
+    }
+    
     // Need a logged-in user
-    if (!user) return;
+    if (!user) {
+      console.log('[WelcomeBack] No user, skipping');
+      return;
+    }
+    
     // Must be on a protected route
-    if (!isProtectedRoute) return;
+    if (!isProtectedRoute) {
+      console.log('[WelcomeBack] Not on protected route, skipping');
+      return;
+    }
     
     // Check if already shown this session (in state or storage)
     const shownInStorage = sessionStorage.getItem(SESSION_SHOWN_KEY) === 'true';
     if (hasShownThisSession || shownInStorage) {
+      console.log('[WelcomeBack] Already shown this session');
       if (!hasShownThisSession && shownInStorage) {
         setHasShownThisSession(true);
       }
       return;
     }
 
-    // Need suggestion to be available
-    if (!suggestion) return;
+    // Wait for suggestion to load, but don't block forever
+    if (suggestionLoading) {
+      console.log('[WelcomeBack] Still loading suggestion...');
+      return;
+    }
 
-    // Show welcome back popup after a small delay
+    // Show welcome back popup after a small delay (even without suggestion)
+    console.log('[WelcomeBack] Scheduling popup display...');
     const timer = setTimeout(() => {
+      console.log('[WelcomeBack] Showing popup now!');
       setIsOpen(true);
       setHasShownThisSession(true);
       sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [user, authLoading, suggestionLoading, isProtectedRoute, hasShownThisSession, suggestion]);
+  }, [user, authLoading, suggestionLoading, isProtectedRoute, hasShownThisSession, suggestion, location.pathname]);
 
   return (
     <WelcomeBackContext.Provider value={{ showWelcomeBack, dismissWelcomeBack, suggestion }}>
