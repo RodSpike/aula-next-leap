@@ -129,20 +129,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Admins have unrestricted access to all content (no subscription or placement test required)
-  // Regular users need valid subscription/trial, or be on specific allowed pages
+  // Regular users need valid subscription/trial to access any protected content
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  
+  // Only these pages are allowed without subscription
+  const allowedWithoutSubscription = ['/subscribe', '/settings'];
+  const isAllowedWithoutSub = allowedWithoutSubscription.some(p => path === p || path.startsWith(p + '/'));
+  
   const hasAccess = userRole?.role === 'admin' || 
                     subscriptionStatus?.subscribed || 
-                    subscriptionStatus?.in_trial ||
-                    path === '/placement-test' ||
-                    path === '/settings' ||
-                    path === '/subscribe';  // Allow access to subscribe page for completing checkout
+                    subscriptionStatus?.in_trial;
 
-  // Don't redirect if we just checked and user doesn't have access but is on a non-protected route
-  const isPublicRoute = ['/', '/login', '/signup', '/placement-test', '/subscribe'].includes(path) || path.startsWith('/course/');
-  
-  // If no access and not on a public route, redirect to subscribe
-  if (!hasAccess && !isPublicRoute) {
+  // If no access and not on an allowed page, redirect to subscribe
+  if (!hasAccess && !isAllowedWithoutSub) {
+    console.log('[ProtectedRoute] No access, redirecting to subscribe. Path:', path);
     return <Navigate to="/subscribe" replace />;
   }
 
