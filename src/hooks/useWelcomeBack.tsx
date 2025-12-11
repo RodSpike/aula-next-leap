@@ -12,6 +12,7 @@ export interface WelcomeBackSuggestion {
   secondaryAction?: { label: string; path: string; icon?: string };
   tertiaryAction?: { label: string; path: string; icon?: string };
   metadata?: Record<string, any>;
+  dismissLabel: string;
 }
 
 interface LastLesson {
@@ -34,10 +35,12 @@ interface FeatureUsage {
   daysSinceLastUse: number;
 }
 
+type Language = 'pt' | 'en';
+
 const FEATURE_PAGES: Record<string, string[]> = {
   'community': ['/community'],
   'ai_chat': ['/ai-chat'],
-  'speech_tutor': ['/dashboard'], // Speech tutor opens as dialog
+  'speech_tutor': ['/dashboard'],
   'achievements': ['/achievements'],
   'friends': ['/friends'],
   'messages': ['/messages'],
@@ -45,16 +48,117 @@ const FEATURE_PAGES: Record<string, string[]> = {
   'courses': ['/courses', '/course/'],
 };
 
+// Translations for messages
+const translations = {
+  pt: {
+    dismissLabel: 'Não, obrigado',
+    continueLessonTitle: 'Bem-vindo de volta! 📚',
+    continueLessonMessage: (lessonTitle: string, courseName: string) => 
+      `Você estava estudando "${lessonTitle}" no curso "${courseName}". Quer continuar?`,
+    continueLesson: '📚 Continuar Lição',
+    doActivities: '📝 Fazer Atividades',
+    askClickAI: '🤖 Tirar Dúvidas com ClickAI',
+    clickOfWeekTitle: 'Pronto para o desafio? 🎮',
+    clickOfWeekMessage: (lives: number) => 
+      `Você tem ${lives} vida(s) para jogar Click of the Week e mostrar seus conhecimentos!`,
+    playNow: '🎮 Jogar Agora',
+    viewLeaderboard: '🏆 Ver Leaderboard',
+    waitingTitle: 'Aguardando nova tentativa ⏳',
+    waitingMessage: (time: string) => 
+      `Ainda falta ${time} para jogar novamente. Que tal continuar estudando?`,
+    goToCourses: '📚 Ir para Cursos',
+    goToCommunity: '💬 Ir para Comunidade',
+    communityTitle: 'Saudades da comunidade! 👋',
+    communityMessage: 'Faz um tempo que você não visita a comunidade! Lá você pode fazer amigos e ver conteúdos exclusivos.',
+    aiChatTitle: 'Precisa de ajuda? 🤖',
+    aiChatMessage: 'Já experimentou conversar com o ClickAI? Ele pode te ajudar com gramática, vocabulário e tirar suas dúvidas!',
+    openClickAI: '🤖 Abrir ClickAI',
+    speechTutorTitle: 'Pratique sua pronúncia! 🎤',
+    speechTutorMessage: 'Que tal praticar conversação em inglês com nosso AI Speech Tutor? É uma ótima forma de melhorar sua fluência!',
+    openSpeechTutor: '🎤 Abrir Speech Tutor',
+    achievementsTitle: 'Conquistas te esperam! 🏆',
+    achievementsMessage: 'Você tem conquistas para desbloquear! Continue estudando e ganhe XP extra.',
+    viewAchievements: '🏆 Ver Conquistas',
+    welcomeBackTitle: 'Que bom ter você de volta! 🎉',
+    welcomeBackMessage: 'Você tem vidas disponíveis no Click of the Week! Que tal testar seus conhecimentos?',
+    playClickOfWeek: '🎮 Jogar Click of the Week',
+    continueJourneyMessage: (courseName: string) => 
+      `Continue sua jornada de aprendizado! Você estava estudando "${courseName}".`,
+    continueCourse: '📚 Continuar Curso',
+  },
+  en: {
+    dismissLabel: 'No, thanks',
+    continueLessonTitle: 'Welcome back! 📚',
+    continueLessonMessage: (lessonTitle: string, courseName: string) => 
+      `You were studying "${lessonTitle}" in "${courseName}". Would you like to continue?`,
+    continueLesson: '📚 Continue Lesson',
+    doActivities: '📝 Do Activities',
+    askClickAI: '🤖 Ask ClickAI',
+    clickOfWeekTitle: 'Ready for the challenge? 🎮',
+    clickOfWeekMessage: (lives: number) => 
+      `You have ${lives} life(s) to play Click of the Week and show your knowledge!`,
+    playNow: '🎮 Play Now',
+    viewLeaderboard: '🏆 View Leaderboard',
+    waitingTitle: 'Waiting for next attempt ⏳',
+    waitingMessage: (time: string) => 
+      `You still need to wait ${time} to play again. How about continuing your studies?`,
+    goToCourses: '📚 Go to Courses',
+    goToCommunity: '💬 Go to Community',
+    communityTitle: 'We miss you in the community! 👋',
+    communityMessage: "It's been a while since you visited the community! You can make friends and see exclusive content there.",
+    aiChatTitle: 'Need some help? 🤖',
+    aiChatMessage: 'Have you tried chatting with ClickAI? It can help you with grammar, vocabulary and answer your questions!',
+    openClickAI: '🤖 Open ClickAI',
+    speechTutorTitle: 'Practice your pronunciation! 🎤',
+    speechTutorMessage: 'How about practicing English conversation with our AI Speech Tutor? It\'s a great way to improve your fluency!',
+    openSpeechTutor: '🎤 Open Speech Tutor',
+    achievementsTitle: 'Achievements await you! 🏆',
+    achievementsMessage: 'You have achievements to unlock! Keep studying and earn extra XP.',
+    viewAchievements: '🏆 View Achievements',
+    welcomeBackTitle: 'Great to have you back! 🎉',
+    welcomeBackMessage: 'You have lives available in Click of the Week! How about testing your knowledge?',
+    playClickOfWeek: '🎮 Play Click of the Week',
+    continueJourneyMessage: (courseName: string) => 
+      `Continue your learning journey! You were studying "${courseName}".`,
+    continueCourse: '📚 Continue Course',
+  },
+};
+
 export function useWelcomeBack() {
   const { user } = useAuth();
   const [suggestion, setSuggestion] = useState<WelcomeBackSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLanguage, setUserLanguage] = useState<Language>('pt');
+
+  // Fetch user's Cambridge level to determine language
+  useEffect(() => {
+    const fetchUserLevel = async () => {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('cambridge_level')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (profile?.cambridge_level) {
+        const level = profile.cambridge_level.toUpperCase();
+        // B1, B2, C1, C2 = English, A1, A2 = Portuguese
+        if (['B1', 'B2', 'C1', 'C2'].includes(level)) {
+          setUserLanguage('en');
+        } else {
+          setUserLanguage('pt');
+        }
+      }
+    };
+    
+    fetchUserLevel();
+  }, [user]);
 
   const getLastLesson = useCallback(async (): Promise<LastLesson | null> => {
     if (!user) return null;
 
     try {
-      // Get most recent lesson page view
       const { data: activityLogs } = await supabase
         .from('user_activity_logs')
         .select('context, created_at')
@@ -65,7 +169,6 @@ export function useWelcomeBack() {
 
       if (!activityLogs) return null;
 
-      // Find last course page
       const lessonActivity = activityLogs.find(log => {
         const context = log.context as any;
         return context?.page?.includes('/course/');
@@ -80,7 +183,6 @@ export function useWelcomeBack() {
 
       const courseId = courseIdMatch[1];
 
-      // Get course and lesson info
       const { data: course } = await supabase
         .from('courses')
         .select('id, title')
@@ -89,7 +191,6 @@ export function useWelcomeBack() {
 
       if (!course) return null;
 
-      // Get latest lesson progress for this course
       const { data: lessonProgress } = await supabase
         .from('user_lesson_progress')
         .select('lesson_id, lessons!inner(id, title, course_id)')
@@ -109,7 +210,6 @@ export function useWelcomeBack() {
         }
       }
 
-      // Fallback: get first lesson of the course
       const { data: firstLesson } = await supabase
         .from('lessons')
         .select('id, title')
@@ -147,11 +247,9 @@ export function useWelcomeBack() {
         .maybeSingle();
 
       if (!attempt) {
-        // No attempts yet - user can play
         return { hasLives: true, livesRemaining: 3, nextAttemptAt: null, timeUntilNextAttempt: null };
       }
 
-      // If completed, check if there's a new challenge
       if (attempt.completed) {
         return { hasLives: true, livesRemaining: 3, nextAttemptAt: null, timeUntilNextAttempt: null };
       }
@@ -169,7 +267,6 @@ export function useWelcomeBack() {
           const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
           timeUntilNextAttempt = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
         } else {
-          // Time has passed, can play again
           return { hasLives: true, livesRemaining: 3, nextAttemptAt: null, timeUntilNextAttempt: null };
         }
       }
@@ -257,6 +354,8 @@ export function useWelcomeBack() {
   const generateSuggestion = useCallback(async (): Promise<WelcomeBackSuggestion | null> => {
     if (!user) return null;
 
+    const t = translations[userLanguage];
+
     const [lastAction, lastLesson, clickStatus, featureUsage] = await Promise.all([
       getLastAction(),
       getLastLesson(),
@@ -268,25 +367,26 @@ export function useWelcomeBack() {
     if (lastAction?.includes('/course/') && lastLesson) {
       return {
         type: 'continue_lesson',
-        title: 'Bem-vindo de volta! 📚',
-        message: `Você estava estudando "${lastLesson.lessonTitle}" no curso "${lastLesson.courseName}". Quer continuar?`,
+        title: t.continueLessonTitle,
+        message: t.continueLessonMessage(lastLesson.lessonTitle, lastLesson.courseName),
         mascotMood: 'waving',
         primaryAction: {
-          label: '📚 Continuar Lição',
+          label: t.continueLesson,
           path: `/course/${lastLesson.courseId}`,
           icon: 'book',
         },
         secondaryAction: {
-          label: '📝 Fazer Atividades',
+          label: t.doActivities,
           path: `/course/${lastLesson.courseId}?tab=exercises`,
           icon: 'pencil',
         },
         tertiaryAction: {
-          label: '🤖 Tirar Dúvidas com ClickAI',
+          label: t.askClickAI,
           path: '/ai-chat',
           icon: 'bot',
         },
         metadata: { lesson: lastLesson },
+        dismissLabel: t.dismissLabel,
       };
     }
 
@@ -295,36 +395,38 @@ export function useWelcomeBack() {
       if (clickStatus.hasLives) {
         return {
           type: 'click_of_week',
-          title: 'Pronto para o desafio? 🎮',
-          message: `Você tem ${clickStatus.livesRemaining} vida(s) para jogar Click of the Week e mostrar seus conhecimentos!`,
+          title: t.clickOfWeekTitle,
+          message: t.clickOfWeekMessage(clickStatus.livesRemaining),
           mascotMood: 'excited',
           primaryAction: {
-            label: '🎮 Jogar Agora',
+            label: t.playNow,
             path: '/click-of-the-week',
             icon: 'gamepad',
           },
           secondaryAction: {
-            label: '🏆 Ver Leaderboard',
+            label: t.viewLeaderboard,
             path: '/click-of-the-week?tab=leaderboard',
             icon: 'trophy',
           },
+          dismissLabel: t.dismissLabel,
         };
       } else {
         return {
           type: 'click_of_week_waiting',
-          title: 'Aguardando nova tentativa ⏳',
-          message: `Ainda falta ${clickStatus.timeUntilNextAttempt || 'um tempo'} para jogar novamente. Que tal continuar estudando?`,
+          title: t.waitingTitle,
+          message: t.waitingMessage(clickStatus.timeUntilNextAttempt || 'um tempo'),
           mascotMood: 'thinking',
           primaryAction: {
-            label: '📚 Ir para Cursos',
+            label: t.goToCourses,
             path: '/courses',
             icon: 'book',
           },
           secondaryAction: {
-            label: '💬 Ir para Comunidade',
+            label: t.goToCommunity,
             path: '/community',
             icon: 'users',
           },
+          dismissLabel: t.dismissLabel,
         };
       }
     }
@@ -339,53 +441,57 @@ export function useWelcomeBack() {
         case 'community':
           return {
             type: 'community',
-            title: 'Saudades da comunidade! 👋',
-            message: 'Faz um tempo que você não visita a comunidade! Lá você pode fazer amigos e ver conteúdos exclusivos.',
+            title: t.communityTitle,
+            message: t.communityMessage,
             mascotMood: 'waving',
             primaryAction: {
-              label: '💬 Ir para Comunidade',
+              label: t.goToCommunity,
               path: '/community',
               icon: 'users',
             },
+            dismissLabel: t.dismissLabel,
           };
         
         case 'ai_chat':
           return {
             type: 'ai_chat',
-            title: 'Precisa de ajuda? 🤖',
-            message: 'Já experimentou conversar com o ClickAI? Ele pode te ajudar com gramática, vocabulário e tirar suas dúvidas!',
+            title: t.aiChatTitle,
+            message: t.aiChatMessage,
             mascotMood: 'thinking',
             primaryAction: {
-              label: '🤖 Abrir ClickAI',
+              label: t.openClickAI,
               path: '/ai-chat',
               icon: 'bot',
             },
+            dismissLabel: t.dismissLabel,
           };
         
         case 'speech_tutor':
           return {
             type: 'speech_tutor',
-            title: 'Pratique sua pronúncia! 🎤',
-            message: 'Que tal praticar conversação em inglês com nosso AI Speech Tutor? É uma ótima forma de melhorar sua fluência!',
+            title: t.speechTutorTitle,
+            message: t.speechTutorMessage,
             mascotMood: 'excited',
             primaryAction: {
-              label: '🎤 Abrir Speech Tutor',
+              label: t.openSpeechTutor,
               path: '/dashboard?open_speech_tutor=true',
               icon: 'mic',
             },
+            dismissLabel: t.dismissLabel,
           };
         
         case 'achievements':
           return {
             type: 'achievements',
-            title: 'Conquistas te esperam! 🏆',
-            message: 'Você tem conquistas para desbloquear! Continue estudando e ganhe XP extra.',
+            title: t.achievementsTitle,
+            message: t.achievementsMessage,
             mascotMood: 'excited',
             primaryAction: {
-              label: '🏆 Ver Conquistas',
+              label: t.viewAchievements,
               path: '/achievements',
               icon: 'trophy',
             },
+            dismissLabel: t.dismissLabel,
           };
       }
     }
@@ -394,19 +500,20 @@ export function useWelcomeBack() {
     if (clickStatus.hasLives) {
       return {
         type: 'click_of_week',
-        title: 'Que bom ter você de volta! 🎉',
-        message: 'Você tem vidas disponíveis no Click of the Week! Que tal testar seus conhecimentos?',
+        title: t.welcomeBackTitle,
+        message: t.welcomeBackMessage,
         mascotMood: 'waving',
         primaryAction: {
-          label: '🎮 Jogar Click of the Week',
+          label: t.playClickOfWeek,
           path: '/click-of-the-week',
           icon: 'gamepad',
         },
         secondaryAction: {
-          label: '📚 Ir para Cursos',
+          label: t.goToCourses,
           path: '/courses',
           icon: 'book',
         },
+        dismissLabel: t.dismissLabel,
       };
     }
 
@@ -414,19 +521,20 @@ export function useWelcomeBack() {
     if (lastLesson) {
       return {
         type: 'continue_lesson',
-        title: 'Bem-vindo de volta! 📚',
-        message: `Continue sua jornada de aprendizado! Você estava estudando "${lastLesson.courseName}".`,
+        title: t.continueLessonTitle,
+        message: t.continueJourneyMessage(lastLesson.courseName),
         mascotMood: 'happy',
         primaryAction: {
-          label: '📚 Continuar Curso',
+          label: t.continueCourse,
           path: `/course/${lastLesson.courseId}`,
           icon: 'book',
         },
+        dismissLabel: t.dismissLabel,
       };
     }
 
     return null;
-  }, [user, getLastAction, getLastLesson, getClickOfWeekStatus, getFeatureUsage]);
+  }, [user, userLanguage, getLastAction, getLastLesson, getClickOfWeekStatus, getFeatureUsage]);
 
   useEffect(() => {
     if (!user) {
