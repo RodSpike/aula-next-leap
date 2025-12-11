@@ -61,6 +61,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const [lastTutorResponse, setLastTutorResponse] = useState<string>('');
   const [interimText, setInterimText] = useState<string>('');
   const [showStats, setShowStats] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [speechRate, setSpeechRate] = useState<number>(() => {
     const saved = localStorage.getItem('speechTutorRate');
     return saved ? parseFloat(saved) : 0.9;
@@ -69,6 +70,62 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     const saved = localStorage.getItem('speechTutorTimeout');
     return saved ? parseInt(saved) : 30;
   });
+
+  // Check subscription status when dialog opens
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!open || !user) {
+        setHasActiveSubscription(null);
+        return;
+      }
+
+      try {
+        // Check admin status first
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const { data: adminResp } = await supabase.functions.invoke('check-admin', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+
+        if (adminResp?.is_admin === true) {
+          setHasActiveSubscription(true);
+          return;
+        }
+
+        // Check free access
+        const { data: freeUserData } = await supabase.functions.invoke('check-free-access');
+        if (freeUserData?.has_free_access) {
+          setHasActiveSubscription(true);
+          return;
+        }
+
+        // Check subscription
+        const { data: subData } = await supabase.functions.invoke('check-subscription');
+        if (subData?.subscribed || subData?.in_trial) {
+          setHasActiveSubscription(true);
+          return;
+        }
+
+        // Fallback: check user_subscriptions table
+        const { data: subRow } = await supabase
+          .from('user_subscriptions')
+          .select('subscription_status, trial_ends_at, current_period_end')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const now = new Date();
+        const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
+        const isActive = (subRow?.subscription_status === 'active') || (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
+
+        setHasActiveSubscription(inTrial || isActive);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasActiveSubscription(false);
+      }
+    };
+
+    checkSubscription();
+  }, [open, user]);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -528,11 +585,33 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
           </Button>
         </DialogHeader>
 
-        {showStats ? (
+        {/* Subscription check - show blocked state if not subscribed */}
+        {hasActiveSubscription === null && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
+        {hasActiveSubscription === false && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <AlertCircle className="h-16 w-16 text-muted-foreground" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Assinatura Necessária</h3>
+              <p className="text-muted-foreground mb-4">
+                Para acessar o AI Speech Tutor, você precisa ter uma assinatura ativa.
+              </p>
+              <Button onClick={() => onOpenChange(false)} variant="outline">
+                Fechar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {hasActiveSubscription && showStats ? (
           <div className="flex-1 overflow-auto p-4">
             <SpeechTutorStats />
           </div>
-        ) : (
+        ) : hasActiveSubscription && (
           <div className="flex-1 grid md:grid-cols-2 gap-6 overflow-hidden">
           {/* Left Panel - Controls */}
           <div className="flex flex-col gap-4">

@@ -35,10 +35,14 @@ export default function Login() {
     toast
   } = useToast();
 
-  // Check subscription status after user logs in
+  // Track if user just logged in during this session
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
+
+  // Check subscription status ONLY after user explicitly logs in (not on page load)
   useEffect(() => {
     const checkAccessAndRedirect = async () => {
-      if (!user) return;
+      // Only check if user just logged in during this session
+      if (!user || !justLoggedIn) return;
       
       setCheckingAccess(true);
       try {
@@ -96,7 +100,7 @@ export default function Login() {
     };
 
     checkAccessAndRedirect();
-  }, [user, navigate]);
+  }, [user, navigate, justLoggedIn]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -127,6 +131,7 @@ export default function Login() {
           variant: "destructive"
         });
       } else {
+        setJustLoggedIn(true);
         toast({
           title: "Login realizado!",
           description: "Bem-vindo de volta!"
@@ -145,10 +150,12 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      setJustLoggedIn(true);
       const {
         error
       } = await signInWithGoogle();
       if (error) {
+        setJustLoggedIn(false);
         console.error('Google login error:', error);
         toast({
           title: "Erro no login",
@@ -160,6 +167,7 @@ export default function Login() {
         // onAuthStateChange will handle post-login navigation.
       }
     } catch (error) {
+      setJustLoggedIn(false);
       console.error('Google login error:', error);
       toast({
         title: "Erro",

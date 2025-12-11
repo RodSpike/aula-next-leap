@@ -65,19 +65,30 @@ export function SubscriptionManager() {
   const handleManageSubscription = async () => {
     setLoading(true);
     try {
-      // Call customer portal edge function
+      // Try customer portal first - this works if user has Stripe customer
       const { data, error } = await supabase.functions.invoke('customer-portal');
 
-      if (error) throw error;
+      if (error) {
+        // If customer portal fails (no Stripe customer), redirect to checkout
+        console.log('Customer portal not available, redirecting to checkout');
+        const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-checkout');
+        
+        if (checkoutError) throw checkoutError;
+        
+        if (checkoutData?.url) {
+          window.open(checkoutData.url, '_blank');
+        }
+        return;
+      }
 
       if (data?.url) {
         window.location.href = data.url;
       }
     } catch (error: any) {
-      console.error('Error opening customer portal:', error);
+      console.error('Error opening payment:', error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível abrir o portal de gerenciamento",
+        description: error.message || "Não foi possível abrir o portal de pagamento",
         variant: "destructive",
       });
     } finally {
