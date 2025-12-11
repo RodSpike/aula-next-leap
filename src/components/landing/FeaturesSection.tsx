@@ -7,7 +7,10 @@ import {
   Target,
   Gamepad2,
   Mic,
-  Award
+  Award,
+  GraduationCap,
+  Headphones,
+  Video
 } from "lucide-react";
 import { GamifiedFeatureCard } from "./GamifiedFeatureCard";
 import { Link } from "react-router-dom";
@@ -74,6 +77,27 @@ export const FeaturesSection = () => {
       description: "Receba certificados oficiais ao completar cada curso e comprove seu conhecimento!",
       color: "info" as const,
       badge: "📜",
+    },
+    {
+      icon: GraduationCap,
+      title: "Professores Reais",
+      description: "Professores disponíveis nas comunidades para tirar dúvidas e guiar seu aprendizado!",
+      color: "secondary" as const,
+      badge: "👨‍🏫",
+    },
+    {
+      icon: Headphones,
+      title: "Hangout Social",
+      description: "Conheça outros alunos e pratique inglês com áudio e texto em tempo real!",
+      color: "primary" as const,
+      badge: "🎧",
+    },
+    {
+      icon: Video,
+      title: "Vídeo Aulas",
+      description: "Acesso a vídeo aulas sempre atualizadas para complementar seu aprendizado!",
+      color: "warning" as const,
+      badge: "🎬",
     },
   ];
 
