@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard } from "lucide-react";
+import { Check, CreditCard, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,8 +91,25 @@ export default function Subscribe() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      {/* Header */}
+      <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center px-4">
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm font-medium">Voltar</span>
+          </Link>
+          <div className="flex-1 flex justify-center">
+            <Link to="/" className="font-bold text-lg text-primary">
+              Aula Click
+            </Link>
+          </div>
+          <div className="w-16" /> {/* Spacer for centering */}
+        </div>
+      </header>
+
+      <div className="flex items-center justify-center p-4 py-8">
+        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Ative seu Período Grátis</CardTitle>
           <CardDescription>
@@ -159,7 +173,8 @@ export default function Subscribe() {
             Você não será cobrado durante os 7 dias de teste. Cancele a qualquer momento na plataforma.
           </p>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

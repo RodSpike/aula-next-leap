@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { InitializeCourses } from "@/components/InitializeCourses";
-import { FloatingChatBubble } from "@/components/FloatingChatBubble";
+
 import { NavigationPersistence } from "@/components/NavigationPersistence";
 import { FirstTimeUserExperience } from "@/components/FirstTimeUserExperience";
 import { RealtimeNotificationsProvider } from "@/components/RealtimeNotificationsProvider";
@@ -69,7 +69,7 @@ const App = () => (
               <WelcomeBackProvider>
                 <Toaster />
                 <Sonner />
-                <FloatingChatBubble />
+                
                 <FirstTimeUserExperience />
               <Routes>
                 <Route path="/" element={<Index />} />
