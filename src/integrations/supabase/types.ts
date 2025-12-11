@@ -104,6 +104,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_posting_settings: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_frequency_hours: number
+          is_enabled: boolean
+          last_interaction_run: string | null
+          last_tip_run: string | null
+          tip_frequency_hours: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_frequency_hours?: number
+          is_enabled?: boolean
+          last_interaction_run?: string | null
+          last_tip_run?: string | null
+          tip_frequency_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_frequency_hours?: number
+          is_enabled?: boolean
+          last_interaction_run?: string | null
+          last_tip_run?: string | null
+          tip_frequency_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_teachers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          personality: string
+          personality_traits: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          personality: string
+          personality_traits?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          personality?: string
+          personality_traits?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
@@ -2092,6 +2158,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_ai_teacher_personality: {
+        Args: { teacher_email: string }
+        Returns: Json
+      }
       get_current_week_challenge: { Args: never; Returns: string }
       get_nearby_users: {
         Args: { p_proximity_radius?: number; p_user_id: string }
@@ -2111,6 +2181,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_ai_teacher: { Args: { user_email: string }; Returns: boolean }
       is_group_creator: {
         Args: { group_uuid: string; user_uuid: string }
         Returns: boolean

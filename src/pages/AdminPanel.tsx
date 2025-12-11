@@ -22,7 +22,8 @@ import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
 import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
 import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
+import { AITeachersManager } from "@/components/admin/AITeachersManager";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText, GraduationCap, Bot } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -645,7 +646,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Overview
@@ -661,6 +662,10 @@ export default function AdminPanel() {
             <TabsTrigger value="free-users" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Free Users
+            </TabsTrigger>
+            <TabsTrigger value="ai-teachers" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              IA Teachers
             </TabsTrigger>
             <TabsTrigger value="content" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -1489,6 +1494,11 @@ export default function AdminPanel() {
           {/* Free Users Tab */}
           <TabsContent value="free-users" className="space-y-6">
             <AdminFreeUsers />
+          </TabsContent>
+
+          {/* AI Teachers Tab */}
+          <TabsContent value="ai-teachers" className="space-y-6">
+            <AITeachersManager />
           </TabsContent>
 
           {/* Audit Log Tab */}

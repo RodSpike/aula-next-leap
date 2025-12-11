@@ -161,3 +161,6 @@ verify_jwt = false
 
 [functions.analyze-user-performance]
 verify_jwt = true
+
+[functions.ai-community-post]
+verify_jwt = true
