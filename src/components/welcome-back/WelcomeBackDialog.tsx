@@ -74,7 +74,7 @@ export function WelcomeBackDialog({ open, onOpenChange, suggestion }: WelcomeBac
               <Button
                 onClick={() => handleAction(suggestion.secondaryAction!.path)}
                 variant="outline"
-                className="w-full h-11 text-base font-medium bg-white border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-gray-50 transition-all"
+                className="w-full h-11 text-base font-medium bg-white text-[#1A1A1A] border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-gray-100 transition-all"
               >
                 {suggestion.secondaryAction.label}
               </Button>
@@ -97,7 +97,7 @@ export function WelcomeBackDialog({ open, onOpenChange, suggestion }: WelcomeBac
             onClick={handleClose}
             className="mt-4 text-sm text-[#1A1A1A]/50 hover:text-[#1A1A1A]/70 transition-colors underline-offset-4 hover:underline"
           >
-            Não, obrigado
+            {suggestion.dismissLabel}
           </button>
         </div>
 
