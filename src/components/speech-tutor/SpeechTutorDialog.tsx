@@ -13,6 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useActivityTracking } from '@/hooks/useActivityTracking';
 
 // TypeScript declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -51,6 +52,7 @@ interface SpeechTutorDialogProps {
 export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { trackSpeechTutor } = useActivityTracking();
   const [status, setStatus] = useState<ConversationStatus>(ConversationStatus.Idle);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -239,10 +241,15 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   useEffect(() => {
     if (open && user) {
       startSession();
+      trackSpeechTutor('open');
     } else if (!open && sessionIdRef.current) {
       endSession();
+      trackSpeechTutor('close', { 
+        messagesCount: messageCountRef.current, 
+        wordsSpoken: wordsSpokenRef.current 
+      });
     }
-  }, [open, user, startSession, endSession]);
+  }, [open, user, startSession, endSession, trackSpeechTutor]);
 
   // Check for SpeechRecognition support
   const getSpeechRecognition = useCallback(() => {

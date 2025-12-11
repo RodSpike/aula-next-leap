@@ -6,10 +6,28 @@ import { useLocation } from 'react-router-dom';
 interface ActivityContext {
   page?: string;
   feature?: string;
+  feature_name?: string;
   duration?: number;
   last_page?: string;
   metadata?: Record<string, any>;
 }
+
+// Feature name mapping for better tracking
+const FEATURE_NAMES: Record<string, string> = {
+  '/ai-chat': 'ai_chat',
+  '/community': 'community',
+  '/friends': 'friends',
+  '/messages': 'messages',
+  '/certificates': 'certificates',
+  '/achievements': 'achievements',
+  '/click-of-the-week': 'click_of_week',
+  '/courses': 'courses',
+  '/hangout': 'hangout',
+  '/enem-tutor': 'enem_tutor',
+  '/enem-course': 'enem_course',
+  '/settings': 'settings',
+  '/dashboard': 'dashboard',
+};
 
 export function useActivityTracking() {
   const { user } = useAuth();
@@ -36,12 +54,32 @@ export function useActivityTracking() {
     }
   }, [user]);
 
-  // Track page views
+  // Get feature name from path
+  const getFeatureName = useCallback((path: string): string | undefined => {
+    // Check exact matches first
+    if (FEATURE_NAMES[path]) return FEATURE_NAMES[path];
+    
+    // Check path prefixes
+    for (const [prefix, name] of Object.entries(FEATURE_NAMES)) {
+      if (path.startsWith(prefix)) return name;
+    }
+    
+    // Check for course pages
+    if (path.match(/^\/course\/[^/]+$/)) return 'course_view';
+    if (path.match(/^\/enem-lesson\//)) return 'enem_lesson';
+    if (path.match(/^\/enem-exam\//)) return 'enem_exam';
+    if (path.match(/^\/profile\//)) return 'profile_view';
+    
+    return undefined;
+  }, []);
+
+  // Track page views with feature detection
   useEffect(() => {
     if (!user) return;
 
     const currentPage = location.pathname;
     const now = Date.now();
+    const featureName = getFeatureName(currentPage);
 
     // Track page exit (time spent on previous page)
     if (lastPageRef.current && lastPageRef.current !== currentPage) {
@@ -49,17 +87,19 @@ export function useActivityTracking() {
       trackActivity('page_exit', {
         page: lastPageRef.current,
         duration,
+        feature_name: getFeatureName(lastPageRef.current),
       });
     }
 
-    // Track page view
+    // Track page view with feature name
     trackActivity('page_view', {
       page: currentPage,
+      feature_name: featureName,
     });
 
     lastPageRef.current = currentPage;
     pageStartRef.current = now;
-  }, [location.pathname, user, trackActivity]);
+  }, [location.pathname, user, trackActivity, getFeatureName]);
 
   // Track session start
   useEffect(() => {
@@ -105,6 +145,7 @@ export function useActivityTracking() {
   const trackFeatureUse = useCallback((feature: string, metadata?: Record<string, any>) => {
     trackActivity('feature_use', {
       feature,
+      feature_name: feature,
       page: location.pathname,
       metadata,
     });
@@ -119,9 +160,42 @@ export function useActivityTracking() {
     });
   }, [trackActivity, location.pathname]);
 
+  // Track Speech Tutor usage
+  const trackSpeechTutor = useCallback((action: 'open' | 'close' | 'conversation', metadata?: Record<string, any>) => {
+    trackActivity('feature_use', {
+      feature: 'speech_tutor',
+      feature_name: 'speech_tutor',
+      page: location.pathname,
+      metadata: { action, ...metadata },
+    });
+  }, [trackActivity, location.pathname]);
+
+  // Track AI Chat usage
+  const trackAIChat = useCallback((action: 'message_sent' | 'conversation_started', metadata?: Record<string, any>) => {
+    trackActivity('feature_use', {
+      feature: 'ai_chat',
+      feature_name: 'ai_chat',
+      page: location.pathname,
+      metadata: { action, ...metadata },
+    });
+  }, [trackActivity, location.pathname]);
+
+  // Track Certificate view
+  const trackCertificates = useCallback((action: 'view' | 'download', metadata?: Record<string, any>) => {
+    trackActivity('feature_use', {
+      feature: 'certificates',
+      feature_name: 'certificates',
+      page: location.pathname,
+      metadata: { action, ...metadata },
+    });
+  }, [trackActivity, location.pathname]);
+
   return {
     trackActivity,
     trackFeatureUse,
     trackClick,
+    trackSpeechTutor,
+    trackAIChat,
+    trackCertificates,
   };
 }

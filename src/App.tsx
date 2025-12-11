@@ -14,6 +14,7 @@ import { RealtimeNotificationsProvider } from "@/components/RealtimeNotification
 import { ActivityTrackingProvider } from "@/components/ActivityTrackingProvider";
 import { CelebrationProvider } from "@/contexts/CelebrationContext";
 import { SoundPreferencesProvider } from "@/contexts/SoundPreferencesContext";
+import { WelcomeBackProvider } from "@/contexts/WelcomeBackContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Community from "./pages/Community";
@@ -64,10 +65,11 @@ const App = () => (
           <ActivityTrackingProvider />
           <TooltipProvider>
             <CelebrationProvider>
-              <Toaster />
-              <Sonner />
-              <FloatingChatBubble />
-              <FirstTimeUserExperience />
+              <WelcomeBackProvider>
+                <Toaster />
+                <Sonner />
+                <FloatingChatBubble />
+                <FirstTimeUserExperience />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
@@ -105,6 +107,7 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </WelcomeBackProvider>
             </CelebrationProvider>
           </TooltipProvider>
           </AuthProvider>
