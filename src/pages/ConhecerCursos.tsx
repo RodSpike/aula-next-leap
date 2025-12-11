@@ -249,7 +249,7 @@ export default function ConhecerCursos() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="text-center p-6">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Brain className="h-8 w-8 text-primary" />
@@ -287,6 +287,48 @@ export default function ConhecerCursos() {
               <h3 className="font-semibold mb-2">Comunidade Ativa</h3>
               <p className="text-sm text-muted-foreground">
                 Conecte-se com outros alunos e pratique inglês juntos.
+              </p>
+            </Card>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="text-center p-6">
+              <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="h-8 w-8 text-warning" />
+              </div>
+              <h3 className="font-semibold mb-2">Aprendizado Gamificado</h3>
+              <p className="text-sm text-muted-foreground">
+                Ganhe XP, suba de nível e conquiste badges enquanto aprende inglês.
+              </p>
+            </Card>
+
+            <Card className="text-center p-6">
+              <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-secondary" />
+              </div>
+              <h3 className="font-semibold mb-2">Hangout Social</h3>
+              <p className="text-sm text-muted-foreground">
+                Pratique falando com outros alunos em salas virtuais interativas.
+              </p>
+            </Card>
+
+            <Card className="text-center p-6">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trophy className="h-8 w-8 text-destructive" />
+              </div>
+              <h3 className="font-semibold mb-2">Click of the Week</h3>
+              <p className="text-sm text-muted-foreground">
+                Desafio semanal competitivo para testar e melhorar seu inglês.
+              </p>
+            </Card>
+
+            <Card className="text-center p-6">
+              <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Play className="h-8 w-8 text-success" />
+              </div>
+              <h3 className="font-semibold mb-2">Videoaulas Atualizadas</h3>
+              <p className="text-sm text-muted-foreground">
+                Conteúdo em vídeo sempre atualizado com as melhores práticas.
               </p>
             </Card>
           </div>
