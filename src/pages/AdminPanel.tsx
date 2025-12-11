@@ -22,7 +22,7 @@ import { DynamicCourseGenerator } from "@/components/DynamicCourseGenerator";
 import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
 import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
-import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck } from "lucide-react";
+import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText } from "lucide-react";
 
 interface UserData {
   user_id: string;
@@ -734,7 +734,16 @@ export default function AdminPanel() {
                  <CertificatePreview />
 
                  {/* Placement Test Manager */}
-                 <PlacementTestManager />
+                 <div className="bg-background/50 p-6 rounded-lg border">
+                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                     <FileText className="h-5 w-5" />
+                     Gerenciador de Teste de Nível
+                   </h3>
+                   <p className="text-sm text-muted-foreground mb-4">
+                     Gerencie versões do teste de nivelamento, visualize estatísticas e analise o desempenho dos usuários.
+                   </p>
+                   <PlacementTestManager />
+                 </div>
                 
                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg dark:bg-amber-950/30">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
