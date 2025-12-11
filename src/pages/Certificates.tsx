@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { CertificatePDF } from "@/components/CertificatePDF";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 interface Certificate {
   id: string;
@@ -25,6 +26,7 @@ interface Profile {
 export default function Certificates() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { trackCertificates } = useActivityTracking();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [certificatesLoading, setCertificatesLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -39,8 +41,9 @@ export default function Certificates() {
     if (user && !loading) {
       fetchCertificates();
       fetchProfile();
+      trackCertificates('view');
     }
-  }, [user, loading]);
+  }, [user, loading, trackCertificates]);
 
   const fetchProfile = async () => {
     try {

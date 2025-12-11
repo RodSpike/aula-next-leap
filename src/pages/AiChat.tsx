@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cleanTextForTTS } from "@/utils/cleanTextForTTS";
+import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 interface Message {
   id: string;
@@ -49,6 +50,7 @@ interface TranslationInfo {
 export default function AiChat() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { trackAIChat } = useActivityTracking();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -93,8 +95,9 @@ export default function AiChat() {
   useEffect(() => {
     if (user && !messagesLoaded) {
       loadMessages();
+      trackAIChat('conversation_started');
     }
-  }, [user, messagesLoaded]);
+  }, [user, messagesLoaded, trackAIChat]);
 
   // Initialize speech synthesis voices
   useEffect(() => {
