@@ -2,10 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Play, ChevronRight, GraduationCap, Users, Bot, BookOpen, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
-import { useAuth } from "@/hooks/useAuth";
 
-export const HeroSection = () => {
-  const { user } = useAuth();
+interface HeroSectionProps {
+  hasActiveSubscription?: boolean;
+}
+
+export const HeroSection = ({ hasActiveSubscription = false }: HeroSectionProps) => {
+  // Only show dashboard link if user has active subscription
+  const showDashboardLink = hasActiveSubscription;
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden pt-20" aria-label="Seção principal">
       {/* Background decorations - more subtle */}
@@ -79,7 +83,7 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {user ? (
+              {showDashboardLink ? (
                 <Button variant="hero" size="xl" asChild className="group text-lg">
                   <Link to="/dashboard">
                     <LayoutDashboard className="mr-2 h-5 w-5" />

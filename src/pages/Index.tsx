@@ -90,8 +90,8 @@ const Index = () => {
       {/* Only show public Navigation for non-subscribed users */}
       {(!user || !hasActiveSubscription) && <Navigation />}
       
-      {/* Hero Section com Mascote */}
-      <HeroSection />
+      {/* Hero Section com Mascote - pass subscription status */}
+      <HeroSection hasActiveSubscription={hasActiveSubscription} />
       
       {/* Stats Section */}
       <StatsSection />
@@ -111,8 +111,8 @@ const Index = () => {
       {/* Student Testimonials */}
       <StudentTestimonials />
 
-      {/* Final CTA */}
-      <CTASection />
+      {/* Final CTA - pass subscription status */}
+      <CTASection hasActiveSubscription={hasActiveSubscription} />
     </>
   );
 

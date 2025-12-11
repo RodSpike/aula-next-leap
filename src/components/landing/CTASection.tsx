@@ -2,10 +2,14 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, CheckCircle, GraduationCap, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
-import { useAuth } from "@/hooks/useAuth";
 
-export const CTASection = () => {
-  const { user } = useAuth();
+interface CTASectionProps {
+  hasActiveSubscription?: boolean;
+}
+
+export const CTASection = ({ hasActiveSubscription = false }: CTASectionProps) => {
+  // Only show dashboard link if user has active subscription
+  const showDashboardLink = hasActiveSubscription;
   const benefits = [
     "7 dias grátis para testar",
     "Cancele quando quiser",
@@ -61,7 +65,7 @@ export const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            {user ? (
+            {showDashboardLink ? (
               <Button 
                 size="xl" 
                 className="bg-white text-primary hover:bg-white/90 shadow-xl text-lg group"
