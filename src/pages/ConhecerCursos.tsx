@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,33 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CupheadFoxMascot } from "@/components/mascot/CupheadFoxMascot";
+
+// Simplified navigation for this page - only logo
+const SimpleNavigation = () => (
+  <nav className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center h-16">
+        {/* Logo */}
+        <Link to="/" className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <BookOpen className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-foreground">Aula Click</span>
+        </Link>
+
+        {/* CTA Buttons */}
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/login">Entrar</Link>
+          </Button>
+          <Button variant="hero" size="sm" asChild>
+            <Link to="/signup">Começar</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  </nav>
+);
 
 interface Course {
   id: string;
@@ -129,8 +155,8 @@ export default function ConhecerCursos() {
 
   const content = (
     <div className="min-h-screen bg-background">
-      {/* Only show public Navigation for non-logged users */}
-      {!user && <Navigation />}
+      {/* Simplified Navigation for non-logged users */}
+      {!user && <SimpleNavigation />}
 
       {/* Hero Section */}
       <section className="py-20 bg-gradient-subtle">
