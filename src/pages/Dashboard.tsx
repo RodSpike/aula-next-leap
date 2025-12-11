@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { 
   BookOpen, Play, Target, Users, Trophy, 
   MessageCircle, Zap, ChevronRight, Gamepad2,
-  Mic, Clock, Award, TrendingUp
+  Mic, Clock, Award, TrendingUp, FileCheck
 } from "lucide-react";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { DashboardVideoWidget } from "@/components/DashboardVideoWidget";
@@ -27,6 +27,7 @@ interface CourseProgress {
   totalLessons: number;
   completedLessons: number;
   level: string;
+  hasCertificate?: boolean;
 }
 
 export default function Dashboard() {
@@ -125,6 +126,14 @@ export default function Dashboard() {
             .select('course_id, id')
             .in('course_id', uniqueCourses.map(c => c.id));
 
+          // Fetch user certificates
+          const { data: userCertificates } = await supabase
+            .from('certificates')
+            .select('course_name')
+            .eq('user_id', user!.id);
+
+          const certificateCourseNames = new Set(userCertificates?.map(c => c.course_name) || []);
+
           const coursesData = uniqueCourses.map(course => {
             const lessonsForCourse = courseLessons?.filter(l => l.course_id === course.id) || [];
             const progressForCourse = userProgress?.filter(p => 
@@ -137,7 +146,8 @@ export default function Dashboard() {
               name: course.title,
               totalLessons: lessonsForCourse.length,
               completedLessons,
-              level: course.level
+              level: course.level,
+              hasCertificate: certificateCourseNames.has(course.title)
             };
           });
           
@@ -325,6 +335,7 @@ export default function Dashboard() {
                   const progress = course.totalLessons > 0 
                     ? (course.completedLessons / course.totalLessons) * 100 
                     : 0;
+                  const isCompleted = progress === 100;
                   
                     return (
                     <Card key={course.id} className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${courses.indexOf(course) * 100}ms` }}>
@@ -341,17 +352,42 @@ export default function Dashboard() {
                               </Badge>
                             </div>
                             <div className="flex items-center gap-3">
-                              <Progress value={progress} className="flex-1 h-2 transition-all duration-500" />
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {/* Custom progress bar like achievements */}
+                              <div className="relative flex-1 h-5 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${progress}%`,
+                                    background: isCompleted 
+                                      ? 'linear-gradient(to right, hsl(142, 76%, 36%), hsl(142, 76%, 46%))'
+                                      : 'linear-gradient(to right, hsl(142, 76%, 36%), hsl(142, 71%, 45%))'
+                                  }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-xs font-medium text-foreground drop-shadow-sm">
+                                    {Math.round(progress)}%
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap min-w-[40px] text-right">
                                 {course.completedLessons}/{course.totalLessons}
                               </span>
                             </div>
                           </div>
-                          <Button size="sm" variant="ghost" asChild className="transition-transform duration-300 hover:scale-110">
-                            <Link to={`/course/${course.id}`}>
-                              <Play className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                          {course.hasCertificate ? (
+                            <Button size="sm" variant="secondary" asChild className="transition-transform duration-300 hover:scale-110 gap-1">
+                              <Link to="/certificates">
+                                <FileCheck className="h-4 w-4 text-green-500" />
+                                <span className="hidden sm:inline text-xs">Certificado</span>
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" asChild className="transition-transform duration-300 hover:scale-110">
+                              <Link to={`/course/${course.id}`}>
+                                <Play className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
