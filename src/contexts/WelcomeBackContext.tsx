@@ -102,26 +102,36 @@ export function WelcomeBackProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  // Show on initial login/session start
+  // Show on initial login/session start when user reaches a protected route
   useEffect(() => {
-    if (!user || authLoading || suggestionLoading) return;
-    if (hasShownThisSession) return;
+    // Wait for auth and suggestion to be ready
+    if (authLoading || suggestionLoading) return;
+    // Need a logged-in user
+    if (!user) return;
+    // Must be on a protected route
     if (!isProtectedRoute) return;
-
-    // Check if this is a new session
-    const shownThisSession = sessionStorage.getItem(SESSION_SHOWN_KEY);
-    if (shownThisSession === 'true') {
-      setHasShownThisSession(true);
+    
+    // Check if already shown this session (in state or storage)
+    const shownInStorage = sessionStorage.getItem(SESSION_SHOWN_KEY) === 'true';
+    if (hasShownThisSession || shownInStorage) {
+      if (!hasShownThisSession && shownInStorage) {
+        setHasShownThisSession(true);
+      }
       return;
     }
 
-    // Small delay after login to show welcome back
+    // Need suggestion to be available
+    if (!suggestion) return;
+
+    // Show welcome back popup after a small delay
     const timer = setTimeout(() => {
-      showWelcomeBack();
+      setIsOpen(true);
+      setHasShownThisSession(true);
+      sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [user, authLoading, suggestionLoading, isProtectedRoute, hasShownThisSession, showWelcomeBack]);
+  }, [user, authLoading, suggestionLoading, isProtectedRoute, hasShownThisSession, suggestion]);
 
   return (
     <WelcomeBackContext.Provider value={{ showWelcomeBack, dismissWelcomeBack, suggestion }}>

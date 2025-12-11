@@ -81,23 +81,25 @@ export const Navigation = () => {
     }
   };
   
-  const navigation = [
-    user 
-      ? { name: "Dashboard", href: "/dashboard", icon: User }
-      : { name: "Início", href: "/", icon: BookOpen },
+  const isHomePage = location.pathname === '/';
+  
+  // For visitors on homepage, show minimal navigation
+  const navigation = user ? [
+    { name: "Dashboard", href: "/dashboard", icon: User },
     { name: "Cursos", href: "/courses", icon: BookOpen },
     { name: "Comunidade", href: "/community", icon: Users },
-    ...(user ? [
-      { name: "Mensagens", href: "/messages", icon: MessageCircle },
-      { name: "Amigos", href: "/friends", icon: UserPlus },
-      { name: "Conquistas", href: "/achievements", icon: Trophy },
-      { name: "Hangout", href: "/hangout", icon: Gamepad2 },
-    ] : []),
+    { name: "Mensagens", href: "/messages", icon: MessageCircle },
+    { name: "Amigos", href: "/friends", icon: UserPlus },
+    { name: "Conquistas", href: "/achievements", icon: Trophy },
+    { name: "Hangout", href: "/hangout", icon: Gamepad2 },
     { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
-    ...(isAdmin ? [
-      { name: "Admin", href: "/admin", icon: Shield }
-    ] : []),
-  ];
+    ...(isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
+  ] : (isHomePage ? [] : [
+    { name: "Início", href: "/", icon: BookOpen },
+    { name: "Cursos", href: "/courses", icon: BookOpen },
+    { name: "Comunidade", href: "/community", icon: Users },
+    { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
+  ]);
 
   const isActive = (path: string) => location.pathname === path;
 
