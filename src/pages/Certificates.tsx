@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, Award } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { CertificatePDF } from "@/components/CertificatePDF";
@@ -30,6 +31,12 @@ export default function Certificates() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [certificatesLoading, setCertificatesLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+
+  usePageMeta({
+    title: 'Certificados - Aula Click | Seus Certificados de Conclusão',
+    description: 'Veja e baixe seus certificados de conclusão de cursos na Aula Click.',
+    keywords: 'certificados, conclusão, cursos, diploma'
+  });
 
   useEffect(() => {
     if (!loading && !user) {

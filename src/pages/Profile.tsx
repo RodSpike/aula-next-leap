@@ -10,6 +10,7 @@ import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, UserPlus, Users, Camera, Save, Music, Palette } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +43,12 @@ export default function Profile() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  usePageMeta({
+    title: 'Perfil - Aula Click | Seu Perfil de Estudante',
+    description: 'Veja e edite seu perfil na Aula Click. Personalize sua experiência de aprendizado.',
+    keywords: 'perfil, estudante, configurações, avatar'
+  });
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);

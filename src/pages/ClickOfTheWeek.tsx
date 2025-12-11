@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -35,6 +36,12 @@ const ClickOfTheWeek = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { addXP, updateAchievement } = useGamification();
+
+  usePageMeta({
+    title: 'Click da Semana - Aula Click | Desafio Semanal de Inglês',
+    description: 'Participe do desafio semanal Click of the Week. Teste seu inglês e compete com outros alunos pelo topo do ranking.',
+    keywords: 'click of the week, desafio semanal, quiz inglês, competição, ranking'
+  });
   
   const [loading, setLoading] = useState(true);
   const [canPlay, setCanPlay] = useState(false);

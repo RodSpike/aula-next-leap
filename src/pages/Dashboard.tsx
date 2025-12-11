@@ -18,6 +18,7 @@ import { DashboardMascot } from "@/components/dashboard/DashboardMascot";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CourseProgress {
@@ -38,6 +39,12 @@ export default function Dashboard() {
   const [recentAchievements, setRecentAchievements] = useState<any[]>([]);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  usePageMeta({
+    title: 'Dashboard - Aula Click | Seu Painel de Aprendizado',
+    description: 'Acompanhe seu progresso, continue seus cursos e alcance suas metas de aprendizado de inglês na Aula Click.',
+    keywords: 'dashboard, painel, progresso, cursos inglês, aprendizado'
+  });
 
   useEffect(() => {
     if (!loading && !user) {

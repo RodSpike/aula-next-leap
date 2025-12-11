@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PersonalProgress } from "@/components/PersonalProgress";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -95,6 +96,12 @@ export default function Community() {
   const { addXP, updateAchievement } = useGamification();
   const { toast } = useToast();
   const location = useLocation();
+
+  usePageMeta({
+    title: 'Comunidade - Aula Click | Pratique Inglês com Outros Alunos',
+    description: 'Participe de grupos de estudo, converse com outros alunos e professores, e pratique inglês na comunidade Aula Click.',
+    keywords: 'comunidade, grupos de estudo, prática inglês, alunos, professores, conversação'
+  });
   const [groups, setGroups] = useState<CommunityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<CommunityGroup | null>(null);
   const [posts, setPosts] = useState<GroupPost[]>([]);

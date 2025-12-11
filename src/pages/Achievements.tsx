@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { AchievementsList } from '@/components/gamification/AchievementsList';
@@ -6,9 +6,27 @@ import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { BadgeFrameSelector } from '@/components/gamification/BadgeFrameSelector';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGamification } from '@/hooks/useGamification';
+import { useAchievementSync } from '@/hooks/useAchievementSync';
+import { usePageMeta } from '@/hooks/usePageMeta';
 
 const Achievements = () => {
-  const { gamificationData } = useGamification();
+  const { gamificationData, refetch } = useGamification();
+  const { syncAchievements } = useAchievementSync();
+
+  usePageMeta({
+    title: 'Conquistas - Aula Click | Seu Progresso de Aprendizado',
+    description: 'Acompanhe suas conquistas e progresso na Aula Click. Desbloqueie medalhas, ganhe XP e suba de nível enquanto aprende inglês.',
+    keywords: 'conquistas, achievements, progresso, medalhas, XP, nível, gamificação, aprendizado inglês'
+  });
+
+  // Sync achievements on mount
+  useEffect(() => {
+    const sync = async () => {
+      await syncAchievements();
+      refetch();
+    };
+    sync();
+  }, [syncAchievements, refetch]);
 
   return (
     <AppLayout>
