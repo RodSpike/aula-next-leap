@@ -17,6 +17,7 @@ import { SoundPreferencesProvider } from "@/contexts/SoundPreferencesContext";
 import { WelcomeBackProvider } from "@/contexts/WelcomeBackContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
+import ConhecerCursos from "./pages/ConhecerCursos";
 import Community from "./pages/Community";
 import Friends from "./pages/Friends";
 import Messages from "./pages/Messages";
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/welcome" element={<Welcome />} />
+                <Route path="/conhecer-cursos" element={<ConhecerCursos />} />
                 <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
                 <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
                 <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />

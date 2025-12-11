@@ -97,7 +97,7 @@ export const HeroSection = () => {
                   </Button>
                   
                   <Button variant="outline" size="xl" asChild className="group">
-                    <Link to="/courses">
+                    <Link to="/conhecer-cursos">
                       <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                       Conhecer Cursos
                     </Link>
