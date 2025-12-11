@@ -71,7 +71,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : userEmail ?? undefined,
       line_items: [
         {
-          price: "price_1SBEjRK2ADuy4IKKJHHgAHhY", // Aula Click Premium price (BRL 59.90/month)
+          price: "price_1SdH50K2ADuy4IKKXoAmsCSI", // Aula Click Premium price (BRL 59.90/month) - LIVE MODE
           quantity: 1,
         },
       ],
