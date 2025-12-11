@@ -18,6 +18,14 @@ const LAST_ACTIVE_KEY = 'welcome_back_last_active';
 
 export function WelcomeBackProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
+  
+  // Clear session flag when user logs out
+  useEffect(() => {
+    if (!user && !authLoading) {
+      console.log('[WelcomeBack] User logged out, clearing session flag');
+      sessionStorage.removeItem(SESSION_SHOWN_KEY);
+    }
+  }, [user, authLoading]);
   const { suggestion, loading: suggestionLoading } = useWelcomeBack();
   const location = useLocation();
   

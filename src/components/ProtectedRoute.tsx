@@ -141,6 +141,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Don't redirect if we just checked and user doesn't have access but is on a non-protected route
   const isPublicRoute = ['/', '/login', '/signup', '/placement-test', '/subscribe'].includes(path) || path.startsWith('/course/');
   
+  // If no access and not on a public route, redirect to subscribe
   if (!hasAccess && !isPublicRoute) {
     return <Navigate to="/subscribe" replace />;
   }
