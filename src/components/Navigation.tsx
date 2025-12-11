@@ -1,105 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Menu, X, BookOpen, Users, Star, User, LogOut, MessageSquare, Shield, UserPlus, Trophy, MessageCircle, Settings, Gamepad2, Mic } from "lucide-react";
+import { Menu, X, BookOpen, Users, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
-  const unreadCount = useUnreadMessages();
-  const MASTER_ADMIN_EMAILS = ["rodspike2k8@gmail.com", "luccadtoledo@gmail.com"];
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        console.log('Checking admin status for user:', user.id, user.email);
-        
-        // First check if user is master admin
-        const isMasterAdmin = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
-        console.log('Is master admin:', isMasterAdmin);
-        
-        if (isMasterAdmin) {
-          console.log('User is master admin, setting admin status to true');
-          setIsAdmin(true);
-          return;
-        }
-        
-        // Check if user has admin role in database using the has_role function
-        const { data, error } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin'
-        });
-        
-        console.log('Admin role check result:', { data, error });
-        
-        if (error) {
-          console.error('Error checking admin role:', error);
-          setIsAdmin(false);
-          return;
-        }
-        
-        console.log('Setting admin status to:', data);
-        setIsAdmin(data === true);
-      } else {
-        console.log('No user, setting admin status to false');
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Desconectado",
-        description: "Até mais!",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao desconectar.",
-        variant: "destructive",
-      });
-    }
-  };
   
   const isHomePage = location.pathname === '/';
   
-  // For visitors on homepage, show minimal navigation
-  const navigation = user ? [
-    { name: "Dashboard", href: "/dashboard", icon: User },
-    { name: "Cursos", href: "/courses", icon: BookOpen },
-    { name: "Comunidade", href: "/community", icon: Users },
-    { name: "Mensagens", href: "/messages", icon: MessageCircle },
-    { name: "Amigos", href: "/friends", icon: UserPlus },
-    { name: "Conquistas", href: "/achievements", icon: Trophy },
-    { name: "Hangout", href: "/hangout", icon: Gamepad2 },
-    { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
-    ...(isAdmin ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
-  ] : (isHomePage ? [] : [
+  // Navigation is only shown for non-subscribed users, so always show visitor navigation
+  const navigation = isHomePage ? [] : [
     { name: "Início", href: "/", icon: BookOpen },
     { name: "Cursos", href: "/courses", icon: BookOpen },
     { name: "Comunidade", href: "/community", icon: Users },
     { name: "IA Chat", href: "/ai-chat", icon: MessageSquare },
-  ]);
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -126,84 +42,21 @@ export const Navigation = () => {
                     ? "text-primary bg-accent"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
-                onClick={item.name === "Dashboard" ? () => {
-                  // Clear navigation persistence to force dashboard navigation
-                  localStorage.removeItem('aula-click-nav-state');
-                } : undefined}
               >
                 <item.icon className="h-4 w-4" />
                 <span className="hidden lg:inline">{item.name}</span>
-                {item.name === "Mensagens" && unreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
               </Link>
             ))}
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons - always show visitor buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {user && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setSpeechTutorOpen(true)}
-                className="gap-2"
-              >
-                <Mic className="h-4 w-4" />
-                AI Tutor
-              </Button>
-            )}
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <User className="h-4 w-4 mr-2" />
-                    Minha Conta
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link 
-                      to="/dashboard" 
-                      onClick={() => {
-                        // Clear navigation persistence to force dashboard navigation
-                        localStorage.removeItem('aula-click-nav-state');
-                      }}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to={`/profile/${user?.id || ''}`}>
-                      <User className="mr-2 h-4 w-4" />
-                      Meu Perfil
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Configurações
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Entrar</Link>
-                </Button>
-                <Button variant="hero" size="sm" asChild>
-                  <Link to="/signup">Começar</Link>
-                </Button>
-              </>
-            )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/login">Entrar</Link>
+            </Button>
+            <Button variant="hero" size="sm" asChild>
+              <Link to="/signup">Começar</Link>
+            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -236,50 +89,19 @@ export const Navigation = () => {
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.name}</span>
-                {item.name === "Mensagens" && unreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
               </Link>
             ))}
-            {user && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => { setSpeechTutorOpen(true); setIsOpen(false); }}
-              className="gap-2 mx-3"
-            >
-              <Mic className="h-4 w-4" />
-              AI Speech Tutor
-            </Button>
-            )}
             <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-              {user ? (
-                <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => { setIsOpen(false); handleSignOut(); }}>
-                    Sair
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
-                  </Button>
-                  <Button variant="hero" size="sm" asChild>
-                    <Link to="/signup" onClick={() => setIsOpen(false)}>Começar</Link>
-                  </Button>
-                </>
-              )}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+              </Button>
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/signup" onClick={() => setIsOpen(false)}>Começar</Link>
+              </Button>
             </div>
           </div>
         </div>
       )}
-
-      <SpeechTutorDialog open={speechTutorOpen} onOpenChange={setSpeechTutorOpen} />
     </nav>
   );
 };
