@@ -135,20 +135,28 @@ export function useWelcomeBack() {
     const fetchUserLevel = async () => {
       if (!user) return;
       
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('cambridge_level')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (profile?.cambridge_level) {
-        const level = profile.cambridge_level.toUpperCase();
-        // B1, B2, C1, C2 = English, A1, A2 = Portuguese
-        if (['B1', 'B2', 'C1', 'C2'].includes(level)) {
-          setUserLanguage('en');
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('cambridge_level')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (profile?.cambridge_level) {
+          const level = profile.cambridge_level.toUpperCase();
+          // B1, B2, C1, C2 = English, A1, A2 = Portuguese
+          if (['B1', 'B2', 'C1', 'C2'].includes(level)) {
+            setUserLanguage('en');
+          } else {
+            setUserLanguage('pt');
+          }
         } else {
+          // Default to Portuguese if no level set
           setUserLanguage('pt');
         }
+      } catch (error) {
+        console.error('Error fetching user level:', error);
+        setUserLanguage('pt'); // Default to Portuguese on error
       }
     };
     

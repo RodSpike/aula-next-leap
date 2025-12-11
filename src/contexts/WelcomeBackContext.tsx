@@ -13,9 +13,7 @@ interface WelcomeBackContextType {
 const WelcomeBackContext = createContext<WelcomeBackContextType | undefined>(undefined);
 
 const INACTIVITY_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
-const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours between popups
 const SESSION_SHOWN_KEY = 'welcome_back_shown_this_session';
-const LAST_SHOWN_KEY = 'welcome_back_last_shown';
 const LAST_ACTIVE_KEY = 'welcome_back_last_active';
 
 export function WelcomeBackProvider({ children }: { children: React.ReactNode }) {
@@ -37,16 +35,9 @@ export function WelcomeBackProvider({ children }: { children: React.ReactNode })
     if (!user || !suggestion || hasShownThisSession) return false;
     if (!isProtectedRoute) return false;
 
-    // Check session storage
+    // Check session storage - only show once per session
     const shownThisSession = sessionStorage.getItem(SESSION_SHOWN_KEY);
     if (shownThisSession === 'true') return false;
-
-    // Check cooldown
-    const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
-    if (lastShown) {
-      const lastShownTime = parseInt(lastShown, 10);
-      if (Date.now() - lastShownTime < COOLDOWN_MS) return false;
-    }
 
     return true;
   }, [user, suggestion, hasShownThisSession, isProtectedRoute]);
@@ -58,7 +49,6 @@ export function WelcomeBackProvider({ children }: { children: React.ReactNode })
     setIsOpen(true);
     setHasShownThisSession(true);
     sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
-    localStorage.setItem(LAST_SHOWN_KEY, Date.now().toString());
   }, [shouldShowPopup]);
 
   // Dismiss welcome back popup
