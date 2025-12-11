@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CupheadFoxMood } from '@/components/mascot/CupheadFoxMascot';
 
 export interface WelcomeBackSuggestion {
-  type: 'continue_lesson' | 'do_exercises' | 'ask_tutor' | 'click_of_week' | 'click_of_week_waiting' | 'community' | 'feature_discovery' | 'speech_tutor' | 'ai_chat' | 'certificates' | 'achievements';
+  type: 'continue_lesson' | 'do_exercises' | 'ask_tutor' | 'click_of_week' | 'click_of_week_waiting' | 'community' | 'feature_discovery' | 'speech_tutor' | 'ai_chat' | 'achievements';
   title: string;
   message: string;
   mascotMood: CupheadFoxMood;
@@ -38,7 +38,6 @@ const FEATURE_PAGES: Record<string, string[]> = {
   'community': ['/community'],
   'ai_chat': ['/ai-chat'],
   'speech_tutor': ['/dashboard'], // Speech tutor opens as dialog
-  'certificates': ['/certificates'],
   'achievements': ['/achievements'],
   'friends': ['/friends'],
   'messages': ['/messages'],
@@ -373,24 +372,6 @@ export function useWelcomeBack() {
               label: '🎤 Abrir Speech Tutor',
               path: '/dashboard?open_speech_tutor=true',
               icon: 'mic',
-            },
-          };
-        
-        case 'certificates':
-          return {
-            type: 'certificates',
-            title: 'Conquiste certificados! 📜',
-            message: 'Sabia que ao completar cursos você ganha certificados? Veja seus certificados e continue conquistando!',
-            mascotMood: 'celebrating',
-            primaryAction: {
-              label: '📜 Ver Certificados',
-              path: '/certificates',
-              icon: 'award',
-            },
-            secondaryAction: {
-              label: '📚 Continuar Estudando',
-              path: '/courses',
-              icon: 'book',
             },
           };
         
