@@ -48,6 +48,20 @@ const FEATURE_PAGES: Record<string, string[]> = {
   'courses': ['/courses', '/course/'],
 };
 
+// Key for tracking which suggestion type was shown last
+const LAST_SUGGESTION_TYPE_KEY = 'welcomeBack_lastSuggestionType';
+const LAST_SUGGESTION_TIME_KEY = 'welcomeBack_lastSuggestionTime';
+
+// Available suggestion types for rotation
+const ROTATABLE_SUGGESTIONS = [
+  'click_of_week',
+  'continue_lesson', 
+  'community',
+  'ai_chat',
+  'speech_tutor',
+  'achievements',
+] as const;
+
 // Translations for messages
 const translations = {
   pt: {
@@ -359,6 +373,152 @@ export function useWelcomeBack() {
     }
   }, [user]);
 
+  // Get the next suggestion type to show (rotation system)
+  const getNextSuggestionType = useCallback((): string | null => {
+    const lastType = localStorage.getItem(LAST_SUGGESTION_TYPE_KEY);
+    const lastTime = localStorage.getItem(LAST_SUGGESTION_TIME_KEY);
+    
+    // If shown within the last 10 minutes, don't rotate
+    if (lastTime) {
+      const timeDiff = Date.now() - parseInt(lastTime, 10);
+      if (timeDiff < 10 * 60 * 1000) {
+        return null; // Too recent, use priority-based selection
+      }
+    }
+    
+    if (!lastType) {
+      return ROTATABLE_SUGGESTIONS[0];
+    }
+    
+    const currentIndex = ROTATABLE_SUGGESTIONS.indexOf(lastType as any);
+    const nextIndex = (currentIndex + 1) % ROTATABLE_SUGGESTIONS.length;
+    return ROTATABLE_SUGGESTIONS[nextIndex];
+  }, []);
+
+  // Save which suggestion type was shown
+  const saveSuggestionType = useCallback((type: string) => {
+    localStorage.setItem(LAST_SUGGESTION_TYPE_KEY, type);
+    localStorage.setItem(LAST_SUGGESTION_TIME_KEY, Date.now().toString());
+  }, []);
+
+  // Create suggestion by type
+  const createSuggestionByType = useCallback((
+    type: string,
+    t: typeof translations['pt'],
+    lastLesson: LastLesson | null,
+    clickStatus: ClickOfWeekStatus
+  ): WelcomeBackSuggestion | null => {
+    switch (type) {
+      case 'click_of_week':
+        if (clickStatus.hasLives) {
+          return {
+            type: 'click_of_week',
+            title: t.welcomeBackTitle,
+            message: t.welcomeBackMessage,
+            mascotMood: 'waving',
+            primaryAction: {
+              label: t.playClickOfWeek,
+              path: '/click-of-the-week',
+              icon: 'gamepad',
+            },
+            secondaryAction: {
+              label: t.goToCourses,
+              path: '/courses',
+              icon: 'book',
+            },
+            dismissLabel: t.dismissLabel,
+          };
+        }
+        return null;
+      
+      case 'continue_lesson':
+        if (lastLesson) {
+          return {
+            type: 'continue_lesson',
+            title: t.continueLessonTitle,
+            message: t.continueJourneyMessage(lastLesson.courseName),
+            mascotMood: 'happy',
+            primaryAction: {
+              label: t.continueCourse,
+              path: `/course/${lastLesson.courseId}`,
+              icon: 'book',
+            },
+            secondaryAction: {
+              label: t.doActivities,
+              path: `/course/${lastLesson.courseId}?tab=exercises`,
+              icon: 'pencil',
+            },
+            tertiaryAction: {
+              label: t.askClickAI,
+              path: '/ai-chat',
+              icon: 'bot',
+            },
+            dismissLabel: t.dismissLabel,
+          };
+        }
+        return null;
+      
+      case 'community':
+        return {
+          type: 'community',
+          title: t.communityTitle,
+          message: t.communityMessage,
+          mascotMood: 'waving',
+          primaryAction: {
+            label: t.goToCommunity,
+            path: '/community',
+            icon: 'users',
+          },
+          dismissLabel: t.dismissLabel,
+        };
+      
+      case 'ai_chat':
+        return {
+          type: 'ai_chat',
+          title: t.aiChatTitle,
+          message: t.aiChatMessage,
+          mascotMood: 'thinking',
+          primaryAction: {
+            label: t.openClickAI,
+            path: '/ai-chat',
+            icon: 'bot',
+          },
+          dismissLabel: t.dismissLabel,
+        };
+      
+      case 'speech_tutor':
+        return {
+          type: 'speech_tutor',
+          title: t.speechTutorTitle,
+          message: t.speechTutorMessage,
+          mascotMood: 'excited',
+          primaryAction: {
+            label: t.openSpeechTutor,
+            path: '/dashboard?open_speech_tutor=true',
+            icon: 'mic',
+          },
+          dismissLabel: t.dismissLabel,
+        };
+      
+      case 'achievements':
+        return {
+          type: 'achievements',
+          title: t.achievementsTitle,
+          message: t.achievementsMessage,
+          mascotMood: 'excited',
+          primaryAction: {
+            label: t.viewAchievements,
+            path: '/achievements',
+            icon: 'trophy',
+          },
+          dismissLabel: t.dismissLabel,
+        };
+      
+      default:
+        return null;
+    }
+  }, []);
+
   const generateSuggestion = useCallback(async (): Promise<WelcomeBackSuggestion | null> => {
     if (!user) return null;
 
@@ -371,8 +531,33 @@ export function useWelcomeBack() {
       getFeatureUsage(),
     ]);
 
+    // Check if we should rotate to a different suggestion
+    const nextType = getNextSuggestionType();
+    
+    if (nextType) {
+      // Try rotation-based suggestion first
+      const rotatedSuggestion = createSuggestionByType(nextType, t, lastLesson, clickStatus);
+      if (rotatedSuggestion) {
+        saveSuggestionType(nextType);
+        return rotatedSuggestion;
+      }
+      
+      // If the rotated type isn't available, try the next ones
+      for (const fallbackType of ROTATABLE_SUGGESTIONS) {
+        if (fallbackType === nextType) continue;
+        const fallbackSuggestion = createSuggestionByType(fallbackType, t, lastLesson, clickStatus);
+        if (fallbackSuggestion) {
+          saveSuggestionType(fallbackType);
+          return fallbackSuggestion;
+        }
+      }
+    }
+
+    // Fallback to priority-based logic if rotation didn't work
+
     // Priority 1: Was in a lesson
     if (lastAction?.includes('/course/') && lastLesson) {
+      saveSuggestionType('continue_lesson');
       return {
         type: 'continue_lesson',
         title: t.continueLessonTitle,
@@ -401,6 +586,7 @@ export function useWelcomeBack() {
     // Priority 2: Was playing Click of the Week
     if (lastAction === '/click-of-the-week') {
       if (clickStatus.hasLives) {
+        saveSuggestionType('click_of_week');
         return {
           type: 'click_of_week',
           title: t.clickOfWeekTitle,
@@ -447,6 +633,7 @@ export function useWelcomeBack() {
       
       switch (feature.feature) {
         case 'community':
+          saveSuggestionType('community');
           return {
             type: 'community',
             title: t.communityTitle,
@@ -461,6 +648,7 @@ export function useWelcomeBack() {
           };
         
         case 'ai_chat':
+          saveSuggestionType('ai_chat');
           return {
             type: 'ai_chat',
             title: t.aiChatTitle,
@@ -475,6 +663,7 @@ export function useWelcomeBack() {
           };
         
         case 'speech_tutor':
+          saveSuggestionType('speech_tutor');
           return {
             type: 'speech_tutor',
             title: t.speechTutorTitle,
@@ -489,6 +678,7 @@ export function useWelcomeBack() {
           };
         
         case 'achievements':
+          saveSuggestionType('achievements');
           return {
             type: 'achievements',
             title: t.achievementsTitle,
@@ -506,6 +696,7 @@ export function useWelcomeBack() {
 
     // Priority 4: Default - Click of the Week or Continue studying
     if (clickStatus.hasLives) {
+      saveSuggestionType('click_of_week');
       return {
         type: 'click_of_week',
         title: t.welcomeBackTitle,
@@ -527,6 +718,7 @@ export function useWelcomeBack() {
 
     // Fallback
     if (lastLesson) {
+      saveSuggestionType('continue_lesson');
       return {
         type: 'continue_lesson',
         title: t.continueLessonTitle,
@@ -542,7 +734,7 @@ export function useWelcomeBack() {
     }
 
     return null;
-  }, [user, userLanguage, getLastAction, getLastLesson, getClickOfWeekStatus, getFeatureUsage]);
+  }, [user, userLanguage, getLastAction, getLastLesson, getClickOfWeekStatus, getFeatureUsage, getNextSuggestionType, createSuggestionByType, saveSuggestionType]);
 
   useEffect(() => {
     if (!user) {
