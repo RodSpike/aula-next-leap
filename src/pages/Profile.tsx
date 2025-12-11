@@ -41,6 +41,7 @@ export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -56,6 +57,7 @@ export default function Profile() {
   const [editedHeaderBg, setEditedHeaderBg] = useState('');
   const [editedSongUrl, setEditedSongUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (userId && user) {
@@ -234,6 +236,65 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('community-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('community-files')
+        .getPublicUrl(fileName);
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+      
+      toast({
+        title: "Avatar updated",
+        description: "Your profile picture has been updated",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!user || !isOwnProfile) return;
 
@@ -340,11 +401,33 @@ export default function Profile() {
           <Card>
             <CardContent className="pt-16">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <ProfileAvatar
-                  userId={profile.user_id}
-                  avatarUrl={profile.avatar_url}
-                  fallback={profile.display_name?.charAt(0) || profile.username?.charAt(0) || 'U'}
-                  className="w-32 h-32 border-4 border-background -mt-28"
+                <div 
+                  className={`relative ${isEditing && isOwnProfile ? 'cursor-pointer group' : ''}`}
+                  onClick={() => isEditing && isOwnProfile && avatarInputRef.current?.click()}
+                >
+                  <ProfileAvatar
+                    userId={profile.user_id}
+                    avatarUrl={profile.avatar_url}
+                    fallback={profile.display_name?.charAt(0) || profile.username?.charAt(0) || 'U'}
+                    className="w-32 h-32 border-4 border-background -mt-28"
+                  />
+                  {isEditing && isOwnProfile && (
+                    <div className="absolute inset-0 -mt-28 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 -mt-28 flex items-center justify-center bg-black/50 rounded-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
                 />
                 
                 <div className="text-center">
