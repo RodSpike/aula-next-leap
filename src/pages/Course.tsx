@@ -15,7 +15,7 @@ import { ExerciseActivity } from "@/components/ExerciseActivity";
 import { LessonAudioPlayer } from "@/components/LessonAudioPlayer";
 import { AdvancedLessonAudioPlayer } from "@/components/AdvancedLessonAudioPlayer";
 import { CourseTutorChat } from "@/components/CourseTutorChat";
-import { BookOpen, Trophy, Clock, ArrowLeft } from "lucide-react";
+import { BookOpen, Trophy, Clock, ArrowLeft, FileCheck, Award } from "lucide-react";
 
 interface Course {
   id: string;
@@ -74,6 +74,7 @@ export default function Course() {
   const [showIntroduction, setShowIntroduction] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [lessonProgress, setLessonProgress] = useState<{[key: string]: number}>({});
+  const [hasCertificate, setHasCertificate] = useState(false);
 
   useEffect(() => {
     if (courseId && user) {
@@ -202,6 +203,25 @@ export default function Course() {
     }
   };
 
+  const checkCertificateStatus = async (courseTitle: string) => {
+    if (!user || !courseTitle) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_name', courseTitle)
+        .maybeSingle();
+      
+      if (!error && data) {
+        setHasCertificate(true);
+      }
+    } catch (error) {
+      console.error('Error checking certificate status:', error);
+    }
+  };
+
   const loadCourseData = async () => {
     try {
       // Load course
@@ -213,6 +233,9 @@ export default function Course() {
 
       if (courseError) throw courseError;
       setCourse(courseData);
+      
+      // Check certificate status with course title
+      checkCertificateStatus(courseData.title);
 
       // Load lessons
       const { data: lessonsData, error: lessonsError } = await supabase
@@ -583,6 +606,25 @@ export default function Course() {
                         {Object.values(lessonProgress).filter(score => score >= 70).length}/{lessons.length}
                       </span>
                     </div>
+                    
+                    {/* Certificate button */}
+                    {hasCertificate && (
+                      <Button asChild className="w-full mt-4 gap-2" variant="secondary">
+                        <Link to="/certificates">
+                          <Award className="h-4 w-4 text-green-500" />
+                          Ver Certificado
+                        </Link>
+                      </Button>
+                    )}
+                    
+                    {/* Course complete but no certificate yet */}
+                    {progress === 100 && !hasCertificate && (
+                      <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-xs text-amber-800 dark:text-amber-200 text-center">
+                          Complete todas as atividades com 70% ou mais para receber seu certificado!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
