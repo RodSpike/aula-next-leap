@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   usePageMeta({
@@ -23,6 +24,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
   const {
     signIn,
     signInWithGoogle,
@@ -32,11 +34,68 @@ export default function Login() {
   const {
     toast
   } = useToast();
+
+  // Check subscription status after user logs in
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
-    if (user) {
-      navigate("/dashboard");
-    }
+    const checkAccessAndRedirect = async () => {
+      if (!user) return;
+      
+      setCheckingAccess(true);
+      try {
+        // Check if user is admin
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const { data: adminResp } = await supabase.functions.invoke('check-admin', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        
+        if (adminResp?.is_admin === true) {
+          navigate("/dashboard");
+          return;
+        }
+
+        // Check for free access
+        const { data: freeUserData } = await supabase.functions.invoke('check-free-access');
+        if (freeUserData?.has_free_access) {
+          navigate("/dashboard");
+          return;
+        }
+
+        // Check subscription status
+        const { data: subData } = await supabase.functions.invoke('check-subscription');
+        if (subData?.subscribed || subData?.in_trial) {
+          navigate("/dashboard");
+          return;
+        }
+
+        // Fallback: check user_subscriptions table
+        const { data: subRow } = await supabase
+          .from('user_subscriptions')
+          .select('subscription_status, trial_ends_at, current_period_end')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const now = new Date();
+        const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
+        const isActive = (subRow?.subscription_status === 'active') || 
+                        (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
+
+        if (inTrial || isActive) {
+          navigate("/dashboard");
+        } else {
+          // User doesn't have active subscription, redirect to subscribe
+          navigate("/subscribe");
+        }
+      } catch (error) {
+        console.error('Error checking access:', error);
+        // On error, redirect to subscribe to be safe
+        navigate("/subscribe");
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    checkAccessAndRedirect();
   }, [user, navigate]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +170,15 @@ export default function Login() {
       setLoading(false);
     }
   };
+  // Show loading while checking access after login
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-gradient-subtle">
       <Navigation />
       
