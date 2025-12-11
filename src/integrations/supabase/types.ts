@@ -2129,7 +2129,7 @@ export type Database = {
     Enums: {
       achievement_category: "learning" | "social" | "engagement" | "milestone"
       achievement_tier: "bronze" | "silver" | "gold" | "platinum"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "teacher"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2259,7 +2259,7 @@ export const Constants = {
     Enums: {
       achievement_category: ["learning", "social", "engagement", "milestone"],
       achievement_tier: ["bronze", "silver", "gold", "platinum"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "teacher"],
     },
   },
 } as const
