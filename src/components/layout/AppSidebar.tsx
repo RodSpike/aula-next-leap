@@ -211,7 +211,10 @@ export const AppSidebar = () => {
             collapsed && "flex justify-center"
           )}>
             {collapsed ? (
-              <div className="relative">
+              <div 
+                className="relative cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => navigate(`/profile/${user.id}`)}
+              >
                 <Avatar className="h-10 w-10 border-2 border-primary">
                   <AvatarImage src={profile?.avatar_url} />
                   <AvatarFallback className="bg-primary/10 text-primary">
@@ -224,7 +227,10 @@ export const AppSidebar = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity rounded-lg p-1 -m-1 hover:bg-accent/50"
+                  onClick={() => navigate(`/profile/${user.id}`)}
+                >
                   <div className="relative">
                     <Avatar className="h-12 w-12 border-2 border-primary/50">
                       <AvatarImage src={profile?.avatar_url} />
