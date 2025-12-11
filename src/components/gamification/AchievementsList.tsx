@@ -100,20 +100,36 @@ export const AchievementsList: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {!isUnlocked && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Progresso</span>
-                <span>{progress?.progress || 0}/{achievement.requirement_count}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Progresso</span>
+              <span className="font-medium">
+                {progress?.progress || 0}/{achievement.requirement_count}
+              </span>
+            </div>
+            <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted">
+              <div 
+                className={`h-full transition-all duration-500 rounded-full ${
+                  isUnlocked 
+                    ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                    : progressPercent > 0 
+                      ? 'bg-gradient-to-r from-green-400 to-green-500' 
+                      : ''
+                }`}
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+              {progressPercent > 15 && (
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-white drop-shadow-sm">
+                  {Math.round(progressPercent)}%
+                </span>
+              )}
+            </div>
+            {isUnlocked && (
+              <div className="text-sm text-green-600 dark:text-green-400 font-medium mt-2">
+                🎉 Desbloqueada em {new Date(progress.unlocked_at!).toLocaleDateString('pt-BR')}
               </div>
-              <Progress value={progressPercent} className="h-2" />
-            </div>
-          )}
-          {isUnlocked && (
-            <div className="text-sm text-muted-foreground">
-              🎉 Desbloqueada em {new Date(progress.unlocked_at!).toLocaleDateString('pt-BR')}
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
     );
