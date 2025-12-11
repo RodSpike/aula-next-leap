@@ -30,6 +30,7 @@ export function FeaturedCourses() {
             level,
             lessons(id)
           `)
+          .or('admin_only.is.null,admin_only.eq.false')
           .order('order_index')
           .limit(6);
 
@@ -146,7 +147,7 @@ export function FeaturedCourses() {
                     </Badge>
                   </div>
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={`/course/${course.id}`}>
+                    <Link to="/conhecer-cursos">
                       Ver Curso
                     </Link>
                   </Button>
@@ -158,7 +159,7 @@ export function FeaturedCourses() {
         
         <div className="text-center">
           <Button variant="hero" size="lg" asChild>
-            <Link to="/courses">
+            <Link to="/conhecer-cursos">
               Ver Todos os Cursos
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
