@@ -26,9 +26,9 @@ export function WelcomeBackProvider({ children }: { children: React.ReactNode })
   const lastActivityRef = useRef<number>(Date.now());
   const visibilityHandlerRef = useRef<(() => void) | null>(null);
 
-  // Protected routes where we can show the dialog
+  // Protected routes where we can show the dialog - never show on home page or public routes
   const protectedRoutes = ['/dashboard', '/courses', '/community', '/achievements', '/friends', '/messages', '/certificates'];
-  const isProtectedRoute = protectedRoutes.some(route => location.pathname.startsWith(route));
+  const isProtectedRoute = location.pathname !== '/' && protectedRoutes.some(route => location.pathname.startsWith(route));
 
   // Check if we should show the popup
   const shouldShowPopup = useCallback((): boolean => {
