@@ -16,7 +16,8 @@ import {
   History,
   FileText,
   ArrowUpCircle,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -32,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PlacementTestStatistics } from './PlacementTestStatistics';
 
 interface TestVersion {
   id: string;
@@ -183,9 +185,13 @@ export function PlacementTestManager() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="current" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="current">Versão Atual</TabsTrigger>
-            <TabsTrigger value="history">Histórico de Versões</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+            <TabsTrigger value="stats" className="gap-1">
+              <BarChart3 className="h-3 w-3" />
+              Estatísticas
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="current" className="space-y-4">
@@ -317,6 +323,10 @@ export function PlacementTestManager() {
                 </div>
               </ScrollArea>
             )}
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <PlacementTestStatistics />
           </TabsContent>
         </Tabs>
       </CardContent>
