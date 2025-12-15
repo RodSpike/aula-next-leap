@@ -403,7 +403,9 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
 
       // Speak the response
       await speakText(aiResponse);
-
+      
+      // Auto-return to idle after AI finishes speaking
+      setStatus(ConversationStatus.Idle);
     } catch (error: any) {
       console.error('[Speech Tutor] AI processing error:', error);
       toast({
