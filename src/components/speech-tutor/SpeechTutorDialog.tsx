@@ -131,6 +131,9 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<Array<{ role: string; content: string }>>([]);
   const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const listeningStartTimeRef = useRef<number>(0);
+  const hasReceivedResultRef = useRef<boolean>(false);
+  const errorSuppressedRef = useRef<boolean>(false);
   
   // Session tracking
   const sessionIdRef = useRef<string | null>(null);
@@ -418,20 +421,33 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     const recognition = getSpeechRecognition();
     if (!recognition) return;
 
-    recognition.continuous = true; // Keep listening for longer
-    recognition.interimResults = true; // Show interim results for feedback
-    recognition.lang = 'en-US'; // English only for fluency practice
+    // Reset refs
+    hasReceivedResultRef.current = false;
+    errorSuppressedRef.current = false;
+    listeningStartTimeRef.current = Date.now();
+
+    // Detect if mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // On mobile, continuous mode often doesn't work well - use single-shot mode
+    recognition.continuous = !isMobile;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
     
     recognition.onstart = () => {
-      console.log('[Speech Tutor] Recognition started');
+      console.log('[Speech Tutor] Recognition started, mobile:', isMobile);
       setStatus(ConversationStatus.Listening);
       setErrorMessage('');
       
       // Set auto-stop timeout
       listeningTimeoutRef.current = setTimeout(() => {
         console.log('[Speech Tutor] Timeout reached, stopping...');
-        recognition.stop();
-        setErrorMessage(`Timeout reached (${maxListeningSeconds}s). Click "Speak" to try again.`);
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
+        if (!hasReceivedResultRef.current) {
+          setErrorMessage(`Timeout reached (${maxListeningSeconds}s). Click "Speak" to try again.`);
+        }
       }, maxListeningSeconds * 1000);
     };
 
@@ -440,29 +456,60 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       const lastResult = event.results[event.results.length - 1];
       
       if (lastResult.isFinal) {
-        const text = lastResult[0].transcript;
+        const text = lastResult[0].transcript.trim();
         console.log('[Speech Tutor] Final result:', text);
         setInterimText('');
+        hasReceivedResultRef.current = true;
+        
         // Clear timeout since we got a result
         if (listeningTimeoutRef.current) {
           clearTimeout(listeningTimeoutRef.current);
           listeningTimeoutRef.current = null;
         }
-        // Stop recognition before processing
-        recognition.stop();
-        processWithAI(text);
+        
+        // Only process if we have actual text
+        if (text.length > 0) {
+          // Stop recognition before processing
+          if (recognitionRef.current) {
+            recognitionRef.current.stop();
+          }
+          processWithAI(text);
+        }
       } else {
         // Show interim results for user feedback
         const interim = lastResult[0].transcript;
         console.log('[Speech Tutor] Interim:', interim);
         setInterimText(interim);
+        hasReceivedResultRef.current = true; // Mark that we're getting input
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('[Speech Tutor] Recognition error:', event.error);
+      
+      const listeningDuration = Date.now() - listeningStartTimeRef.current;
+      const minListeningMs = 2000; // Minimum 2 seconds before showing no-speech error
+      
       if (event.error === 'no-speech') {
-        setErrorMessage('No speech detected. Please speak closer to the microphone.');
+        // Only show error if we've been listening for a reasonable time
+        if (listeningDuration < minListeningMs) {
+          console.log('[Speech Tutor] Suppressing early no-speech error, duration:', listeningDuration);
+          errorSuppressedRef.current = true;
+          // On mobile, restart recognition silently
+          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            setTimeout(() => {
+              if (status === ConversationStatus.Listening && !hasReceivedResultRef.current) {
+                try {
+                  recognition.start();
+                } catch (e) {
+                  console.log('[Speech Tutor] Could not restart after suppressed error');
+                }
+              }
+            }, 100);
+          }
+          return;
+        }
+        setErrorMessage('No speech detected. Please speak closer to the microphone and try again.');
       } else if (event.error === 'audio-capture') {
         setErrorMessage('Microphone not found. Please check your permissions.');
       } else if (event.error === 'not-allowed') {
@@ -470,19 +517,30 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       } else if (event.error === 'aborted') {
         // User or code stopped recognition, not an error
         console.log('[Speech Tutor] Recognition aborted');
+        return;
+      } else if (event.error === 'network') {
+        setErrorMessage('Network error. Please check your connection and try again.');
       } else {
-        setErrorMessage(`Recognition error: ${event.error}`);
+        setErrorMessage(`Recognition error: ${event.error}. Please try again.`);
       }
-      if (event.error !== 'aborted') {
+      
+      if (!hasReceivedResultRef.current) {
         setStatus(ConversationStatus.Error);
       }
     };
 
     recognition.onend = () => {
-      console.log('[Speech Tutor] Recognition ended');
-      // Only reset to idle if we're not processing or speaking
+      console.log('[Speech Tutor] Recognition ended, hasResult:', hasReceivedResultRef.current);
+      
+      // Clear the timeout
+      if (listeningTimeoutRef.current) {
+        clearTimeout(listeningTimeoutRef.current);
+        listeningTimeoutRef.current = null;
+      }
+      
+      // Only reset to idle if we're still in listening state and didn't get results
       setStatus(prev => {
-        if (prev === ConversationStatus.Listening) {
+        if (prev === ConversationStatus.Listening && !hasReceivedResultRef.current && !errorSuppressedRef.current) {
           return ConversationStatus.Idle;
         }
         return prev;
@@ -499,7 +557,7 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
       setErrorMessage('Failed to start speech recognition. Please try again.');
       setStatus(ConversationStatus.Error);
     }
-  }, [getSpeechRecognition, processWithAI, maxListeningSeconds]);
+  }, [getSpeechRecognition, processWithAI, maxListeningSeconds, status]);
 
   // Stop listening
   const stopListening = useCallback(() => {
