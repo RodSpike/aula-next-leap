@@ -71,7 +71,7 @@ export default function Messages() {
   if (showDirectChat && friendData) {
     return (
       <AppLayout>
-        <div className="h-[calc(100vh-4rem)] pb-24 md:pb-0 animate-fade-in">
+        <div className="h-[calc(100vh-4rem)] pb-20 md:pb-0 animate-fade-in">
           <DirectMessageChat
             friendId={friendData.id}
             friendName={friendData.name}
@@ -89,7 +89,7 @@ export default function Messages() {
 
   return (
     <AppLayout>
-      <div className="pb-24 md:pb-0 animate-fade-in">
+      <div className="pb-20 md:pb-0 animate-fade-in">
         <UnifiedChatInterface />
       </div>
     </AppLayout>

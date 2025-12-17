@@ -367,4 +367,28 @@ All colors MUST be HSL for consistency and theming.
   .delay-700 {
     animation-delay: 700ms;
   }
+
+  /* Safe area utilities for iOS */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Mobile chat input positioning */
+  .mobile-chat-input {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch-friendly tap targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
