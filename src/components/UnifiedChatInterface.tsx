@@ -224,50 +224,50 @@ export const UnifiedChatInterface = () => {
   }
 
   return (
-    <div className="container max-w-6xl mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-6 w-6" />
-            Messages
+    <div className="container max-w-6xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <Card className="border-0 md:border shadow-none md:shadow-sm">
+        <CardHeader className="px-4 md:px-6 pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
+            Mensagens
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 md:px-6">
           <div className="space-y-4">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative px-2 md:px-0">
+              <Search className="absolute left-5 md:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search conversations..."
+                placeholder="Buscar conversas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12"
               />
             </div>
 
             {/* Conversations List */}
-            <ScrollArea className="h-[600px]">
+            <ScrollArea className="h-[calc(100vh-280px)] md:h-[600px]">
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Loading conversations...
+                  Carregando conversas...
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No conversations yet</p>
-                  <p className="text-sm">Start chatting with friends or join a group!</p>
+                  <p>Nenhuma conversa ainda</p>
+                  <p className="text-sm">Comece a conversar com amigos ou entre em um grupo!</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {filteredConversations.map((conv) => (
                     <Button
                       key={conv.id}
                       variant="ghost"
-                      className="w-full justify-start h-auto p-4"
+                      className="w-full justify-start h-auto p-3 md:p-4 hover:bg-muted/80 active:scale-[0.98] transition-transform"
                       onClick={() => setSelectedChat(conv)}
                     >
                       <div className="flex items-center gap-3 w-full">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-12 w-12 flex-shrink-0">
                           <AvatarImage src={conv.avatar} />
                           <AvatarFallback>
                             {conv.type === 'direct' ? (
@@ -280,8 +280,8 @@ export const UnifiedChatInterface = () => {
                         <div className="flex-1 text-left min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium truncate">{conv.name}</p>
-                            <Badge variant={conv.type === 'direct' ? 'secondary' : 'default'} className="text-xs">
-                              {conv.type === 'direct' ? 'DM' : 'Group'}
+                            <Badge variant={conv.type === 'direct' ? 'secondary' : 'default'} className="text-xs flex-shrink-0">
+                              {conv.type === 'direct' ? 'DM' : 'Grupo'}
                             </Badge>
                           </div>
                           {conv.lastMessage && (
@@ -291,7 +291,7 @@ export const UnifiedChatInterface = () => {
                           )}
                         </div>
                         {conv.unreadCount > 0 && (
-                          <Badge variant="destructive" className="ml-auto">
+                          <Badge variant="destructive" className="ml-auto flex-shrink-0">
                             {conv.unreadCount}
                           </Badge>
                         )}

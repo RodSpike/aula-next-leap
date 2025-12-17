@@ -202,37 +202,40 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header - fixed */}
-      <div className="flex-none bg-card border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={onBack}>
+      <div className="flex-none bg-card border-b px-3 md:px-6 py-3 md:py-4 safe-area-top">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+            <Button variant="ghost" size="icon" onClick={onBack} className="flex-shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Avatar className="w-10 h-10 cursor-pointer" onClick={() => navigate(`/profile/${friendId}`)}>
+            <Avatar className="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${friendId}`)}>
               <AvatarImage src={friendAvatar} />
               <AvatarFallback>{friendName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-lg">{friendName}</h2>
+                <h2 className="font-semibold text-base md:text-lg truncate">{friendName}</h2>
                 {groupId && <OnlineStatus userId={friendId} groupId={groupId} showBadge={false} />}
               </div>
-              <p className="text-sm text-muted-foreground">Direct Message</p>
+              <p className="text-xs md:text-sm text-muted-foreground hidden md:block">Direct Message</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/profile/${friendId}`)}>
+          <Button variant="ghost" size="icon" className="flex-shrink-0 md:hidden" onClick={() => navigate(`/profile/${friendId}`)}>
+            <User className="h-5 w-5" />
+          </Button>
+          <Button variant="outline" size="sm" className="hidden md:flex" onClick={() => navigate(`/profile/${friendId}`)}>
             <User className="h-4 w-4 mr-2" />
-            View Profile
+            Ver Perfil
           </Button>
         </div>
       </div>
 
       {/* Messages - scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
-              <p>No messages yet. Start the conversation!</p>
+              <p>Nenhuma mensagem ainda. Comece a conversar!</p>
             </div>
           </div>
         ) : (
@@ -242,14 +245,14 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
             return (
               <div key={message.id} className={`flex ${isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
                 {!isFromCurrentUser && (
-                  <Avatar className="w-8 h-8 mr-3 mt-1">
+                  <Avatar className="w-8 h-8 mr-2 mt-1 flex-shrink-0">
                     <AvatarImage src={message.sender_profile?.avatar_url} />
                     <AvatarFallback>
                       {message.sender_profile?.display_name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className={`max-w-[70%] ${isFromCurrentUser ? 'ml-auto' : ''}`}>
+                <div className={`max-w-[80%] md:max-w-[70%] ${isFromCurrentUser ? 'ml-auto' : ''}`}>
                   {!isFromCurrentUser && (
                     <div className="text-xs text-muted-foreground mb-1 ml-1">
                       {message.sender_profile?.display_name || message.sender_profile?.username || 'Anonymous'}
@@ -269,7 +272,7 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
                   </div>
                 </div>
                 {isFromCurrentUser && (
-                  <Avatar className="w-8 h-8 ml-3 mt-1">
+                  <Avatar className="w-8 h-8 ml-2 mt-1 flex-shrink-0">
                     <AvatarImage src={message.sender_profile?.avatar_url} />
                     <AvatarFallback>
                       {message.sender_profile?.display_name?.charAt(0) || 'U'}
@@ -284,16 +287,15 @@ export const DirectMessageChat: React.FC<DirectMessageChatProps> = ({
       </div>
 
       {/* Input - fixed at bottom */}
-      <div className="flex-none bg-card border-t px-6 py-4 pb-6">
-        <form onSubmit={sendMessage} className="flex gap-3">
+      <div className="flex-none bg-card border-t px-3 md:px-6 py-3 md:py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <form onSubmit={sendMessage} className="flex gap-2 md:gap-3">
           <Input
-            placeholder="Type your message..."
+            placeholder="Digite sua mensagem..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1 h-12"
-            autoFocus
           />
-          <Button type="submit" size="lg" className="px-8" disabled={!newMessage.trim()}>
+          <Button type="submit" size="lg" className="px-4 md:px-8 h-12" disabled={!newMessage.trim()}>
             <Send className="h-5 w-5" />
           </Button>
         </form>

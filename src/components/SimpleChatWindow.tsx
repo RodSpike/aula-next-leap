@@ -103,12 +103,12 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[600px] bg-card border rounded-lg shadow-lg flex flex-col z-50">
+    <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] bg-card md:border md:rounded-lg md:shadow-lg flex flex-col z-50">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between bg-muted/50">
-        <h3 className="font-semibold">{groupName}</h3>
+      <div className="p-4 border-b flex items-center justify-between bg-muted/50 safe-area-top">
+        <h3 className="font-semibold truncate flex-1">{groupName}</h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </Button>
       </div>
 
@@ -140,25 +140,25 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
                     userId={message.sender_id}
                     avatarUrl={message.sender?.avatar_url}
                     fallback={message.sender?.display_name?.charAt(0) || 'U'}
-                    className="w-8 h-8 mr-2"
+                    className="w-8 h-8 mr-2 flex-shrink-0"
                   />
                 )}
-                <div className={`max-w-[70%] ${isFromCurrentUser ? 'ml-4' : 'mr-4'}`}>
+                <div className={`max-w-[75%] ${isFromCurrentUser ? 'ml-4' : 'mr-4'}`}>
                   {!isFromCurrentUser && (
                     <div className="text-xs text-muted-foreground mb-1">
                       {message.sender?.display_name || message.sender?.username || 'Anonymous'}
                     </div>
                   )}
-                  <div className={`p-3 rounded-lg ${
+                  <div className={`p-3 rounded-2xl ${
                     isFromCurrentUser 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted'
+                      ? 'bg-primary text-primary-foreground rounded-tr-sm' 
+                      : 'bg-muted rounded-tl-sm'
                   }`}>
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm break-words">{message.content}</p>
                     <span className={`text-xs ${
                       isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
                     }`}>
-                      {new Date(message.created_at).toLocaleTimeString()}
+                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
                     userId={message.sender_id}
                     avatarUrl={message.sender?.avatar_url}
                     fallback={message.sender?.display_name?.charAt(0) || 'U'}
-                    className="w-8 h-8 ml-2"
+                    className="w-8 h-8 ml-2 flex-shrink-0"
                   />
                 )}
               </div>
@@ -178,16 +178,16 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
       </div>
 
       {/* Input */}
-      <form onSubmit={sendMessage} className="p-4 border-t bg-muted/50">
+      <form onSubmit={sendMessage} className="p-4 border-t bg-muted/50" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         <div className="flex gap-2">
           <Input
             placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1"
+            className="flex-1 h-12"
           />
-          <Button type="submit" size="icon">
-            <Send className="h-4 w-4" />
+          <Button type="submit" size="icon" className="h-12 w-12" disabled={!newMessage.trim()}>
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </form>

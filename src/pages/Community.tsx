@@ -896,8 +896,8 @@ export default function Community() {
           <Breadcrumb />
         </div>
       
-        {/* Header */}
-      <section className="relative bg-gradient-hero py-24 overflow-hidden">
+        {/* Header - Compact on mobile */}
+      <section className="relative bg-gradient-hero py-12 md:py-24 overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
@@ -905,41 +905,54 @@ export default function Community() {
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-8">
+          <div className="text-center space-y-4 md:space-y-8">
             <div className="flex items-center justify-center">
-              <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center shadow-lg">
-                <Users className="h-12 w-12 text-primary" />
+              <div className="w-14 h-14 md:w-20 md:h-20 bg-primary/10 rounded-2xl flex items-center justify-center shadow-lg">
+                <Users className="h-8 w-8 md:h-12 md:w-12 text-primary" />
               </div>
             </div>
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-6xl font-bold text-foreground">
-                <span className="bg-gradient-primary bg-clip-text text-transparent">Community</span> Learning
+            <div className="space-y-2 md:space-y-4">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-foreground">
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Comunidade</span>
               </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Connect, collaborate, and grow together in your English learning journey!
+              <p className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto">
+                Conecte-se e aprenda junto!
               </p>
             </div>
             
             {/* Community stats */}
-            <div className="flex items-center justify-center gap-8 pt-4">
+            <div className="flex items-center justify-center gap-6 md:gap-8 pt-2 md:pt-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{groups.length}</div>
-                <div className="text-sm text-muted-foreground">Active Groups</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary">{groups.length}</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Grupos</div>
               </div>
-              <div className="w-px h-12 bg-border"></div>
+              <div className="w-px h-8 md:h-12 bg-border"></div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-secondary">{groups.reduce((sum, g) => sum + (g.member_count || 0), 0)}</div>
-                <div className="text-sm text-muted-foreground">Members</div>
+                <div className="text-2xl md:text-3xl font-bold text-secondary">{groups.reduce((sum, g) => sum + (g.member_count || 0), 0)}</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Membros</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Groups Sidebar */}
-          <div className="lg:col-span-1">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 md:py-8">
+        {/* Mobile: Show back button when group is selected */}
+        {selectedGroup && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="mb-4 lg:hidden"
+            onClick={() => setSelectedGroup(null)}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Voltar aos Grupos
+          </Button>
+        )}
+        
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
+          {/* Groups Sidebar - Hidden on mobile when group is selected */}
+          <div className={`lg:col-span-1 ${selectedGroup ? 'hidden lg:block' : ''}`}>
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Groups</h2>
@@ -1180,67 +1193,66 @@ export default function Community() {
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
+          {/* Main Content - Shown on mobile only when group selected */}
+          <div className={`lg:col-span-2 ${!selectedGroup ? 'hidden lg:block' : ''}`}>
             {selectedGroup ? (
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                  {/* Group Header */}
                  <Card>
-                   <CardHeader>
-                     <div className="flex items-start justify-between">
-                       <div className="flex-1">
-                         <CardTitle className="flex items-center gap-2">
+                   <CardHeader className="p-4 md:p-6">
+                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                       <div className="flex-1 min-w-0">
+                         <CardTitle className="flex flex-wrap items-center gap-2 text-lg md:text-xl">
                            {selectedGroup.is_default ? (
-                             <Building2 className="h-4 w-4 text-primary" />
+                             <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
                            ) : (
-                             <User className="h-4 w-4 text-muted-foreground" />
+                             <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                            )}
-                           {selectedGroup.name}
-                           <Badge variant="outline">{selectedGroup.level}</Badge>
+                           <span className="truncate">{selectedGroup.name}</span>
+                           <Badge variant="outline" className="flex-shrink-0">{selectedGroup.level}</Badge>
                            {selectedGroup.group_type === 'closed' && (
-                             <Badge variant="secondary" className="text-xs">
+                             <Badge variant="secondary" className="text-xs flex-shrink-0">
                                <Lock className="h-3 w-3 mr-1" />
-                               Private
+                               Privado
                              </Badge>
                            )}
                          </CardTitle>
                          
-                         {/* Welcome Message */}
-                         <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
-                           <h4 className="font-semibold text-primary mb-2">
-                             {selectedGroup.is_default ? '🏫 Official Aula Click Community' : '👥 User Community'}
+                         {/* Welcome Message - Simplified on mobile */}
+                         <div className="mt-3 md:mt-4 p-3 md:p-4 bg-primary/5 rounded-lg border border-primary/20">
+                           <h4 className="font-semibold text-primary text-sm md:text-base mb-1 md:mb-2">
+                             {selectedGroup.is_default ? '🏫 Comunidade Oficial' : '👥 Comunidade'}
                            </h4>
-                           {selectedGroup.is_default ? (
-                             <p className="text-sm text-muted-foreground">
-                               Welcome to the official {selectedGroup.level} level community! 
-                               This is your space to practice English, get help from peers, and improve together. 
-                               Connect with other learners at your level and enhance your language skills.
+                           {selectedGroup.is_default && (
+                             <p className="text-xs md:text-sm text-muted-foreground">
+                               Bem-vindo à comunidade {selectedGroup.level}! Pratique inglês com outros estudantes.
                              </p>
-                           ) : null}
+                           )}
                          </div>
                          
                          {selectedGroup.description && (
-                           <p className="text-muted-foreground mt-2">
+                           <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                              {selectedGroup.description}
                            </p>
                          )}
                        </div>
-                       <div className="flex items-center gap-4">
-                         <div className="flex items-center text-sm text-muted-foreground">
+                       <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+                         <div className="flex items-center text-xs md:text-sm text-muted-foreground">
                            <Users className="h-4 w-4 mr-1" />
-                           {selectedGroup.member_count || 0} members
+                           {selectedGroup.member_count || 0}
                          </div>
                           <Button 
                             variant="outline" 
                             size="sm"
+                            className="h-9"
                             onClick={() => {
                               setChatInitialTab('group');
                               setChatInitialUserId(undefined);
                               setIsChatOpen(true);
                             }}
                           >
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Group Chat
+                            <MessageSquare className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Chat do Grupo</span>
                           </Button>
                        </div>
                      </div>
