@@ -14,7 +14,6 @@ import { LessonContent } from "@/components/LessonContent";
 import { ExerciseActivity } from "@/components/ExerciseActivity";
 import { LessonAudioPlayer } from "@/components/LessonAudioPlayer";
 import { AdvancedLessonAudioPlayer } from "@/components/AdvancedLessonAudioPlayer";
-import { CourseTutorChat } from "@/components/CourseTutorChat";
 import { BookOpen, Trophy, Clock, ArrowLeft, FileCheck, Award } from "lucide-react";
 
 interface Course {
@@ -844,15 +843,6 @@ export default function Course() {
         )}
       </div>
 
-      {/* Course AI Tutor Chat */}
-      {course && (
-        <CourseTutorChat
-          courseId={course.id}
-          courseName={course.title}
-          courseDescription={course.description}
-          currentLessonTitle={currentLesson?.title}
-        />
-      )}
     </AppLayout>
   );
 }
