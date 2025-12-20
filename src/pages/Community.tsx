@@ -953,14 +953,14 @@ export default function Community() {
         <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
           {/* Groups Sidebar - Hidden on mobile when group is selected */}
           <div className={`lg:col-span-1 ${selectedGroup ? 'hidden lg:block' : ''}`}>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Groups</h2>
+                <h2 className="text-lg md:text-2xl font-bold">Groups</h2>
                 <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create
+                    <Button size="sm" className="h-8 text-xs md:text-sm">
+                      <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                      <span className="hidden xs:inline">Create</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -1008,20 +1008,21 @@ export default function Community() {
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search groups..."
-                  className="pl-10"
+                  placeholder="Search..."
+                  className="pl-8 md:pl-10 h-8 md:h-10 text-xs md:text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
               {/* Filter */}
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 md:gap-2 flex-wrap">
                 <Button
                   variant={groupFilter === "all" ? "default" : "outline"}
                   size="sm"
+                  className="h-7 md:h-8 text-[10px] md:text-xs px-2 md:px-3"
                   onClick={() => setGroupFilter("all")}
                 >
                   All
@@ -1029,23 +1030,25 @@ export default function Community() {
                 <Button
                   variant={groupFilter === "official" ? "default" : "outline"}
                   size="sm"
+                  className="h-7 md:h-8 text-[10px] md:text-xs px-2 md:px-3"
                   onClick={() => setGroupFilter("official")}
                 >
-                  <Building2 className="h-3 w-3 mr-1" />
+                  <Building2 className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                   Official
                 </Button>
                 <Button
                   variant={groupFilter === "user" ? "default" : "outline"}
                   size="sm"
+                  className="h-7 md:h-8 text-[10px] md:text-xs px-2 md:px-3"
                   onClick={() => setGroupFilter("user")}
                 >
-                  <User className="h-3 w-3 mr-1" />
+                  <User className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                   User
                 </Button>
               </div>
 
               {/* Groups List */}
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {filteredGroups.map((group) => {
                   const isUserCurrentLevel = userProfile?.cambridge_level === group.level && group.is_default;
                   const canAccess = canAccessGroup(group.level);
@@ -1062,29 +1065,29 @@ export default function Community() {
                       }`}
                       onClick={() => !isLocked && setSelectedGroup(group)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex items-start justify-between gap-2 mb-1.5 md:mb-2">
+                          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
                             {group.is_default ? (
-                              <Building2 className="h-3 w-3 text-primary" />
+                              <Building2 className="h-3 w-3 text-primary shrink-0" />
                             ) : (
-                              <User className="h-3 w-3 text-muted-foreground" />
+                              <User className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}
-                            <h3 className={`font-semibold text-sm ${isUserCurrentLevel ? 'text-primary' : ''}`}>
+                            <h3 className={`font-semibold text-xs md:text-sm truncate ${isUserCurrentLevel ? 'text-primary' : ''}`}>
                               {group.name}
-                              {isUserCurrentLevel && ' (Your Level)'}
+                              {isUserCurrentLevel && ' ★'}
                             </h3>
                           </div>
-                          <div className="flex items-center gap-1">
-                            {isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                            <Badge variant={isUserCurrentLevel ? "default" : "outline"} className="text-xs">
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isLocked && <Lock className="h-2.5 w-2.5 md:h-3 md:w-3 text-muted-foreground" />}
+                            <Badge variant={isUserCurrentLevel ? "default" : "outline"} className="text-[10px] md:text-xs px-1.5 md:px-2">
                               {group.level}
                             </Badge>
                             {isAdmin && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                                    <MoreVertical className="h-4 w-4" />
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8" onClick={(e) => e.stopPropagation()}>
+                                    <MoreVertical className="h-3 w-3 md:h-4 md:w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -1107,25 +1110,26 @@ export default function Community() {
                           </div>
                         </div>
                       {group.description && (
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                        <p className="text-[10px] md:text-xs text-muted-foreground mb-1.5 md:mb-2 line-clamp-2">
                           {group.description}
                         </p>
                       )}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Users className="h-3 w-3 mr-1" />
-                          {group.member_count || 0} members
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center text-[10px] md:text-xs text-muted-foreground">
+                          <Users className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
+                          {group.member_count || 0}
                         </div>
                          {!group.is_member && !isLocked && (
                            <Button 
                              size="sm" 
                              variant="outline" 
+                             className="h-6 md:h-8 text-[10px] md:text-xs px-2 md:px-3"
                              onClick={(e) => {
                                e.stopPropagation();
                                joinGroup(group.id);
                              }}
                            >
-                             <UserPlus className="h-3 w-3 mr-1" />
+                             <UserPlus className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                              Join
                            </Button>
                          )}
@@ -1133,6 +1137,7 @@ export default function Community() {
                            <Button 
                              size="sm" 
                              variant="outline" 
+                             className="h-6 md:h-8 text-[10px] md:text-xs px-2 md:px-3"
                              onClick={(e) => {
                                e.stopPropagation();
                                leaveGroup(group.id);
@@ -1142,8 +1147,8 @@ export default function Community() {
                            </Button>
                          )}
                         {isLocked && (
-                          <div className="text-xs text-muted-foreground">
-                            Reach {group.level} level to join
+                          <div className="text-[10px] md:text-xs text-muted-foreground">
+                            {group.level} needed
                           </div>
                         )}
                       </div>
@@ -1257,54 +1262,54 @@ export default function Community() {
                        </div>
                      </div>
                      
-                     {/* Online Members */}
-                     {groupMembers.length > 0 && (
-                       <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                         <div className="flex items-center gap-2 mb-2">
-                           <span className="text-sm font-medium">Members Online:</span>
-                         </div>
-                         <div className="flex flex-wrap gap-2">
-                            {groupMembers.slice(0, 8).map((member) => (
-                              <ClickableUserProfile
-                                key={member.user_id}
-                                userId={member.user_id}
-                                profile={{
-                                  user_id: member.user_id,
-                                  display_name: member.profiles?.display_name || 'Unknown',
-                                  username: member.profiles?.username,
-                                  avatar_url: member.profiles?.avatar_url
-                                }}
-                                onClick={openUserProfile}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <ProfileAvatar
-                                    userId={member.user_id}
-                                    avatarUrl={member.profiles?.avatar_url}
-                                    fallback={member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                    className="w-6 h-6"
-                                  />
-                                  <OnlineStatus 
-                                    userId={member.user_id} 
-                                    groupId={selectedGroup.id}
-                                    showBadge={false}
-                                    className="w-2 h-2"
-                                  />
-                                  <span className="text-xs text-muted-foreground hover:underline">
-                                    {member.profiles?.display_name || 'Unknown'}
-                                  </span>
-                                </div>
-                              </ClickableUserProfile>
-                            ))}
-                           {groupMembers.length > 8 && (
-                             <span className="text-xs text-muted-foreground">
-                               +{groupMembers.length - 8} more
-                             </span>
-                           )}
-                         </div>
-                       </div>
-                     )}
-                   </CardHeader>
-                 </Card>
+                      {/* Online Members - Compact on mobile */}
+                      {groupMembers.length > 0 && (
+                        <div className="mt-3 md:mt-4 p-2 md:p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                            <span className="text-xs md:text-sm font-medium">Members:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 md:gap-2">
+                             {groupMembers.slice(0, 6).map((member) => (
+                               <ClickableUserProfile
+                                 key={member.user_id}
+                                 userId={member.user_id}
+                                 profile={{
+                                   user_id: member.user_id,
+                                   display_name: member.profiles?.display_name || 'Unknown',
+                                   username: member.profiles?.username,
+                                   avatar_url: member.profiles?.avatar_url
+                                 }}
+                                 onClick={openUserProfile}
+                               >
+                                 <div className="flex items-center gap-1 md:gap-2">
+                                   <ProfileAvatar
+                                     userId={member.user_id}
+                                     avatarUrl={member.profiles?.avatar_url}
+                                     fallback={member.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                     className="w-5 h-5 md:w-6 md:h-6"
+                                   />
+                                   <OnlineStatus 
+                                     userId={member.user_id} 
+                                     groupId={selectedGroup.id}
+                                     showBadge={false}
+                                     className="w-1.5 h-1.5 md:w-2 md:h-2"
+                                   />
+                                   <span className="text-[10px] md:text-xs text-muted-foreground hover:underline hidden sm:inline">
+                                     {member.profiles?.display_name?.split(' ')[0] || 'User'}
+                                   </span>
+                                 </div>
+                               </ClickableUserProfile>
+                             ))}
+                            {groupMembers.length > 6 && (
+                              <span className="text-[10px] md:text-xs text-muted-foreground self-center">
+                                +{groupMembers.length - 6}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardHeader>
+                  </Card>
 
                   {/* Personal Progress for English Learning Group */}
                   {selectedGroup.is_default && selectedGroup.name === 'English Learning' && (
@@ -1314,16 +1319,17 @@ export default function Community() {
                  {/* Create Post */}
                 {(selectedGroup.can_post || isAdmin || selectedGroup.is_member) && (
                   <Card>
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="space-y-2 md:space-y-3">
                         <Textarea
-                          placeholder="Share something with the group..."
+                          placeholder="Share something..."
                           value={newPost}
                           onChange={(e) => setNewPost(e.target.value)}
+                          className="min-h-[60px] md:min-h-[80px] text-sm"
                         />
                         
                         {/* File Upload */}
-                        <div className="space-y-3">
+                        <div className="space-y-2 md:space-y-3">
                           <div className="flex gap-2">
             <input
               type="file"
@@ -1336,36 +1342,36 @@ export default function Community() {
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="h-8 text-xs md:text-sm"
               onClick={() => document.getElementById('file-upload')?.click()}
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Attach Files
+              <Upload className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden xs:inline">Attach</span>
             </Button>
                           </div>
                           
                           {/* Selected Files Preview */}
                           {selectedFiles.length > 0 && (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5 md:space-y-2">
                               {selectedFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                                  <div className="flex items-center gap-2">
+                                <div key={index} className="flex items-center justify-between p-1.5 md:p-2 bg-muted rounded text-xs md:text-sm">
+                                  <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                                     {file.type.startsWith('image/') ? (
-                                      <ImageIcon className="h-4 w-4" />
+                                      <ImageIcon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                                     ) : (
-                                      <FileText className="h-4 w-4" />
+                                      <FileText className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                                     )}
-                                    <span className="text-sm">{file.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                                    </span>
+                                    <span className="truncate">{file.name}</span>
                                   </div>
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
+                                    className="h-6 w-6 p-0"
                                     onClick={() => removeFile(index)}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 </div>
                               ))}
@@ -1375,10 +1381,12 @@ export default function Community() {
                         
                         <div className="flex justify-end">
                           <Button 
+                            size="sm"
+                            className="h-8 text-xs md:text-sm"
                             onClick={createPost} 
                             disabled={!newPost.trim() && selectedFiles.length === 0}
                           >
-                            <Send className="h-4 w-4 mr-2" />
+                            <Send className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                             Post
                           </Button>
                         </div>
@@ -1388,13 +1396,13 @@ export default function Community() {
                 )}
 
                 {/* Posts */}
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {posts.length > 0 ? (
                     posts.map((post) => (
                       <Card key={post.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
+                        <CardContent className="p-3 md:p-4">
+                          <div className="flex items-start justify-between mb-2 md:mb-3 gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 min-w-0">
                               <ClickableUserProfile
                                 userId={post.user_id}
                                 profile={{
@@ -1408,11 +1416,11 @@ export default function Community() {
                                   userId={post.user_id}
                                   avatarUrl={post.profiles?.avatar_url}
                                   fallback={post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                  className="w-8 h-8"
+                                  className="w-7 h-7 md:w-8 md:h-8 shrink-0"
                                 />
                               </ClickableUserProfile>
-                              <div>
-                                <div className="flex items-center gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                                   <ClickableUserProfile
                                     userId={post.user_id}
                                     profile={{
@@ -1422,30 +1430,30 @@ export default function Community() {
                                     }}
                                     onClick={openUserProfile}
                                   >
-                                    <p className="font-medium text-sm hover:underline">
+                                    <p className="font-medium text-xs md:text-sm hover:underline truncate max-w-[120px] md:max-w-none">
                                       {post.profiles?.display_name || 'Unknown User'}
                                     </p>
                                   </ClickableUserProfile>
                                   {post.is_admin && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      <Settings className="h-3 w-3 mr-1" />
-                                      Admin
+                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5">
+                                      <Settings className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
+                                      <span className="hidden xs:inline">Admin</span>
                                     </Badge>
                                   )}
                                   {post.is_teacher && (
-                                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                                      <GraduationCap className="h-3 w-3 mr-1" />
-                                      Teacher
+                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                      <GraduationCap className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
+                                      <span className="hidden xs:inline">Teacher</span>
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-[10px] md:text-xs text-muted-foreground">
                                   {new Date(post.created_at).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
                           </div>
-                           <p className="text-sm">{post.content}</p>
+                           <p className="text-xs md:text-sm">{post.content}</p>
                            
                             {/* Post Attachments */}
                             {post.attachments && post.attachments.length > 0 && (

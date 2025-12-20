@@ -57,11 +57,11 @@ export const MobileNavigation = () => {
     { name: "Home", href: "/dashboard", icon: Home },
     { name: "Cursos", href: "/courses", icon: BookOpen },
     { name: "Social", href: "/community", icon: Users },
-    { name: "Chat", href: "/messages", icon: MessageCircle, badge: unreadCount },
+    { name: "IA Chat", href: "/ai-chat", icon: MessageCircle },
   ];
 
   const moreItems = [
-    { name: "IA Chat", href: "/ai-chat", icon: MessageCircle },
+    { name: "Mensagens", href: "/messages", icon: MessageCircle, badge: unreadCount },
     { name: "Conquistas", href: "/achievements", icon: Trophy },
     { name: "Click da Semana", href: "/click-of-the-week", icon: Gamepad2 },
     { name: "Amigos", href: "/friends", icon: UserCircle },
@@ -109,14 +109,6 @@ export const MobileNavigation = () => {
                   "h-5 w-5 mb-1",
                   isActive(item.href) && "scale-110"
                 )} />
-                {item.badge && item.badge > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-3 h-4 min-w-4 flex items-center justify-center text-[10px] px-1"
-                  >
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </Badge>
-                )}
               </div>
               <span className={cn(
                 "text-[10px] font-medium",
@@ -177,7 +169,7 @@ export const MobileNavigation = () => {
                     to={item.href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-lg transition-all duration-200 hover:scale-105",
+                      "flex flex-col items-center justify-center p-4 rounded-lg transition-all duration-200 hover:scale-105 relative",
                       isActive(item.href)
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted"
@@ -186,7 +178,17 @@ export const MobileNavigation = () => {
                       animation: moreOpen ? `fade-in 0.3s ease-out ${index * 0.05}s both` : undefined
                     }}
                   >
-                    <item.icon className="h-6 w-6 mb-2 transition-transform duration-200" />
+                    <div className="relative">
+                      <item.icon className="h-6 w-6 mb-2 transition-transform duration-200" />
+                      {'badge' in item && item.badge && (item.badge as number) > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="absolute -top-2 -right-3 h-4 min-w-4 flex items-center justify-center text-[10px] px-1"
+                        >
+                          {(item.badge as number) > 9 ? '9+' : item.badge}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs font-medium text-center">{item.name}</span>
                   </Link>
                 ))}
