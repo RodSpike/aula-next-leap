@@ -53,7 +53,7 @@ serve(async (req) => {
     const { action, groupId } = await req.json();
     console.log(`[AI-POST] Starting action: ${action}, groupId: ${groupId || 'all'}`);
 
-    // Get an admin user to use as the post author
+    // Get an admin user to use as the post author (needed for RLS bypass)
     const { data: adminUser, error: adminError } = await supabase
       .from('user_roles')
       .select('user_id')
@@ -70,7 +70,7 @@ serve(async (req) => {
     }
 
     const systemUserId = adminUser.user_id;
-    console.log(`[AI-POST] Using admin user as author: ${systemUserId}`);
+    console.log(`[AI-POST] Using admin user for RLS bypass: ${systemUserId}`);
 
     // Get active AI teachers
     const { data: teachers, error: teachersError } = await supabase
@@ -250,16 +250,17 @@ REGRAS IMPORTANTES:
             continue;
           }
 
-          // Format the post with teacher name as header
-          const formattedContent = `**🎓 ${teacher.name} - Professora Aula Click**\n\n${responseContent}`;
+          // Format the post content (no header needed, will show from ai_teacher_id)
+          const formattedContent = responseContent;
 
-          // Insert the post using service role (bypasses RLS)
+          // Insert the post with ai_teacher_id to identify the AI teacher
           const { data: postData, error: postError } = await supabase
             .from('group_posts')
             .insert({
               group_id: group.id,
               content: formattedContent,
-              user_id: systemUserId
+              user_id: systemUserId,
+              ai_teacher_id: teacher.id
             })
             .select('id')
             .single();
@@ -339,16 +340,17 @@ REGRAS:
             continue;
           }
 
-          // Format the post with teacher name as header
-          const formattedContent = `**💡 Dica do Dia - ${teacher.name} (Professora Aula Click)**\n\n${tipContent}`;
+          // Format the post content (no header needed, will show from ai_teacher_id)
+          const formattedContent = tipContent;
 
-          // Insert the post using service role (bypasses RLS)
+          // Insert the post with ai_teacher_id to identify the AI teacher
           const { data: postData, error: postError } = await supabase
             .from('group_posts')
             .insert({
               group_id: group.id,
               content: formattedContent,
-              user_id: systemUserId
+              user_id: systemUserId,
+              ai_teacher_id: teacher.id
             })
             .select('id')
             .single();

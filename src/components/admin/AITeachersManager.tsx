@@ -15,6 +15,7 @@ interface AITeacher {
   name: string;
   email: string;
   personality: string;
+  avatar_url?: string;
   personality_traits: {
     style: string;
     approach: string;
@@ -206,6 +207,7 @@ export function AITeachersManager() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Avatar</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Personalidade</TableHead>
                 <TableHead>Estilo</TableHead>
@@ -216,6 +218,18 @@ export function AITeachersManager() {
             <TableBody>
               {teachers.map((teacher) => (
                 <TableRow key={teacher.id}>
+                  <TableCell>
+                    <div className="relative">
+                      <img
+                        src={teacher.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${teacher.name}`}
+                        alt={teacher.name}
+                        className="w-10 h-10 rounded-full ring-2 ring-primary/30"
+                      />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-[8px] text-primary-foreground">🤖</span>
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{teacher.name}</TableCell>
                   <TableCell>{getPersonalityBadge(teacher.personality)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-xs truncate">

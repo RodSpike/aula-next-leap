@@ -139,6 +139,7 @@ export type Database = {
       }
       ai_teachers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string
           id: string
@@ -149,6 +150,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email: string
           id?: string
@@ -159,6 +161,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -968,6 +971,7 @@ export type Database = {
       }
       group_posts: {
         Row: {
+          ai_teacher_id: string | null
           attachments: Json | null
           content: string
           created_at: string
@@ -977,6 +981,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_teacher_id?: string | null
           attachments?: Json | null
           content: string
           created_at?: string
@@ -986,6 +991,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_teacher_id?: string | null
           attachments?: Json | null
           content?: string
           created_at?: string
@@ -995,6 +1001,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "group_posts_ai_teacher_id_fkey"
+            columns: ["ai_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "ai_teachers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "group_posts_group_id_fkey"
             columns: ["group_id"]

@@ -72,6 +72,7 @@ interface GroupPost {
   content: string;
   created_at: string;
   user_id: string;
+  ai_teacher_id?: string;
   attachments?: {
     url: string;
     type: string;
@@ -86,6 +87,12 @@ interface GroupPost {
   profiles: {
     display_name: string;
     avatar_url?: string;
+  } | null;
+  ai_teacher?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+    personality: string;
   } | null;
   is_admin?: boolean;
   is_teacher?: boolean;
@@ -392,10 +399,10 @@ export default function Community() {
 
   const fetchPosts = async (groupId: string) => {
     try {
-      // Get posts
+      // Get posts including ai_teacher_id
       const { data: postsData, error: postsError } = await supabase
         .from('group_posts')
-        .select('*')
+        .select('*, ai_teacher_id')
         .eq('group_id', groupId)
         .order('created_at', { ascending: false });
 
@@ -408,6 +415,9 @@ export default function Community() {
 
       // Get unique user IDs
       const userIds = [...new Set(postsData.map(p => p.user_id))];
+      
+      // Get unique AI teacher IDs
+      const aiTeacherIds = [...new Set(postsData.filter(p => p.ai_teacher_id).map(p => p.ai_teacher_id))];
 
       // Batch fetch all profiles at once
       const { data: profilesData } = await supabase
@@ -429,22 +439,39 @@ export default function Community() {
         .in('user_id', userIds)
         .eq('role', 'teacher');
 
+      // Batch fetch AI teachers if any posts have ai_teacher_id
+      let aiTeachersMap = new Map();
+      if (aiTeacherIds.length > 0) {
+        const { data: aiTeachersData } = await supabase
+          .from('ai_teachers')
+          .select('id, name, avatar_url, personality')
+          .in('id', aiTeacherIds);
+        
+        aiTeachersMap = new Map((aiTeachersData || []).map(t => [t.id, t]));
+      }
+
       // Create lookup maps
       const profilesMap = new Map((profilesData || []).map(p => [p.user_id, p]));
       const adminSet = new Set((adminRoles || []).map(r => r.user_id));
       const teacherSet = new Set((teacherRoles || []).map(r => r.user_id));
 
       // Map posts with enriched data
-      const enrichedPosts: GroupPost[] = postsData.map(post => ({
-        id: post.id,
-        content: post.content,
-        created_at: post.created_at,
-        user_id: post.user_id,
-        attachments: post.attachments as GroupPost['attachments'],
-        profiles: profilesMap.get(post.user_id) || { display_name: 'Unknown User', avatar_url: null },
-        is_admin: adminSet.has(post.user_id),
-        is_teacher: teacherSet.has(post.user_id)
-      }));
+      const enrichedPosts: GroupPost[] = postsData.map(post => {
+        const aiTeacher = post.ai_teacher_id ? aiTeachersMap.get(post.ai_teacher_id) : null;
+        
+        return {
+          id: post.id,
+          content: post.content,
+          created_at: post.created_at,
+          user_id: post.user_id,
+          ai_teacher_id: post.ai_teacher_id,
+          attachments: post.attachments as GroupPost['attachments'],
+          profiles: profilesMap.get(post.user_id) || { display_name: 'Unknown User', avatar_url: null },
+          ai_teacher: aiTeacher || null,
+          is_admin: adminSet.has(post.user_id),
+          is_teacher: teacherSet.has(post.user_id)
+        };
+      });
 
       setPosts(enrichedPosts);
     } catch (error) {
@@ -658,6 +685,21 @@ export default function Community() {
       fetchGroups();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to delete group', variant: 'destructive' });
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    if (!confirm('Delete this post permanently?')) return;
+    try {
+      const { error } = await supabase
+        .from('group_posts')
+        .delete()
+        .eq('id', postId);
+      if (error) throw error;
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast({ title: 'Success', description: 'Post deleted' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete post', variant: 'destructive' });
     }
   };
 
@@ -1416,28 +1458,41 @@ export default function Community() {
                 <div className="space-y-3 md:space-y-4">
                   {posts.length > 0 ? (
                     posts.map((post) => (
-                      <Card key={post.id}>
+                      <Card key={post.id} className={post.ai_teacher ? 'border-primary/30 bg-primary/5' : ''}>
                         <CardContent className="p-3 md:p-4">
                           <div className="flex items-start justify-between mb-2 md:mb-3 gap-2">
                             <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                              <ClickableUserProfile
-                                userId={post.user_id}
-                                profile={{
-                                  user_id: post.user_id,
-                                  display_name: post.profiles?.display_name || 'Unknown User',
-                                  avatar_url: post.profiles?.avatar_url
-                                }}
-                                onClick={openUserProfile}
-                              >
-                                <ProfileAvatar
-                                  userId={post.user_id}
-                                  avatarUrl={post.profiles?.avatar_url}
-                                  fallback={post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
-                                  className="w-7 h-7 md:w-8 md:h-8 shrink-0"
-                                />
-                              </ClickableUserProfile>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                              {post.ai_teacher ? (
+                                // AI Teacher post - show AI teacher avatar and info
+                                <>
+                                  <div className="relative">
+                                    <img
+                                      src={post.ai_teacher.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.ai_teacher.name}`}
+                                      alt={post.ai_teacher.name}
+                                      className="w-7 h-7 md:w-8 md:h-8 rounded-full shrink-0 ring-2 ring-primary/30"
+                                    />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full flex items-center justify-center">
+                                      <span className="text-[6px] text-primary-foreground">🤖</span>
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                                      <p className="font-medium text-xs md:text-sm truncate max-w-[120px] md:max-w-none text-primary">
+                                        {post.ai_teacher.name}
+                                      </p>
+                                      <Badge variant="default" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5 bg-gradient-to-r from-primary to-primary/80">
+                                        <GraduationCap className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
+                                        <span className="hidden xs:inline">Professor</span> IA
+                                      </Badge>
+                                    </div>
+                                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                                      {new Date(post.created_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </>
+                              ) : (
+                                // Regular user post
+                                <>
                                   <ClickableUserProfile
                                     userId={post.user_id}
                                     profile={{
@@ -1447,28 +1502,75 @@ export default function Community() {
                                     }}
                                     onClick={openUserProfile}
                                   >
-                                    <p className="font-medium text-xs md:text-sm hover:underline truncate max-w-[120px] md:max-w-none">
-                                      {post.profiles?.display_name || 'Unknown User'}
-                                    </p>
+                                    <ProfileAvatar
+                                      userId={post.user_id}
+                                      avatarUrl={post.profiles?.avatar_url}
+                                      fallback={post.profiles?.display_name?.charAt(0)?.toUpperCase() || 'U'}
+                                      className="w-7 h-7 md:w-8 md:h-8 shrink-0"
+                                    />
                                   </ClickableUserProfile>
-                                  {post.is_admin && (
-                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5">
-                                      <Settings className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
-                                      <span className="hidden xs:inline">Admin</span>
-                                    </Badge>
-                                  )}
-                                  {post.is_teacher && (
-                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                                      <GraduationCap className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
-                                      <span className="hidden xs:inline">Teacher</span>
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-[10px] md:text-xs text-muted-foreground">
-                                  {new Date(post.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                                      <ClickableUserProfile
+                                        userId={post.user_id}
+                                        profile={{
+                                          user_id: post.user_id,
+                                          display_name: post.profiles?.display_name || 'Unknown User',
+                                          avatar_url: post.profiles?.avatar_url
+                                        }}
+                                        onClick={openUserProfile}
+                                      >
+                                        <p className="font-medium text-xs md:text-sm hover:underline truncate max-w-[120px] md:max-w-none">
+                                          {post.profiles?.display_name || 'Unknown User'}
+                                        </p>
+                                      </ClickableUserProfile>
+                                      {post.is_admin && (
+                                        <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5">
+                                          <Settings className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
+                                          <span className="hidden xs:inline">Admin</span>
+                                        </Badge>
+                                      )}
+                                      {post.is_teacher && (
+                                        <Badge variant="secondary" className="text-[10px] md:text-xs px-1 md:px-1.5 h-4 md:h-5 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                          <GraduationCap className="h-2 w-2 md:h-3 md:w-3 mr-0.5" />
+                                          <span className="hidden xs:inline">Teacher</span>
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                                      {new Date(post.created_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
                             </div>
+                            {/* Admin actions for AI teacher posts */}
+                            {isAdmin && post.ai_teacher && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8">
+                                    <MoreVertical className="h-3 w-3 md:h-4 md:w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditPostId(post.id);
+                                    setEditPostContent(post.content);
+                                    setIsEditPostOpen(true);
+                                  }}>
+                                    <Edit2 className="h-4 w-4 mr-2" />
+                                    Edit Post
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => deletePost(post.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Post
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                            <p className="text-xs md:text-sm">{post.content}</p>
                            
