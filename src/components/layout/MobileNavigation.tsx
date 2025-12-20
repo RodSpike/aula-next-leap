@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Home, BookOpen, Users, MessageCircle, Trophy, MoreHorizontal, 
   Settings, Mic, UserCircle, Medal, Gamepad2, Moon, Sun,
-  Shield, BarChart3, CreditCard, GraduationCap, Tv, Users2, ClipboardCheck
+  Shield, BarChart3, CreditCard, GraduationCap, Tv, Users2, ClipboardCheck, Download
 } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 import { useTheme } from "next-themes";
@@ -66,6 +66,7 @@ export const MobileNavigation = () => {
     { name: "Click da Semana", href: "/click-of-the-week", icon: Gamepad2 },
     { name: "Amigos", href: "/friends", icon: UserCircle },
     { name: "Hangout", href: "/hangout", icon: Medal },
+    { name: "Instalar App", href: "/install", icon: Download },
     { name: "Configurações", href: "/settings", icon: Settings },
   ];
 
