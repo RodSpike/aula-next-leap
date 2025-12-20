@@ -34,57 +34,60 @@ export const EnhancedGroupCard: React.FC<EnhancedGroupCardProps> = ({
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer border-2 hover:border-primary/50">
-      <CardContent className="p-6">
-        <div className="space-y-4">
+      <CardContent className="p-4 md:p-6">
+        <div className="space-y-3 md:space-y-4">
           {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2 flex-wrap">
+                <h3 className="font-bold text-sm md:text-lg group-hover:text-primary transition-colors truncate">
                   {group.name}
                 </h3>
                 {group.is_default && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] md:text-xs shrink-0">
                     Official
                   </Badge>
                 )}
                 {group.group_type === 'closed' && (
-                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <Lock className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                 )}
               </div>
               
-              <Badge className={levelColors[group.level] || 'bg-gray-500/10'}>
+              <Badge className={`${levelColors[group.level] || 'bg-gray-500/10'} text-[10px] md:text-xs`}>
                 Level {group.level}
               </Badge>
             </div>
           </div>
 
           {/* Description */}
-          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+          <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 min-h-[32px] md:min-h-[40px]">
             {group.description}
           </p>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{group.member_count || 0} members</span>
+          <div className="flex items-center justify-between pt-2 border-t gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground">
+              <Users className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
+              <span className="whitespace-nowrap">{group.member_count || 0}</span>
             </div>
 
             {group.is_member ? (
               <Button 
                 onClick={onSelect}
-                className="gap-2"
+                size="sm"
+                className="gap-1.5 text-xs md:text-sm h-8 md:h-9 px-3 md:px-4"
               >
-                <CheckCircle2 className="h-4 w-4" />
-                Open
+                <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden xs:inline">Open</span>
               </Button>
             ) : (
               <Button 
                 onClick={() => onJoin(group.id)}
                 variant="outline"
+                size="sm"
+                className="text-xs md:text-sm h-8 md:h-9 px-3 md:px-4"
               >
-                Join Group
+                Join
               </Button>
             )}
           </div>
