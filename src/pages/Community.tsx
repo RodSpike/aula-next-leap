@@ -392,7 +392,7 @@ export default function Community() {
 
   const fetchPosts = async (groupId: string) => {
     try {
-      // First get the posts
+      // Get posts
       const { data: postsData, error: postsError } = await supabase
         .from('group_posts')
         .select('*')
@@ -401,35 +401,52 @@ export default function Community() {
 
       if (postsError) throw postsError;
 
-      // Then get the profile information for each post
-      const posts = [];
-      for (const post of postsData || []) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('user_id', post.user_id)
-          .single();
-
-        // Check if user is admin
-        const { data: adminData } = await supabase.rpc('has_role', {
-          _user_id: post.user_id,
-          _role: 'admin'
-        });
-
-        // Check if user is teacher
-        const { data: teacherData } = await supabase.rpc('is_teacher', {
-          user_uuid: post.user_id
-        });
-
-        posts.push({
-          ...post,
-          profiles: profileData || { display_name: 'Unknown User', avatar_url: null },
-          is_admin: adminData === true,
-          is_teacher: teacherData === true
-        });
+      if (!postsData || postsData.length === 0) {
+        setPosts([]);
+        return;
       }
 
-      setPosts(posts);
+      // Get unique user IDs
+      const userIds = [...new Set(postsData.map(p => p.user_id))];
+
+      // Batch fetch all profiles at once
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      // Batch fetch admin roles
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('user_id', userIds)
+        .eq('role', 'admin');
+
+      // Batch fetch teacher roles
+      const { data: teacherRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('user_id', userIds)
+        .eq('role', 'teacher');
+
+      // Create lookup maps
+      const profilesMap = new Map((profilesData || []).map(p => [p.user_id, p]));
+      const adminSet = new Set((adminRoles || []).map(r => r.user_id));
+      const teacherSet = new Set((teacherRoles || []).map(r => r.user_id));
+
+      // Map posts with enriched data
+      const enrichedPosts: GroupPost[] = postsData.map(post => ({
+        id: post.id,
+        content: post.content,
+        created_at: post.created_at,
+        user_id: post.user_id,
+        attachments: post.attachments as GroupPost['attachments'],
+        profiles: profilesMap.get(post.user_id) || { display_name: 'Unknown User', avatar_url: null },
+        is_admin: adminSet.has(post.user_id),
+        is_teacher: teacherSet.has(post.user_id)
+      }));
+
+      setPosts(enrichedPosts);
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast({
@@ -897,14 +914,14 @@ export default function Community() {
         </div>
       
         {/* Header - Compact on mobile */}
-      <section className="relative bg-gradient-hero py-12 md:py-24 overflow-hidden">
+      <section className="relative bg-gradient-hero py-12 md:py-24 overflow-hidden w-full max-w-full">
         {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-700"></div>
         </div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="text-center space-y-4 md:space-y-8">
             <div className="flex items-center justify-center">
               <div className="w-14 h-14 md:w-20 md:h-20 bg-primary/10 rounded-2xl flex items-center justify-center shadow-lg">
@@ -936,7 +953,7 @@ export default function Community() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 md:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 md:py-8 w-full overflow-x-hidden">
         {/* Mobile: Show back button when group is selected */}
         {selectedGroup && (
           <Button 
@@ -950,7 +967,7 @@ export default function Community() {
           </Button>
         )}
         
-        <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-8 w-full">
           {/* Groups Sidebar - Hidden on mobile when group is selected */}
           <div className={`lg:col-span-1 ${selectedGroup ? 'hidden lg:block' : ''}`}>
             <div className="space-y-4 md:space-y-6">
@@ -1199,7 +1216,7 @@ export default function Community() {
           </div>
 
           {/* Main Content - Shown on mobile only when group selected */}
-          <div className={`lg:col-span-2 ${!selectedGroup ? 'hidden lg:block' : ''}`}>
+          <div className={`lg:col-span-2 w-full min-w-0 overflow-hidden ${!selectedGroup ? 'hidden lg:block' : ''}`}>
             {selectedGroup ? (
               <div className="space-y-4 md:space-y-6">
                  {/* Group Header */}
@@ -1207,21 +1224,21 @@ export default function Community() {
                    <CardHeader className="p-4 md:p-6">
                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                        <div className="flex-1 min-w-0">
-                         <CardTitle className="flex flex-wrap items-center gap-2 text-lg md:text-xl">
-                           {selectedGroup.is_default ? (
-                             <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
-                           ) : (
-                             <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                           )}
-                           <span className="truncate">{selectedGroup.name}</span>
-                           <Badge variant="outline" className="flex-shrink-0">{selectedGroup.level}</Badge>
-                           {selectedGroup.group_type === 'closed' && (
-                             <Badge variant="secondary" className="text-xs flex-shrink-0">
-                               <Lock className="h-3 w-3 mr-1" />
-                               Privado
-                             </Badge>
-                           )}
-                         </CardTitle>
+                  <CardTitle className="flex flex-wrap items-center gap-2 text-base md:text-xl">
+                            {selectedGroup.is_default ? (
+                              <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+                            ) : (
+                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <span className="truncate max-w-[200px] md:max-w-none">{selectedGroup.name}</span>
+                            <Badge variant="outline" className="flex-shrink-0 text-xs">{selectedGroup.level}</Badge>
+                            {selectedGroup.group_type === 'closed' && (
+                              <Badge variant="secondary" className="text-[10px] md:text-xs flex-shrink-0">
+                                <Lock className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 md:mr-1" />
+                                <span className="hidden xs:inline">Privado</span>
+                              </Badge>
+                            )}
+                          </CardTitle>
                          
                          {/* Welcome Message - Simplified on mobile */}
                          <div className="mt-3 md:mt-4 p-3 md:p-4 bg-primary/5 rounded-lg border border-primary/20">
