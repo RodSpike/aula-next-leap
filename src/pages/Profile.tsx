@@ -558,16 +558,19 @@ export default function Profile() {
                     placeholder="Paste YouTube URL here..."
                   />
                 ) : youtubeId ? (
-                  <div className="aspect-video rounded-lg overflow-hidden">
+                  <div className="aspect-video rounded-lg overflow-hidden relative group">
                     <iframe
                       width="100%"
                       height="100%"
-                      src={`https://www.youtube.com/embed/${youtubeId}`}
+                      src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&enablejsapi=1`}
                       title="Favorite Song"
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
+                    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                      Click on video to unmute
+                    </div>
                   </div>
                 ) : (
                   <p className="text-muted-foreground italic">No favorite song set</p>
