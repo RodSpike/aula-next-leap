@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Smartphone, Monitor, Share, MoreVertical, PlusSquare } from 'lucide-react';
+import { Check, Share, Plus, MoreVertical, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -17,28 +16,20 @@ const Install = () => {
   const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
     }
 
-    // Detect platform
     const userAgent = navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroidDevice = /android/.test(userAgent);
-    
-    setIsIOS(isIOSDevice);
-    setIsAndroid(isAndroidDevice);
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+    setIsAndroid(/android/.test(userAgent));
 
-    // Listen for the beforeinstallprompt event (Android/Chrome)
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
-    // Listen for successful installation
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
@@ -51,10 +42,8 @@ const Install = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
     }
@@ -62,174 +51,133 @@ const Install = () => {
 
   if (isInstalled) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-              <Smartphone className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">App Instalado!</CardTitle>
-            <CardDescription>
-              O Aula Click já está instalado no seu dispositivo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/dashboard')} className="w-full">
-              Ir para o Dashboard
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="text-center space-y-6 max-w-sm">
+          <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg border-2 border-border">
+            <img src="/navicon.png" alt="Click English" className="w-full h-full object-cover" />
+          </div>
+          <div className="w-16 h-16 mx-auto bg-success/20 rounded-full flex items-center justify-center">
+            <Check className="w-8 h-8 text-success" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">App Instalado!</h1>
+          <p className="text-muted-foreground">O Click English já está na sua tela inicial.</p>
+          <Button onClick={() => navigate('/dashboard')} className="w-full">
+            Abrir App
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-            <img src="/navicon.png" alt="Aula Click" className="w-14 h-14" />
-          </div>
-          <CardTitle className="text-2xl">Instalar Aula Click</CardTitle>
-          <CardDescription>
-            Instale o app para acesso rápido e experiência completa offline.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Benefits */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                <Download className="w-4 h-4 text-primary" />
-              </div>
-              <span>Acesso offline às suas aulas</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                <Smartphone className="w-4 h-4 text-primary" />
-              </div>
-              <span>Ícone na tela inicial</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                <Monitor className="w-4 h-4 text-primary" />
-              </div>
-              <span>Experiência em tela cheia</span>
-            </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <div className="p-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </Button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center space-y-8 max-w-sm w-full">
+          {/* App Icon */}
+          <div className="w-28 h-28 mx-auto rounded-3xl overflow-hidden shadow-xl border-2 border-border">
+            <img src="/navicon.png" alt="Click English" className="w-full h-full object-cover" />
           </div>
 
-          {/* Android Installation */}
+          {/* Title */}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Instalar Click English</h1>
+            <p className="text-muted-foreground text-sm">Acesso rápido direto da sua tela inicial</p>
+          </div>
+
+          {/* Android Section */}
           {isAndroid && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-[#3DDC84]/10 rounded-lg border border-[#3DDC84]/20">
-                <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#3DDC84">
-                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.4396"/>
-                </svg>
-                <div>
-                  <p className="font-medium text-[#3DDC84]">Android</p>
-                  <p className="text-xs text-muted-foreground">Instalação automática</p>
-                </div>
-              </div>
-              
               {deferredPrompt ? (
-                <Button onClick={handleInstallClick} className="w-full bg-[#3DDC84] hover:bg-[#32C770] text-black" size="lg">
-                  <Download className="w-5 h-5 mr-2" />
-                  Instalar Agora
-                </Button>
+                <button
+                  onClick={handleInstallClick}
+                  className="w-full flex items-center justify-center gap-3 bg-foreground text-background py-4 px-6 rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  <PlayStoreIcon />
+                  <span className="font-semibold">Instalar via Google Play</span>
+                </button>
               ) : (
-                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-medium">Como instalar:</p>
-                  <ol className="text-sm text-muted-foreground space-y-3">
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">1</span>
-                      <span>Toque no ícone <MoreVertical className="w-4 h-4 inline" /> (menu) do navegador</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">2</span>
-                      <span>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong></span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">3</span>
-                      <span>Confirme tocando em <strong>"Instalar"</strong></span>
-                    </li>
-                  </ol>
+                <div className="space-y-4">
+                  <div className="bg-card rounded-xl p-5 space-y-4 text-left border border-border">
+                    <p className="text-sm text-center text-muted-foreground mb-2">No Chrome, siga os passos:</p>
+                    <Step number={1} icon={<MoreVertical className="w-5 h-5" />}>
+                      Toque no menu <strong className="text-foreground">⋮</strong> do navegador
+                    </Step>
+                    <Step number={2} icon={<Plus className="w-5 h-5" />}>
+                      Selecione <strong className="text-foreground">"Adicionar à tela inicial"</strong>
+                    </Step>
+                    <Step number={3} icon={<Check className="w-5 h-5" />}>
+                      Confirme tocando em <strong className="text-foreground">"Adicionar"</strong>
+                    </Step>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* iOS Installation */}
+          {/* iOS Section */}
           {isIOS && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
-                <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                <div>
-                  <p className="font-medium">iPhone / iPad</p>
-                  <p className="text-xs text-muted-foreground">Instalação manual via Safari</p>
-                </div>
-              </div>
-              
-              <div className="bg-muted/50 rounded-lg p-4 space-y-4">
-                <p className="text-sm font-medium">Siga os passos abaixo:</p>
-                <ol className="text-sm text-muted-foreground space-y-4">
-                  <li className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">1</span>
-                    <div className="flex-1">
-                      <span>Toque no botão <strong>Compartilhar</strong></span>
-                      <div className="mt-2 flex items-center gap-2 text-primary">
-                        <Share className="w-5 h-5" />
-                        <span className="text-xs">(ícone de quadrado com seta para cima)</span>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">2</span>
-                    <div className="flex-1">
-                      <span>Role para baixo e toque em:</span>
-                      <div className="mt-2 flex items-center gap-2 bg-background p-2 rounded-lg border">
-                        <PlusSquare className="w-5 h-5 text-primary" />
-                        <span className="font-medium">Adicionar à Tela de Início</span>
-                      </div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-primary">3</span>
-                    <span>Toque em <strong>"Adicionar"</strong> no canto superior direito</span>
-                  </li>
-                </ol>
+              <div className="bg-card rounded-xl p-5 space-y-4 text-left border border-border">
+                <p className="text-sm text-center text-muted-foreground mb-2">No Safari, siga os passos:</p>
+                <Step number={1} icon={<Share className="w-5 h-5" />}>
+                  Toque no botão <strong className="text-foreground">Compartilhar</strong>
+                </Step>
+                <Step number={2} icon={<Plus className="w-5 h-5" />}>
+                  Selecione <strong className="text-foreground">"Adicionar à Tela de Início"</strong>
+                </Step>
+                <Step number={3} icon={<Check className="w-5 h-5" />}>
+                  Toque em <strong className="text-foreground">"Adicionar"</strong>
+                </Step>
               </div>
             </div>
           )}
 
-          {/* Desktop */}
+          {/* Desktop fallback */}
           {!isIOS && !isAndroid && (
             <div className="space-y-4">
               {deferredPrompt ? (
-                <Button onClick={handleInstallClick} className="w-full" size="lg">
-                  <Download className="w-5 h-5 mr-2" />
-                  Instalar Agora
+                <Button onClick={handleInstallClick} size="lg" className="w-full">
+                  Instalar Aplicativo
                 </Button>
               ) : (
-                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-medium">Como instalar no computador:</p>
-                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                    <li>Clique no ícone de instalação na barra de endereços</li>
-                    <li>Ou acesse Menu → "Instalar Aula Click..."</li>
-                  </ol>
+                <div className="bg-card rounded-xl p-5 border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Acesse pelo celular para instalar o app, ou use o menu do navegador para adicionar.
+                  </p>
                 </div>
               )}
             </div>
           )}
-
-          <Button variant="outline" onClick={() => navigate('/')} className="w-full">
-            Voltar para o site
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
+
+const PlayStoreIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
+    <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+  </svg>
+);
+
+const Step = ({ number, icon, children }: { number: number; icon: React.ReactNode; children: React.ReactNode }) => (
+  <div className="flex items-start gap-3">
+    <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+      {icon}
+    </div>
+    <div className="flex-1 pt-2">
+      <span className="text-sm text-muted-foreground">{children}</span>
+    </div>
+  </div>
+);
 
 export default Install;
