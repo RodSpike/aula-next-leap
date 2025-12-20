@@ -13,8 +13,12 @@ interface InstallStatus {
   isTopLevel: boolean;
   isSecureContext: boolean;
   hasServiceWorker: boolean;
+  hasSWController: boolean;
   isHttps: boolean;
   hasManifest: boolean;
+  isAndroid: boolean;
+  isChrome: boolean;
+  isAndroidWebView: boolean;
 }
 
 const useInstallStatus = (): InstallStatus => {
@@ -23,12 +27,21 @@ const useInstallStatus = (): InstallStatus => {
     isTopLevel: true,
     isSecureContext: false,
     hasServiceWorker: false,
+    hasSWController: false,
     isHttps: false,
     hasManifest: false,
+    isAndroid: false,
+    isChrome: false,
+    isAndroidWebView: false,
   });
 
   useEffect(() => {
     const checkStatus = async () => {
+      const ua = navigator.userAgent;
+      const isAndroid = /Android/i.test(ua);
+      const isAndroidWebView = isAndroid && (/(;\s?wv\)|\bwv\b)/i.test(ua) || /Version\/[\d.]+\s+Chrome\/[\d.]+\s+Mobile\s+Safari/i.test(ua));
+      const isChrome = isAndroid && /Chrome\//i.test(ua) && !/(EdgA|OPR|SamsungBrowser|Brave|YaBrowser)/i.test(ua) && !isAndroidWebView;
+
       // Check if running in standalone mode (true PWA)
       const isStandalone =
         window.matchMedia('(display-mode: standalone)').matches ||
@@ -49,6 +62,7 @@ const useInstallStatus = (): InstallStatus => {
       const hasServiceWorker =
         'serviceWorker' in navigator &&
         (await navigator.serviceWorker.getRegistrations()).length > 0;
+      const hasSWController = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
 
       // Check HTTPS
       const isHttps =
@@ -62,8 +76,12 @@ const useInstallStatus = (): InstallStatus => {
         isTopLevel,
         isSecureContext,
         hasServiceWorker,
+        hasSWController,
         isHttps,
         hasManifest,
+        isAndroid,
+        isChrome,
+        isAndroidWebView,
       });
     };
 
@@ -248,10 +266,14 @@ const InstallChecklist = ({ status }: { status: InstallStatus }) => {
   const allGood = status.isStandalone;
   const isShortcutOnly = !status.isStandalone && status.hasManifest;
 
+  const likelyBlockedByContext = !status.isTopLevel || status.isAndroidWebView;
+  const likelyBlockedByRequirements =
+    !status.isSecureContext || !status.hasManifest || !status.hasServiceWorker || !status.hasSWController;
+
   return (
     <div className="bg-card rounded-xl p-4 border border-border shadow-sm text-left space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Status da Instalação</h3>
+        <h3 className="text-sm font-semibold text-foreground">Checklist (por que não aparece “Instalar app”)</h3>
         {allGood ? (
           <span className="text-xs bg-success/20 text-success px-2 py-1 rounded-full font-medium">
             PWA Ativo
@@ -275,8 +297,20 @@ const InstallChecklist = ({ status }: { status: InstallStatus }) => {
           critical
         />
         <ChecklistItem
+          checked={!status.isAndroid || status.isChrome}
+          label={status.isAndroid ? "Android no Chrome" : "Dispositivo compatível"}
+          icon={<Globe className="w-4 h-4" />}
+          critical={status.isAndroid}
+        />
+        <ChecklistItem
+          checked={!status.isAndroid || !status.isAndroidWebView}
+          label={status.isAndroid ? "Não é navegador embutido (Instagram/WhatsApp)" : ""}
+          icon={<Globe className="w-4 h-4" />}
+          critical={status.isAndroid}
+        />
+        <ChecklistItem
           checked={status.isTopLevel}
-          label="Aberto em aba do Chrome (fora de preview)"
+          label="Aberto em aba normal do navegador (fora de preview)"
           icon={<Globe className="w-4 h-4" />}
           critical
         />
@@ -286,28 +320,48 @@ const InstallChecklist = ({ status }: { status: InstallStatus }) => {
           icon={<Check className="w-4 h-4" />}
         />
         <ChecklistItem
-          checked={status.hasServiceWorker}
-          label="Service Worker ativo"
+          checked={status.hasManifest}
+          label="Manifest carregado"
           icon={<Check className="w-4 h-4" />}
         />
         <ChecklistItem
-          checked={status.isHttps}
-          label="Conexão segura (HTTPS)"
-          icon={<Globe className="w-4 h-4" />}
+          checked={status.hasServiceWorker}
+          label="Service Worker registrado"
+          icon={<Check className="w-4 h-4" />}
         />
         <ChecklistItem
-          checked={status.hasManifest}
-          label="Manifest configurado"
+          checked={status.hasSWController}
+          label="Service Worker controlando esta aba"
           icon={<Check className="w-4 h-4" />}
         />
       </div>
 
-      {!status.isTopLevel && (
+      {likelyBlockedByContext && (
         <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
           <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
           <p className="text-xs text-warning">
-            Você está vendo o app dentro de um preview/iframe. No Android, o Chrome só mostra
-            <strong> “Instalar app”</strong> quando você abre o link em uma aba normal do Chrome.
+            No Android, o Chrome só mostra “Instalar app” em uma aba normal (não em preview/iframe) e não
+            em navegadores embutidos. Abra o link do site diretamente no <strong>Chrome</strong>.
+          </p>
+        </div>
+      )}
+
+      {status.isAndroid && !status.isChrome && (
+        <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
+          <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-warning">
+            Você não está no Chrome (ou está em uma versão que não mostra o instalador). No Android, use o
+            <strong> Google Chrome</strong> para instalar como app.
+          </p>
+        </div>
+      )}
+
+      {likelyBlockedByRequirements && (
+        <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
+          <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-warning">
+            Se algum item acima está com X (principalmente Service Worker controlando + Manifest), o Chrome
+            não considera instalável e não mostra “Instalar app”.
           </p>
         </div>
       )}
