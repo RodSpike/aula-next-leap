@@ -10,6 +10,8 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface InstallStatus {
   isStandalone: boolean;
+  isTopLevel: boolean;
+  isSecureContext: boolean;
   hasServiceWorker: boolean;
   isHttps: boolean;
   hasManifest: boolean;
@@ -18,6 +20,8 @@ interface InstallStatus {
 const useInstallStatus = (): InstallStatus => {
   const [status, setStatus] = useState<InstallStatus>({
     isStandalone: false,
+    isTopLevel: true,
+    isSecureContext: false,
     hasServiceWorker: false,
     isHttps: false,
     hasManifest: false,
@@ -26,23 +30,37 @@ const useInstallStatus = (): InstallStatus => {
   useEffect(() => {
     const checkStatus = async () => {
       // Check if running in standalone mode (true PWA)
-      const isStandalone = 
+      const isStandalone =
         window.matchMedia('(display-mode: standalone)').matches ||
         (window.navigator as any).standalone === true ||
         document.referrer.includes('android-app://');
 
+      // Install prompts usually won't appear inside iframes / embedded webviews
+      let isTopLevel = true;
+      try {
+        isTopLevel = window.self === window.top;
+      } catch {
+        isTopLevel = false;
+      }
+
+      const isSecureContext = window.isSecureContext === true;
+
       // Check for service worker
-      const hasServiceWorker = 'serviceWorker' in navigator && 
+      const hasServiceWorker =
+        'serviceWorker' in navigator &&
         (await navigator.serviceWorker.getRegistrations()).length > 0;
 
       // Check HTTPS
-      const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+      const isHttps =
+        window.location.protocol === 'https:' || window.location.hostname === 'localhost';
 
       // Check manifest
       const hasManifest = !!document.querySelector('link[rel="manifest"]');
 
       setStatus({
         isStandalone,
+        isTopLevel,
+        isSecureContext,
         hasServiceWorker,
         isHttps,
         hasManifest,
@@ -250,34 +268,55 @@ const InstallChecklist = ({ status }: { status: InstallStatus }) => {
       </div>
 
       <div className="space-y-2">
-        <ChecklistItem 
-          checked={status.isStandalone} 
+        <ChecklistItem
+          checked={status.isStandalone}
           label="Modo standalone (app real)"
           icon={<Smartphone className="w-4 h-4" />}
           critical
         />
-        <ChecklistItem 
-          checked={status.hasServiceWorker} 
+        <ChecklistItem
+          checked={status.isTopLevel}
+          label="Aberto em aba do Chrome (fora de preview)"
+          icon={<Globe className="w-4 h-4" />}
+          critical
+        />
+        <ChecklistItem
+          checked={status.isSecureContext}
+          label="Contexto seguro"
+          icon={<Check className="w-4 h-4" />}
+        />
+        <ChecklistItem
+          checked={status.hasServiceWorker}
           label="Service Worker ativo"
           icon={<Check className="w-4 h-4" />}
         />
-        <ChecklistItem 
-          checked={status.isHttps} 
+        <ChecklistItem
+          checked={status.isHttps}
           label="Conexão segura (HTTPS)"
           icon={<Globe className="w-4 h-4" />}
         />
-        <ChecklistItem 
-          checked={status.hasManifest} 
+        <ChecklistItem
+          checked={status.hasManifest}
           label="Manifest configurado"
           icon={<Check className="w-4 h-4" />}
         />
       </div>
 
+      {!status.isTopLevel && (
+        <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
+          <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-warning">
+            Você está vendo o app dentro de um preview/iframe. No Android, o Chrome só mostra
+            <strong> “Instalar app”</strong> quando você abre o link em uma aba normal do Chrome.
+          </p>
+        </div>
+      )}
+
       {isShortcutOnly && (
         <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
           <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
           <p className="text-xs text-warning">
-            Você instalou apenas um atalho. Para ter a experiência de app real (sem barra do navegador), 
+            Você instalou apenas um atalho. Para ter a experiência de app real (sem barra do navegador),
             remova o atalho e use a opção <strong>"Instalar app"</strong> do Chrome.
           </p>
         </div>
