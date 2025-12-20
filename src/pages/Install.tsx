@@ -14,6 +14,7 @@ const Install = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -40,6 +41,19 @@ const Install = () => {
     };
   }, []);
 
+  // Animate steps sequentially
+  useEffect(() => {
+    if (isInstalled) return;
+    
+    const stepTimers = [
+      setTimeout(() => setActiveStep(1), 300),
+      setTimeout(() => setActiveStep(2), 600),
+      setTimeout(() => setActiveStep(3), 900),
+    ];
+    
+    return () => stepTimers.forEach(clearTimeout);
+  }, [isInstalled]);
+
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -52,11 +66,11 @@ const Install = () => {
   if (isInstalled) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center space-y-6 max-w-sm">
-          <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg border-2 border-border">
+        <div className="text-center space-y-6 max-w-sm animate-fade-in">
+          <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg border-2 border-border animate-scale-in">
             <img src="/navicon.png" alt="Click English" className="w-full h-full object-cover" />
           </div>
-          <div className="w-16 h-16 mx-auto bg-success/20 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto bg-success/20 rounded-full flex items-center justify-center animate-scale-in" style={{ animationDelay: '0.2s' }}>
             <Check className="w-8 h-8 text-success" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">App Instalado!</h1>
@@ -99,22 +113,22 @@ const Install = () => {
               {deferredPrompt ? (
                 <button
                   onClick={handleInstallClick}
-                  className="w-full flex items-center justify-center gap-3 bg-foreground text-background py-4 px-6 rounded-xl hover:opacity-90 transition-opacity"
+                  className="w-full flex items-center justify-center gap-3 bg-foreground text-background py-4 px-6 rounded-xl hover:opacity-90 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg animate-fade-in"
                 >
                   <PlayStoreIcon />
-                  <span className="font-semibold">Instalar via Google Play</span>
+                  <span className="font-semibold">Instalar Agora</span>
                 </button>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-card rounded-xl p-5 space-y-4 text-left border border-border">
-                    <p className="text-sm text-center text-muted-foreground mb-2">No Chrome, siga os passos:</p>
-                    <Step number={1} icon={<MoreVertical className="w-5 h-5" />}>
-                      Toque no menu <strong className="text-foreground">⋮</strong> do navegador
+                  <div className="bg-card rounded-xl p-6 space-y-5 text-left border border-border shadow-sm">
+                    <p className="text-sm text-center text-muted-foreground font-medium">No Chrome, siga os passos:</p>
+                    <Step number={1} icon={<MoreVertical className="w-5 h-5" />} isActive={activeStep >= 1} delay={0}>
+                      Toque no menu <strong className="text-foreground">⋮</strong> no canto superior
                     </Step>
-                    <Step number={2} icon={<Plus className="w-5 h-5" />}>
+                    <Step number={2} icon={<Plus className="w-5 h-5" />} isActive={activeStep >= 2} delay={100}>
                       Selecione <strong className="text-foreground">"Adicionar à tela inicial"</strong>
                     </Step>
-                    <Step number={3} icon={<Check className="w-5 h-5" />}>
+                    <Step number={3} icon={<Check className="w-5 h-5" />} isActive={activeStep >= 3} delay={200}>
                       Confirme tocando em <strong className="text-foreground">"Adicionar"</strong>
                     </Step>
                   </div>
@@ -126,16 +140,16 @@ const Install = () => {
           {/* iOS Section */}
           {isIOS && (
             <div className="space-y-4">
-              <div className="bg-card rounded-xl p-5 space-y-4 text-left border border-border">
-                <p className="text-sm text-center text-muted-foreground mb-2">No Safari, siga os passos:</p>
-                <Step number={1} icon={<Share className="w-5 h-5" />}>
-                  Toque no botão <strong className="text-foreground">Compartilhar</strong>
+              <div className="bg-card rounded-xl p-6 space-y-5 text-left border border-border shadow-sm">
+                <p className="text-sm text-center text-muted-foreground font-medium">No Safari, siga os passos:</p>
+                <Step number={1} icon={<Share className="w-5 h-5" />} isActive={activeStep >= 1} delay={0}>
+                  Toque no botão <strong className="text-foreground">Compartilhar</strong> na barra inferior
                 </Step>
-                <Step number={2} icon={<Plus className="w-5 h-5" />}>
-                  Selecione <strong className="text-foreground">"Adicionar à Tela de Início"</strong>
+                <Step number={2} icon={<Plus className="w-5 h-5" />} isActive={activeStep >= 2} delay={100}>
+                  Role e selecione <strong className="text-foreground">"Adicionar à Tela de Início"</strong>
                 </Step>
-                <Step number={3} icon={<Check className="w-5 h-5" />}>
-                  Toque em <strong className="text-foreground">"Adicionar"</strong>
+                <Step number={3} icon={<Check className="w-5 h-5" />} isActive={activeStep >= 3} delay={200}>
+                  Toque em <strong className="text-foreground">"Adicionar"</strong> para finalizar
                 </Step>
               </div>
             </div>
@@ -169,13 +183,43 @@ const PlayStoreIcon = () => (
   </svg>
 );
 
-const Step = ({ number, icon, children }: { number: number; icon: React.ReactNode; children: React.ReactNode }) => (
-  <div className="flex items-start gap-3">
-    <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-      {icon}
+const Step = ({ 
+  number, 
+  icon, 
+  children, 
+  isActive,
+  delay = 0 
+}: { 
+  number: number; 
+  icon: React.ReactNode; 
+  children: React.ReactNode;
+  isActive?: boolean;
+  delay?: number;
+}) => (
+  <div 
+    className={`flex items-start gap-4 transition-all duration-500 ${
+      isActive 
+        ? 'opacity-100 translate-x-0' 
+        : 'opacity-0 -translate-x-4'
+    }`}
+    style={{ transitionDelay: `${delay}ms` }}
+  >
+    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+      isActive 
+        ? 'bg-primary text-primary-foreground scale-100 shadow-lg shadow-primary/30' 
+        : 'bg-muted text-muted-foreground scale-90'
+    }`}>
+      <span className="text-lg font-bold">{number}</span>
     </div>
-    <div className="flex-1 pt-2">
-      <span className="text-sm text-muted-foreground">{children}</span>
+    <div className="flex-1 pt-1">
+      <div className={`flex items-center gap-2 mb-1 transition-all duration-300 ${
+        isActive ? 'text-foreground' : 'text-muted-foreground'
+      }`}>
+        <span className="text-primary">{icon}</span>
+      </div>
+      <span className={`text-sm transition-colors duration-300 ${
+        isActive ? 'text-foreground' : 'text-muted-foreground'
+      }`}>{children}</span>
     </div>
   </div>
 );

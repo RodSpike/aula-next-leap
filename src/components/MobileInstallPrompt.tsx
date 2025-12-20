@@ -71,10 +71,17 @@ const MobileInstallPrompt = () => {
     }
   };
 
-  if (!show || dismissed) return null;
+  // Check if already installed
+  const [isInstalled, setIsInstalled] = useState(false);
+  
+  useEffect(() => {
+    setIsInstalled(window.matchMedia('(display-mode: standalone)').matches);
+  }, []);
+
+  if (!show || dismissed || isInstalled) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300 md:hidden">
+    <div className="fixed bottom-24 left-4 right-4 z-40 animate-in slide-in-from-bottom-4 duration-300 md:hidden">
       <div className="bg-card border border-border rounded-xl shadow-lg p-4">
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
