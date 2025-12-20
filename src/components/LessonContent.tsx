@@ -161,12 +161,12 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
             
             {/* Handle tables */}
             {part.table && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-border rounded-lg">
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <table className="w-full border-collapse border border-border rounded-lg min-w-[300px]">
                   <thead>
                     <tr className="bg-muted/50">
                       {part.table[0].map((header: string, hIndex: number) => (
-                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                        <th key={hIndex} className="border border-border p-2 md:p-3 text-left font-medium text-xs md:text-sm whitespace-nowrap">
                           {header}
                         </th>
                       ))}
@@ -176,7 +176,7 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
                     {part.table.slice(1).map((row: string[], rIndex: number) => (
                       <tr key={rIndex} className="hover:bg-muted/30">
                         {row.map((cell: string, cIndex: number) => (
-                          <td key={cIndex} className="border border-border p-3 text-sm">
+                          <td key={cIndex} className="border border-border p-2 md:p-3 text-xs md:text-sm">
                             {cell}
                           </td>
                         ))}
@@ -189,12 +189,12 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
 
             {/* Handle countries table */}
             {part.countries_table && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-border rounded-lg">
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <table className="w-full border-collapse border border-border rounded-lg min-w-[300px]">
                   <thead>
                     <tr className="bg-muted/50">
                       {part.countries_table[0].map((header: string, hIndex: number) => (
-                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                        <th key={hIndex} className="border border-border p-2 md:p-3 text-left font-medium text-xs md:text-sm whitespace-nowrap">
                           {header}
                         </th>
                       ))}
@@ -204,7 +204,7 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
                     {part.countries_table.slice(1).map((row: string[], rIndex: number) => (
                       <tr key={rIndex} className="hover:bg-muted/30">
                         {row.map((cell: string, cIndex: number) => (
-                          <td key={cIndex} className="border border-border p-3 text-sm">
+                          <td key={cIndex} className="border border-border p-2 md:p-3 text-xs md:text-sm">
                             {cell}
                           </td>
                         ))}
@@ -217,12 +217,12 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
 
             {/* Handle wh-questions table */}
             {part.wh_table && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-border rounded-lg">
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <table className="w-full border-collapse border border-border rounded-lg min-w-[300px]">
                   <thead>
                     <tr className="bg-muted/50">
                       {part.wh_table[0].map((header: string, hIndex: number) => (
-                        <th key={hIndex} className="border border-border p-3 text-left font-medium">
+                        <th key={hIndex} className="border border-border p-2 md:p-3 text-left font-medium text-xs md:text-sm whitespace-nowrap">
                           {header}
                         </th>
                       ))}
@@ -232,7 +232,7 @@ export function LessonContent({ content, lessonId, lessonTitle, lessonContent, a
                     {part.wh_table.slice(1).map((row: string[], rIndex: number) => (
                       <tr key={rIndex} className="hover:bg-muted/30">
                         {row.map((cell: string, cIndex: number) => (
-                          <td key={cIndex} className="border border-border p-3 text-sm">
+                          <td key={cIndex} className="border border-border p-2 md:p-3 text-xs md:text-sm">
                             {cell}
                           </td>
                         ))}

@@ -638,32 +638,36 @@ export default function Course() {
         {currentLesson && (
           <div className="space-y-8">
             {/* Lesson Navigation - Top */}
-            <div className="flex justify-between items-center pb-4 border-b">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pb-4 border-b">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1));
                   setShowIntroduction(true);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === 0}
+                className="w-full sm:w-auto"
               >
-                ← Lição Anterior
+                ← Anterior
               </Button>
               
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground order-first sm:order-none">
                 Lição {currentLessonIndex + 1} de {lessons.length}
               </span>
               
               <Button
+                size="sm"
                 onClick={() => {
                   setCurrentLessonIndex(Math.min(lessons.length - 1, currentLessonIndex + 1));
                   setShowIntroduction(true);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === lessons.length - 1 || !canAccessNextLesson()}
+                className="w-full sm:w-auto"
               >
-                Próxima Lição →
+                Próxima →
               </Button>
             </div>
 
@@ -714,9 +718,9 @@ export default function Course() {
                 
                 {lessonHtml ? (
                   // Enhanced lesson content with proper educational styling
-                  <div className="lesson-container">
+                  <div className="lesson-container overflow-x-hidden">
                     <article
-                      className="prose prose-lg dark:prose-invert max-w-none"
+                      className="prose prose-lg dark:prose-invert max-w-none overflow-hidden break-words"
                       dangerouslySetInnerHTML={{ __html: lessonHtml }}
                     />
                   </div>
@@ -806,9 +810,10 @@ export default function Course() {
             
 
             {/* Navigation */}
-            <div className="flex justify-between pt-8 border-t">
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-8 border-t">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   const newIndex = Math.max(0, currentLessonIndex - 1);
                   setCurrentLessonIndex(newIndex);
@@ -816,11 +821,13 @@ export default function Course() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === 0}
+                className="w-full sm:w-auto"
               >
-                ← Lição Anterior
+                ← Anterior
               </Button>
               
               <Button
+                size="sm"
                 onClick={() => {
                   const newIndex = Math.min(lessons.length - 1, currentLessonIndex + 1);
                   setCurrentLessonIndex(newIndex);
@@ -828,8 +835,9 @@ export default function Course() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 disabled={currentLessonIndex === lessons.length - 1 || (!isAdmin && !canAccessNextLesson())}
+                className="w-full sm:w-auto"
               >
-                Próxima Lição →
+                Próxima →
               </Button>
             </div>
           </div>
