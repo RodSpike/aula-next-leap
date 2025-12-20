@@ -74,11 +74,14 @@ const MobileInstallPrompt = () => {
   };
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
+    const promptToUse = deferredPrompt || globalDeferredPrompt;
+    
+    if (promptToUse) {
       setIsInstalling(true);
       try {
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        // Call prompt immediately - no await before it
+        promptToUse.prompt();
+        const { outcome } = await promptToUse.userChoice;
         if (outcome === 'accepted') {
           setShow(false);
           globalDeferredPrompt = null;
