@@ -179,16 +179,38 @@ const ClickHangout = () => {
     initAvatar();
   }, [user, currentRoom]);
 
-  // Load other avatars in room
+  // Heartbeat: update last_active every 60 seconds to keep presence fresh
+  useEffect(() => {
+    if (!user) return;
+
+    const heartbeat = async () => {
+      await supabase
+        .from("user_avatars")
+        .update({ last_active: new Date().toISOString() })
+        .eq("user_id", user.id);
+    };
+
+    const interval = setInterval(heartbeat, 60000); // Every 60 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Load other avatars in room (only active users from last 2 hours)
   useEffect(() => {
     if (!currentRoom || !user) return;
 
+    const INACTIVITY_HOURS = 2;
+
     const loadOtherAvatars = async () => {
+      const cutoffTime = new Date(Date.now() - INACTIVITY_HOURS * 60 * 60 * 1000).toISOString();
+      
       const { data, error } = await supabase
         .from("user_avatars")
         .select("*, profiles(display_name, avatar_url)")
         .eq("current_room_id", currentRoom.id)
-        .neq("user_id", user.id);
+        .neq("user_id", user.id)
+        .eq("status", "online")
+        .gte("last_active", cutoffTime);
 
       if (!error && data) {
         setOtherAvatars(data);
@@ -196,6 +218,9 @@ const ClickHangout = () => {
     };
 
     loadOtherAvatars();
+
+    // Periodically refresh to remove stale avatars (every 30 seconds)
+    const refreshInterval = setInterval(loadOtherAvatars, 30000);
 
     // Subscribe to avatar updates
     const channel = supabase
@@ -210,19 +235,29 @@ const ClickHangout = () => {
         },
         async (payload) => {
           if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            const avatar = payload.new as Avatar;
+            const avatar = payload.new as Avatar & { status?: string; last_active?: string };
+            
+            // Only show online users with recent activity
+            const cutoffTime = new Date(Date.now() - INACTIVITY_HOURS * 60 * 60 * 1000).toISOString();
+            const isActive = avatar.status === "online" && avatar.last_active && avatar.last_active >= cutoffTime;
+            
             if (avatar.user_id !== user.id) {
-              // Fetch profile data for this avatar
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("display_name, avatar_url")
-                .eq("user_id", avatar.user_id)
-                .single();
+              if (isActive) {
+                // Fetch profile data for this avatar
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("display_name, avatar_url")
+                  .eq("user_id", avatar.user_id)
+                  .single();
 
-              setOtherAvatars((prev) => {
-                const filtered = prev.filter((a) => a.user_id !== avatar.user_id);
-                return [...filtered, { ...avatar, profiles: profileData || undefined }];
-              });
+                setOtherAvatars((prev) => {
+                  const filtered = prev.filter((a) => a.user_id !== avatar.user_id);
+                  return [...filtered, { ...avatar, profiles: profileData || undefined }];
+                });
+              } else {
+                // User went offline or inactive, remove from list
+                setOtherAvatars((prev) => prev.filter((a) => a.user_id !== avatar.user_id));
+              }
             }
           } else if (payload.eventType === "DELETE") {
             const avatar = payload.old as Avatar;
@@ -233,6 +268,7 @@ const ClickHangout = () => {
       .subscribe();
 
     return () => {
+      clearInterval(refreshInterval);
       supabase.removeChannel(channel);
     };
   }, [currentRoom, user]);
