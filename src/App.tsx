@@ -50,6 +50,7 @@ import ClickOfTheWeek from "./pages/ClickOfTheWeek";
 import MascotPreview from "./pages/MascotPreview";
 import PixelMascotPreview from "./pages/PixelMascotPreview";
 import MascotComparison from "./pages/MascotComparison";
+import Install from "./pages/Install";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -106,6 +107,7 @@ const App = () => (
                 <Route path="/mascot-preview" element={<MascotPreview />} />
                 <Route path="/pixel-mascot-preview" element={<PixelMascotPreview />} />
                 <Route path="/mascot-comparison" element={<MascotComparison />} />
+                <Route path="/install" element={<Install />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
