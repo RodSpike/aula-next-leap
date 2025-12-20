@@ -396,24 +396,24 @@ const ClickHangout = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-7xl mx-auto space-y-4">
+      <div className="min-h-screen bg-background p-2 md:p-4 pb-24">
+        <div className="max-w-7xl mx-auto space-y-3 md:space-y-4">
         {/* Header */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
               <div>
-                <h1 className="text-2xl font-bold">Click Hangout 🎮</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-lg md:text-2xl font-bold">Click Hangout 🎮</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">
                   Virtual Campus
                 </p>
               </div>
-              <Badge variant="secondary" className="text-xs">Beta Testing</Badge>
+              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">Beta Testing</Badge>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="flex items-center gap-1 md:gap-2">
                 <Users className="w-4 h-4" />
-                <span className="text-sm">
+                <span className="text-xs md:text-sm">
                   {currentRoom?.current_users || 0}/{currentRoom?.capacity || 0}
                 </span>
               </div>
@@ -421,6 +421,7 @@ const ClickHangout = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowChat(!showChat)}
+                className="h-8 w-8 p-0 md:h-9 md:w-auto md:px-3"
               >
                 <MessageSquare className="w-4 h-4" />
               </Button>
@@ -428,10 +429,10 @@ const ClickHangout = () => {
           </div>
         </Card>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Campus Map */}
-          <Card className="lg:col-span-2 p-4">
+        {/* Main Content - Stack on mobile, grid on desktop */}
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 md:gap-4">
+          {/* Campus Map - Full width on mobile */}
+          <Card className="lg:col-span-2 p-2 md:p-4">
             {currentRoom && myAvatar ? (
               <VirtualCampusMap
                 room={currentRoom}
@@ -442,27 +443,28 @@ const ClickHangout = () => {
                 onAvatarClick={openUserProfile}
               />
             ) : (
-              <div className="flex items-center justify-center h-[600px]">
+              <div className="flex items-center justify-center h-[300px] md:h-[600px]">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
             )}
           </Card>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Room List */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Rooms</h3>
-              <div className="space-y-2">
+          {/* Sidebar - Below map on mobile */}
+          <div className="space-y-3 md:space-y-4">
+            {/* Room List - Horizontal scroll on mobile */}
+            <Card className="p-3 md:p-4">
+              <h3 className="font-semibold mb-2 md:mb-3 text-sm md:text-base">Rooms</h3>
+              <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
                 {rooms.map((room) => (
                   <Button
                     key={room.id}
                     variant={currentRoom?.id === room.id ? "default" : "outline"}
-                    className="w-full justify-start"
+                    className="flex-shrink-0 lg:w-full justify-start text-xs md:text-sm"
+                    size="sm"
                     onClick={() => handleRoomChange(room)}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span>{room.name}</span>
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <span className="truncate">{room.name}</span>
                       <span className="text-xs">
                         {room.current_users}/{room.capacity}
                       </span>
@@ -472,7 +474,7 @@ const ClickHangout = () => {
               </div>
             </Card>
 
-            {/* Chat */}
+            {/* Chat - Collapsible on mobile */}
             {showChat && currentRoom && (
               <RoomChatInterface roomId={currentRoom.id} roomName={currentRoom.name} />
             )}

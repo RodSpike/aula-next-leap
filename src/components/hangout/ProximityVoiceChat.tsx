@@ -348,46 +348,90 @@ const ProximityVoiceChat = ({
     };
   }, []);
 
+  // Get status message for display
+  const getStatusMessage = () => {
+    if (!isEnabled) return "Voice chat disabled";
+    if (!permissionGranted) return "Requesting mic access...";
+    if (isMuted) return "🔇 Mic muted";
+    return "🎤 Mic on";
+  };
+
+  const getStatusColor = () => {
+    if (!isEnabled || !permissionGranted) return "bg-muted";
+    if (isMuted) return "bg-destructive/20 border-destructive";
+    return "bg-green-500/20 border-green-500";
+  };
+
   return (
-    <div className="fixed bottom-4 right-4 bg-background border border-border rounded-lg p-3 shadow-lg z-50">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 text-sm">
-          {permissionGranted ? (
-            <>
-              <Volume2 className="w-4 h-4 text-green-500" />
-              <span>{nearbyUsers.length} nearby</span>
-            </>
+    <div className={`fixed bottom-20 md:bottom-4 left-2 right-2 md:left-auto md:right-4 md:w-auto ${getStatusColor()} border rounded-lg p-3 shadow-lg z-50`}>
+      {/* Status indicator bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {!isEnabled ? (
+            <VolumeX className="w-4 h-4 text-muted-foreground" />
+          ) : !permissionGranted ? (
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          ) : isMuted ? (
+            <MicOff className="w-5 h-5 text-destructive" />
           ) : (
-            <>
-              <VolumeX className="w-4 h-4 text-muted-foreground" />
-              <span>Requesting mic...</span>
-            </>
+            <Mic className="w-5 h-5 text-green-600 animate-pulse" />
+          )}
+          <span className="text-xs md:text-sm">{getStatusMessage()}</span>
+          
+          {permissionGranted && nearbyUsers.length > 0 && (
+            <span className="text-xs bg-primary/20 px-2 py-0.5 rounded-full">
+              {nearbyUsers.length} nearby
+            </span>
           )}
         </div>
         
-        <Button
-          size="sm"
-          variant={isEnabled && permissionGranted ? "default" : "outline"}
-          onClick={toggleVoiceChat}
-          title={isEnabled ? "Disable voice chat" : "Enable voice chat"}
-        >
-          {isEnabled && permissionGranted ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-        </Button>
-
-        {isEnabled && permissionGranted && (
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
-            variant={isMuted ? "destructive" : "outline"}
-            onClick={toggleMute}
-            title={isMuted ? "Unmute" : "Mute"}
+            variant={isEnabled && permissionGranted ? "default" : "outline"}
+            onClick={toggleVoiceChat}
+            title={isEnabled ? "Disable voice chat" : "Enable voice chat"}
+            className="h-8 px-3"
           >
-            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {isEnabled && permissionGranted ? (
+              <>
+                <Volume2 className="w-4 h-4 mr-1" />
+                <span className="text-xs hidden sm:inline">On</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-4 h-4 mr-1" />
+                <span className="text-xs hidden sm:inline">Off</span>
+              </>
+            )}
           </Button>
-        )}
+
+          {isEnabled && permissionGranted && (
+            <Button
+              size="sm"
+              variant={isMuted ? "destructive" : "secondary"}
+              onClick={toggleMute}
+              title={isMuted ? "Unmute" : "Mute"}
+              className="h-8 px-3"
+            >
+              {isMuted ? (
+                <>
+                  <MicOff className="w-4 h-4 mr-1" />
+                  <span className="text-xs hidden sm:inline">Unmute</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-4 h-4 mr-1" />
+                  <span className="text-xs hidden sm:inline">Mute</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {nearbyUsers.length > 0 && permissionGranted && (
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="mt-2 text-xs text-muted-foreground border-t pt-2">
           🎙️ In range: {nearbyUsers.map(u => u.profiles?.display_name || "User").join(", ")}
         </div>
       )}

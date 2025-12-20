@@ -39,6 +39,7 @@ interface VirtualCampusMapProps {
 
 const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange, onAvatarClick }: VirtualCampusMapProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredAvatar, setHoveredAvatar] = useState<Avatar | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const animationFrameRef = useRef<number>();
@@ -46,10 +47,28 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
   const lastPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const bgImageRef = useRef<HTMLImageElement | null>(null);
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const AVATAR_SIZE = 48;
-  const MAP_WIDTH = room.map_data?.width || 800;
-  const MAP_HEIGHT = room.map_data?.height || 600;
+  const BASE_MAP_WIDTH = room.map_data?.width || 800;
+  const BASE_MAP_HEIGHT = room.map_data?.height || 600;
+
+  // Handle responsive canvas sizing
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const aspectRatio = BASE_MAP_HEIGHT / BASE_MAP_WIDTH;
+        const newWidth = Math.min(containerWidth, BASE_MAP_WIDTH);
+        const newHeight = Math.round(newWidth * aspectRatio);
+        setCanvasSize({ width: newWidth, height: newHeight });
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, [BASE_MAP_WIDTH, BASE_MAP_HEIGHT]);
 
   useEffect(() => {
     const bgImage = new Image();
@@ -81,16 +100,19 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
 
       // Draw background (only once per frame)
       if (bgImageRef.current) {
-        ctx.drawImage(bgImageRef.current, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+        ctx.drawImage(bgImageRef.current, 0, 0, canvasSize.width, canvasSize.height);
       }
 
-      // Draw other avatars
+      // Draw other avatars with scaled positions
+      const scaleX = canvasSize.width / BASE_MAP_WIDTH;
+      const scaleY = canvasSize.height / BASE_MAP_HEIGHT;
+
       otherAvatars.forEach((avatar) => {
-        drawAvatar(ctx, avatar, false);
+        drawAvatar(ctx, avatar, false, scaleX, scaleY);
       });
 
       // Draw my avatar (on top)
-      drawAvatar(ctx, myAvatar, true);
+      drawAvatar(ctx, myAvatar, true, scaleX, scaleY);
 
       animationFrameRef.current = requestAnimationFrame(render);
     };
@@ -102,7 +124,7 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [myAvatar, otherAvatars, MAP_WIDTH, MAP_HEIGHT, imagesLoaded]);
+  }, [myAvatar, otherAvatars, canvasSize, imagesLoaded, BASE_MAP_WIDTH, BASE_MAP_HEIGHT]);
 
   // Normalize avatar_style values to a valid emoji. Treat 'default', empty or null as 😀
   const resolveEmoji = (style?: string | null) => {
@@ -112,9 +134,10 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     return s;
   };
 
-  const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean) => {
-    const x = avatar.position_x;
-    const y = avatar.position_y;
+  const drawAvatar = (ctx: CanvasRenderingContext2D, avatar: Avatar, isMe: boolean, scaleX: number = 1, scaleY: number = 1) => {
+    const x = avatar.position_x * scaleX;
+    const y = avatar.position_y * scaleY;
+    const scaledAvatarSize = AVATAR_SIZE * Math.min(scaleX, scaleY);
     
     // Resolve emoji, using 😀 as the default when style is missing or 'default'
     const emoji = resolveEmoji(avatar.avatar_style);
@@ -122,11 +145,11 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     // Draw shadow
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
     ctx.beginPath();
-    ctx.ellipse(x, y + AVATAR_SIZE / 2 + 4, AVATAR_SIZE / 3, AVATAR_SIZE / 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + scaledAvatarSize / 2 + 4, scaledAvatarSize / 3, scaledAvatarSize / 8, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Draw emoji
-    ctx.font = `${AVATAR_SIZE}px Arial`;
+    ctx.font = `${scaledAvatarSize}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     // Ensure full opacity after drawing semi-transparent shadow
@@ -136,19 +159,20 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     
     // Name label - positioned ABOVE the avatar
     const displayName = avatar.profiles?.display_name || "User";
-    ctx.font = "bold 12px Arial";
+    const fontSize = Math.max(10, 12 * Math.min(scaleX, scaleY));
+    ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = "center";
     const textWidth = ctx.measureText(displayName).width;
-    const padding = 6;
+    const padding = 4;
     
     // Position the label above the emoji
-    const labelY = y - AVATAR_SIZE / 2 - 10;
+    const labelY = y - scaledAvatarSize / 2 - 8;
     
     ctx.fillStyle = isMe ? "rgba(59, 130, 246, 0.9)" : "rgba(16, 185, 129, 0.9)";
-    ctx.fillRect(x - textWidth / 2 - padding, labelY - 16, textWidth + padding * 2, 18);
+    ctx.fillRect(x - textWidth / 2 - padding, labelY - fontSize, textWidth + padding * 2, fontSize + 4);
     
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(displayName, x, labelY - 4);
+    ctx.fillText(displayName, x, labelY - 2);
     
     // Clickable indicator for my avatar
     if (isMe) {
@@ -156,7 +180,7 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(x, y, AVATAR_SIZE / 2 + 8, 0, Math.PI * 2);
+      ctx.arc(x, y, scaledAvatarSize / 2 + 6, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -167,15 +191,23 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // Calculate scale for coordinate conversion
+    const scaleX = canvasSize.width / BASE_MAP_WIDTH;
+    const scaleY = canvasSize.height / BASE_MAP_HEIGHT;
 
-    // Check if clicking on my avatar
+    // Check if clicking on my avatar (using scaled avatar position)
+    const myAvatarScreenX = myAvatar.position_x * scaleX;
+    const myAvatarScreenY = myAvatar.position_y * scaleY;
     const distanceToMyAvatar = Math.sqrt(
-      Math.pow(myAvatar.position_x - x, 2) + Math.pow(myAvatar.position_y - y, 2)
+      Math.pow(myAvatarScreenX - clickX, 2) + Math.pow(myAvatarScreenY - clickY, 2)
     );
     
-    if (distanceToMyAvatar <= AVATAR_SIZE / 2 + 8) {
+    const scaledAvatarSize = AVATAR_SIZE * Math.min(scaleX, scaleY);
+    
+    if (distanceToMyAvatar <= scaledAvatarSize / 2 + 8) {
       // Clicked on my avatar, open emoji picker
       setShowEmojiPicker(true);
       return;
@@ -184,11 +216,13 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     // Check if clicking on another user's avatar
     if (onAvatarClick) {
       for (const avatar of otherAvatars) {
+        const avatarScreenX = avatar.position_x * scaleX;
+        const avatarScreenY = avatar.position_y * scaleY;
         const distance = Math.sqrt(
-          Math.pow(avatar.position_x - x, 2) + Math.pow(avatar.position_y - y, 2)
+          Math.pow(avatarScreenX - clickX, 2) + Math.pow(avatarScreenY - clickY, 2)
         );
         
-        if (distance <= AVATAR_SIZE / 2 + 8) {
+        if (distance <= scaledAvatarSize / 2 + 8) {
           // Clicked on another user's avatar
           onAvatarClick(avatar.user_id, {
             user_id: avatar.user_id,
@@ -200,9 +234,12 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
       }
     }
 
-    // Otherwise move avatar
-    const constrainedX = Math.max(AVATAR_SIZE, Math.min(MAP_WIDTH - AVATAR_SIZE, x));
-    const constrainedY = Math.max(AVATAR_SIZE, Math.min(MAP_HEIGHT - AVATAR_SIZE, y));
+    // Otherwise move avatar - convert click position to base coordinates
+    const baseX = clickX / scaleX;
+    const baseY = clickY / scaleY;
+    
+    const constrainedX = Math.max(AVATAR_SIZE, Math.min(BASE_MAP_WIDTH - AVATAR_SIZE, baseX));
+    const constrainedY = Math.max(AVATAR_SIZE, Math.min(BASE_MAP_HEIGHT - AVATAR_SIZE, baseY));
 
     onMove(Math.round(constrainedX), Math.round(constrainedY));
   };
@@ -223,16 +260,22 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const scaleX = canvasSize.width / BASE_MAP_WIDTH;
+    const scaleY = canvasSize.height / BASE_MAP_HEIGHT;
+    const scaledAvatarSize = AVATAR_SIZE * Math.min(scaleX, scaleY);
 
     // Check if hovering over any avatar
     const allAvatars = [myAvatar, ...otherAvatars];
     const hovered = allAvatars.find((avatar) => {
+      const avatarScreenX = avatar.position_x * scaleX;
+      const avatarScreenY = avatar.position_y * scaleY;
       const distance = Math.sqrt(
-        Math.pow(avatar.position_x - x, 2) + Math.pow(avatar.position_y - y, 2)
+        Math.pow(avatarScreenX - mouseX, 2) + Math.pow(avatarScreenY - mouseY, 2)
       );
-      return distance <= AVATAR_SIZE / 2;
+      return distance <= scaledAvatarSize / 2;
     });
 
     setHoveredAvatar(hovered || null);
@@ -247,14 +290,15 @@ const VirtualCampusMap = ({ room, myAvatar, otherAvatars, onMove, onEmojiChange,
             Click anywhere to move. Click your emoji to customize it. Click others' emojis to view their profile!
           </p>
           
-          <div className="relative border border-border rounded-lg overflow-hidden">
+          <div ref={containerRef} className="relative border border-border rounded-lg overflow-hidden w-full">
             <canvas
               ref={canvasRef}
-              width={MAP_WIDTH}
-              height={MAP_HEIGHT}
+              width={canvasSize.width}
+              height={canvasSize.height}
               onClick={handleCanvasClick}
               onMouseMove={handleMouseMove}
-              className="cursor-pointer"
+              className="cursor-pointer w-full"
+              style={{ touchAction: 'manipulation' }}
             />
             
             {/* Hover tooltip */}
