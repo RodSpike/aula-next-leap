@@ -15,12 +15,21 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["navicon.png", "og-image.png"],
-      // Enable PWA behavior while testing in dev/preview (so Android shows "Install app" instead of a simple shortcut)
+      includeAssets: [
+        "navicon.png",
+        "og-image.png",
+        "pwa-192.png",
+        "pwa-512.png",
+        "pwa-maskable-192.png",
+        "pwa-maskable-512.png",
+        "apple-touch-icon.png",
+      ],
+      // Enable PWA behavior while testing in dev/preview
       devOptions: {
         enabled: true,
       },
       manifest: {
+        id: "/",
         name: "Aula Click - Aprenda Inglês Online",
         short_name: "Aula Click",
         description:
@@ -30,31 +39,31 @@ export default defineConfig(({ mode }) => ({
         display: "standalone",
         display_override: ["standalone", "fullscreen"],
         orientation: "portrait-primary",
-        start_url: "/?source=pwa",
+        start_url: "/",
         scope: "/",
         lang: "pt-BR",
         categories: ["education", "language learning"],
         icons: [
           {
-            src: "/navicon.png",
+            src: "/pwa-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/navicon.png",
+            src: "/pwa-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/navicon.png",
+            src: "/pwa-maskable-192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "maskable",
           },
           {
-            src: "/navicon.png",
+            src: "/pwa-maskable-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

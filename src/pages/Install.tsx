@@ -150,7 +150,7 @@ const Install = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="text-center space-y-6 max-w-sm animate-fade-in">
           <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-lg border-2 border-border animate-scale-in">
-            <img src="/navicon.png" alt="Click English" className="w-full h-full object-cover" />
+            <img src="/pwa-192.png" alt="Ícone do app Aula Click" className="w-full h-full object-cover" />
           </div>
           <div className="w-16 h-16 mx-auto bg-success/20 rounded-full flex items-center justify-center animate-scale-in" style={{ animationDelay: '0.2s' }}>
             <Check className="w-8 h-8 text-success" />
@@ -180,7 +180,7 @@ const Install = () => {
         <div className="text-center space-y-6 max-w-sm w-full">
           {/* App Icon */}
           <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden shadow-xl border-2 border-border">
-            <img src="/navicon.png" alt="Click English" className="w-full h-full object-cover" />
+            <img src="/pwa-192.png" alt="Ícone do app Aula Click" className="w-full h-full object-cover" />
           </div>
 
           {/* Title */}
