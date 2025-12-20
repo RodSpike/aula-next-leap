@@ -53,6 +53,25 @@ serve(async (req) => {
     const { action, groupId } = await req.json();
     console.log(`[AI-POST] Starting action: ${action}, groupId: ${groupId || 'all'}`);
 
+    // Get an admin user to use as the post author
+    const { data: adminUser, error: adminError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin')
+      .limit(1)
+      .single();
+
+    if (adminError || !adminUser) {
+      console.error('[AI-POST] No admin user found:', adminError);
+      return new Response(JSON.stringify({ error: 'No admin user found to post as' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const systemUserId = adminUser.user_id;
+    console.log(`[AI-POST] Using admin user as author: ${systemUserId}`);
+
     // Get active AI teachers
     const { data: teachers, error: teachersError } = await supabase
       .from('ai_teachers')
@@ -240,7 +259,7 @@ REGRAS IMPORTANTES:
             .insert({
               group_id: group.id,
               content: formattedContent,
-              user_id: '00000000-0000-0000-0000-000000000000' // System user placeholder
+              user_id: systemUserId
             })
             .select('id')
             .single();
@@ -329,7 +348,7 @@ REGRAS:
             .insert({
               group_id: group.id,
               content: formattedContent,
-              user_id: '00000000-0000-0000-0000-000000000000' // System user placeholder
+              user_id: systemUserId
             })
             .select('id')
             .single();
