@@ -51,6 +51,7 @@ import MascotPreview from "./pages/MascotPreview";
 import PixelMascotPreview from "./pages/PixelMascotPreview";
 import MascotComparison from "./pages/MascotComparison";
 import Install from "./pages/Install";
+import MobileInstallPrompt from "@/components/MobileInstallPrompt";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
                 <Sonner />
                 
                 <FirstTimeUserExperience />
+                <MobileInstallPrompt />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
