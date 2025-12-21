@@ -20,9 +20,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    if (!GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not configured');
     }
 
     const systemPrompt = `You are Alex, a friendly English conversation partner focused on helping users practice English fluency. You ONLY understand and respond in English.
@@ -55,28 +55,29 @@ Example interactions:
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-6), // Keep last 6 messages for context
+      ...conversationHistory.slice(-6),
       { role: 'user', content: text }
     ];
 
-    console.log('[speech-tutor-lovable] Processing text:', text);
+    console.log('[speech-tutor-groq] Processing text:', text);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'llama-3.1-8b-instant',
         messages,
         max_tokens: 400,
+        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[speech-tutor-lovable] AI error:', response.status, errorText);
+      console.error('[speech-tutor-groq] API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -84,20 +85,14 @@ Example interactions:
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
       
-      throw new Error(`AI request failed: ${response.status}`);
+      throw new Error(`Groq API request failed: ${response.status}`);
     }
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
 
-    console.log('[speech-tutor-lovable] AI response:', aiResponse);
+    console.log('[speech-tutor-groq] AI response:', aiResponse);
 
     return new Response(
       JSON.stringify({ response: aiResponse }),
@@ -105,7 +100,7 @@ Example interactions:
     );
 
   } catch (error) {
-    console.error('[speech-tutor-lovable] Error:', error);
+    console.error('[speech-tutor-groq] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'An error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
