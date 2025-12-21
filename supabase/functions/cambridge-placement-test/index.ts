@@ -2,7 +2,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
-const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -10,6 +9,59 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+async function callLovableAI(prompt: string): Promise<any> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) {
+    throw new Error('Lovable API key not configured');
+  }
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Lovable AI error:', response.status, errorText);
+    
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 402) {
+      throw new Error('AI credits exhausted. Please add credits to continue.');
+    }
+    
+    throw new Error(`AI API failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const textContent = data?.choices?.[0]?.message?.content;
+  
+  if (!textContent) {
+    throw new Error('Invalid response structure from AI API');
+  }
+
+  // Strip markdown code blocks if present
+  const cleanedContent = textContent.replace(/```json\n?|\n?```/g, '').trim();
+  
+  try {
+    return JSON.parse(cleanedContent);
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError, 'Content:', textContent);
+    throw new Error('Failed to parse AI response as JSON');
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,23 +71,10 @@ serve(async (req) => {
   try {
     const { action, userId, userAnswer, questionIndex, askedQuestions, correctAnswer, currentLevel, answersHistory, startedAt } = await req.json();
     
-    if (!geminiApiKey) {
-      throw new Error('Gemini API key not configured');
-    }
-
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     if (action === 'start') {
-      // Generate initial question using Gemini
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
+      const prompt = `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
 
 Generate the first question for a Cambridge English placement test that will determine the user's level (A1, A2, B1, B2, C1, C2). 
 
@@ -54,44 +93,10 @@ Return ONLY a JSON object with this exact format:
   "questionNumber": 1,
   "correctAnswer": "A",
   "askedQuestions": ["I _____ to work every day."]
-}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 800,
-          }
-        }),
-      });
+}`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gemini API error:', response.status, response.statusText, errorText);
-        throw new Error(`Gemini API failed with status ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Gemini response data:', data);
-
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        throw new Error('Invalid response structure from Gemini API');
-      }
-
-      const textContent = data.candidates[0].content.parts[0].text;
-      console.log('Generated text:', textContent);
+      const questionData = await callLovableAI(prompt);
       
-      let questionData;
-      try {
-        // Strip markdown code blocks if present
-        const cleanedContent = textContent.replace(/```json\n?|\n?```/g, '').trim();
-        questionData = JSON.parse(cleanedContent);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError, 'Content:', textContent);
-        throw new Error('Failed to parse AI response as JSON');
-      }
-
       // Add startedAt timestamp for tracking
       questionData.startedAt = new Date().toISOString();
       questionData.answersHistory = [];
@@ -118,16 +123,7 @@ Return ONLY a JSON object with this exact format:
         }
       ];
       
-      // Evaluate answer and generate next question using Gemini
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
+      const prompt = `You are a Cambridge English placement test examiner. You must respond ONLY with valid JSON objects, no additional text.
 
 CURRENT SITUATION:
 - Question ${questionIndex} just answered
@@ -179,43 +175,9 @@ Otherwise, return a completely new question with appropriate difficulty:
   "questionNumber": ${questionIndex + 1},
   "correctAnswer": "[A/B/C/D]",
   "askedQuestions": [all previous questions including this new one]
-}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.4,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 800,
-          }
-        }),
-      });
+}`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gemini API error:', response.status, response.statusText, errorText);
-        throw new Error(`Gemini API failed with status ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('Gemini response data:', data);
-
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        throw new Error('Invalid response structure from Gemini API');
-      }
-
-      const textContent = data.candidates[0].content.parts[0].text;
-      console.log('Generated text:', textContent);
-      
-      let result;
-      try {
-        // Strip markdown code blocks if present
-        const cleanedContent = textContent.replace(/```json\n?|\n?```/g, '').trim();
-        result = JSON.parse(cleanedContent);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError, 'Content:', textContent);
-        throw new Error('Failed to parse AI response as JSON');
-      }
+      const result = await callLovableAI(prompt);
 
       // Always include answers history in response
       result.answersHistory = updatedAnswersHistory;
@@ -297,19 +259,17 @@ Otherwise, return a completely new question with appropriate difficulty:
   } catch (error) {
     console.error('Error in cambridge-placement-test function:', error);
     
-    // Type-safe error handling
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
-    // Return appropriate status code based on error type
     let statusCode = 500;
     let displayMessage = 'Internal server error';
     
     if (errorMessage.includes('API key not configured')) {
       statusCode = 500;
       displayMessage = 'Service configuration error';
-    } else if (errorMessage.includes('Gemini API failed')) {
+    } else if (errorMessage.includes('AI API failed') || errorMessage.includes('Rate limit') || errorMessage.includes('credits exhausted')) {
       statusCode = 502;
-      displayMessage = 'External service error';
+      displayMessage = errorMessage;
     } else if (errorMessage.includes('Failed to parse')) {
       statusCode = 502;
       displayMessage = 'Service response error';

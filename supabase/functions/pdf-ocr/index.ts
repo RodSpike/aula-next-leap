@@ -53,121 +53,51 @@ serve(async (req) => {
       if (base64.includes(',')) base64 = base64.split(',')[1];
     }
 
-    // Prioritize Lovable AI Gateway, then OpenAI, then Gemini
+    // Use Lovable AI Gateway exclusively
     const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPENAI') || Deno.env.get('OPENAI_KEY');
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('Gemini') || Deno.env.get('GOOGLE_API_KEY');
-
-    if (lovableKey) {
-      console.log('Using Lovable AI Gateway (Gemini) for OCR');
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
-                  { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
-                ]
-              }
-            ]
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const extractedText = data?.choices?.[0]?.message?.content ?? '';
-
-          return new Response(
-            JSON.stringify({ text: extractedText, filename }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          const errorData = await response.json();
-          console.error('Lovable AI error, trying fallback:', errorData);
-        }
-      } catch (lovableError) {
-        console.error('Lovable AI Gateway failed, trying fallback:', lovableError);
-      }
+    
+    if (!lovableKey) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    if (openaiApiKey) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
-                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
-              ]
-            }
-          ],
-          max_tokens: 4000,
-          temperature: 0
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-      const extractedText = data?.choices?.[0]?.message?.content ?? '';
-
-      return new Response(
-        JSON.stringify({ text: extractedText, filename }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!geminiApiKey) {
-      throw new Error('No OCR provider configured (missing OPENAI_API_KEY and GEMINI_API_KEY)');
-    }
-
-    // Gemini Vision fallback using inline_data
-    const geminiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+    console.log('Using Lovable AI Gateway for OCR');
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${lovableKey}`,
         'Content-Type': 'application/json',
-        'X-goog-api-key': geminiApiKey,
       },
       body: JSON.stringify({
-        contents: [
+        model: 'google/gemini-2.5-flash',
+        messages: [
           {
-            parts: [
-              { text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting and line breaks. If multi-page, include everything. For Word documents, maintain structure.' },
-              { inline_data: { mime_type: mimeType, data: base64 } }
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Extract all text from this document/image in its original language. Return only the extracted text with proper formatting. If multi-page, extract everything. For Word documents, maintain structure.' },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
             ]
           }
-        ],
-        generationConfig: { temperature: 0, maxOutputTokens: 4000 }
-      })
+        ]
+      }),
     });
 
-    if (!geminiRes.ok) {
-      const errorText = await geminiRes.text();
-      console.error('Gemini API error:', geminiRes.status, errorText);
-      throw new Error(`Gemini API error: ${geminiRes.status}`);
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Lovable AI error:', response.status, errorData);
+      
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      if (response.status === 402) {
+        throw new Error('AI credits exhausted. Please add credits to continue.');
+      }
+      
+      throw new Error(`OCR API error: ${response.status}`);
     }
 
-    const geminiData = await geminiRes.json();
-    const extractedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const data = await response.json();
+    const extractedText = data?.choices?.[0]?.message?.content ?? '';
 
     return new Response(
       JSON.stringify({ text: extractedText, filename }),
