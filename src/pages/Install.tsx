@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Share, Plus, MoreVertical, ArrowLeft, X, Smartphone, Globe, AlertCircle } from 'lucide-react';
+import { Check, Share, Plus, MoreVertical, ArrowLeft, X, Smartphone, Globe, AlertCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -228,14 +228,20 @@ const Install = () => {
               <div className="bg-card rounded-xl p-5 space-y-4 text-left border border-border shadow-sm">
                 <p className="text-sm text-center text-muted-foreground font-medium">No Safari, siga os passos:</p>
                 <Step number={1} icon={<Share className="w-5 h-5" />} isActive={activeStep >= 1} delay={0}>
-                  Toque no botão <strong className="text-foreground">Compartilhar</strong> na barra inferior
+                  Toque no ícone <strong className="text-foreground">Compartilhar</strong> (quadrado com seta ↑) na barra do Safari
                 </Step>
                 <Step number={2} icon={<Plus className="w-5 h-5" />} isActive={activeStep >= 2} delay={100}>
-                  Role e selecione <strong className="text-foreground">"Adicionar à Tela de Início"</strong>
+                  Role a lista e toque em <strong className="text-foreground">"Adicionar à Tela de Início"</strong>
                 </Step>
                 <Step number={3} icon={<Check className="w-5 h-5" />} isActive={activeStep >= 3} delay={200}>
-                  Toque em <strong className="text-foreground">"Adicionar"</strong> para finalizar
+                  Confirme tocando em <strong className="text-foreground">"Adicionar"</strong> no canto superior direito
                 </Step>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <Info className="w-4 h-4 shrink-0" />
+                  <span>O ícone de compartilhar fica na parte inferior do Safari (iPhone) ou superior (iPad).</span>
+                </p>
               </div>
             </div>
           )}
