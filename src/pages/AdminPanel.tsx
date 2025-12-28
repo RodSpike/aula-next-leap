@@ -646,44 +646,46 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="admins" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Admins
-            </TabsTrigger>
-            <TabsTrigger value="free-users" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Free Users
-            </TabsTrigger>
-            <TabsTrigger value="ai-teachers" className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              IA Teachers
-            </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="groups" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Groups
-            </TabsTrigger>
-            <TabsTrigger value="posts" className="flex items-center gap-2">
-              <Edit className="h-4 w-4" />
-              Posts
-            </TabsTrigger>
-            <TabsTrigger value="audit" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Audit Log
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex h-auto min-w-max gap-1 p-1 bg-muted">
+              <TabsTrigger value="overview" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="admins" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Admins</span>
+              </TabsTrigger>
+              <TabsTrigger value="free-users" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Free Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai-teachers" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Bot className="h-4 w-4" />
+                <span className="hidden sm:inline">IA Teachers</span>
+              </TabsTrigger>
+              <TabsTrigger value="content" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Content</span>
+              </TabsTrigger>
+              <TabsTrigger value="groups" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Groups</span>
+              </TabsTrigger>
+              <TabsTrigger value="posts" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Edit className="h-4 w-4" />
+                <span className="hidden sm:inline">Posts</span>
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">Audit</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
