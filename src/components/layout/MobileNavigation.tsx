@@ -93,32 +93,32 @@ export const MobileNavigation = () => {
           paddingBottom: 'env(safe-area-inset-bottom, 0px)'
         }}
       >
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-16 px-1">
           {navItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full px-2 relative transition-colors",
+                "flex flex-col items-center justify-center flex-1 min-h-[48px] min-w-[48px] px-1 relative transition-all duration-200 active:scale-95",
                 isActive(item.href)
                   ? "text-primary"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <div className="relative">
                 <item.icon className={cn(
-                  "h-5 w-5 mb-1",
+                  "h-6 w-6 mb-0.5 transition-transform duration-200",
                   isActive(item.href) && "scale-110"
                 )} />
               </div>
               <span className={cn(
-                "text-[10px] font-medium",
+                "text-[10px] font-medium transition-all duration-200",
                 isActive(item.href) && "font-semibold"
               )}>
                 {item.name}
               </span>
               {isActive(item.href) && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-primary rounded-full animate-fade-in" />
               )}
             </Link>
           ))}
@@ -126,9 +126,9 @@ export const MobileNavigation = () => {
           {/* AI Tutor Button */}
           <button
             onClick={() => setSpeechTutorOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 h-full px-2 relative transition-colors text-muted-foreground hover:text-primary"
+            className="flex flex-col items-center justify-center flex-1 min-h-[48px] min-w-[48px] px-1 relative transition-all duration-200 active:scale-95 text-muted-foreground hover:text-foreground"
           >
-            <Mic className="h-5 w-5 mb-1" />
+            <Mic className="h-6 w-6 mb-0.5" />
             <span className="text-[10px] font-medium">AI Tutor</span>
           </button>
           
@@ -137,22 +137,22 @@ export const MobileNavigation = () => {
             <SheetTrigger asChild>
               <button
                 className={cn(
-                  "flex flex-col items-center justify-center flex-1 h-full px-2 relative transition-colors",
-                  isMoreActive ? "text-primary" : "text-muted-foreground"
+                  "flex flex-col items-center justify-center flex-1 min-h-[48px] min-w-[48px] px-1 relative transition-all duration-200 active:scale-95",
+                  isMoreActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <MoreHorizontal className={cn(
-                  "h-5 w-5 mb-1",
+                  "h-6 w-6 mb-0.5 transition-transform duration-200",
                   isMoreActive && "scale-110"
                 )} />
                 <span className={cn(
-                  "text-[10px] font-medium",
+                  "text-[10px] font-medium transition-all duration-200",
                   isMoreActive && "font-semibold"
                 )}>
                   Mais
                 </span>
                 {isMoreActive && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-primary rounded-full animate-fade-in" />
                 )}
               </button>
             </SheetTrigger>

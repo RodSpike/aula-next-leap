@@ -214,11 +214,11 @@ export default function Signup() {
           
           <CardContent className="space-y-6">
             {user && (
-              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm mb-2">
+              <div className="bg-info/10 border border-info/30 rounded-lg p-4 text-sm mb-2">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
-                    <div className="font-medium text-blue-900 dark:text-blue-100">Você já está logado</div>
-                    <p className="text-blue-800 dark:text-blue-200">Se deseja criar outra conta, saia primeiro.</p>
+                    <div className="font-medium text-foreground">Você já está logado</div>
+                    <p className="text-muted-foreground">Se deseja criar outra conta, saia primeiro.</p>
                   </div>
                   <div className="flex gap-2">
                     <Button asChild variant="outline" size="sm">
@@ -298,8 +298,10 @@ export default function Signup() {
                   <Input
                     id="email"
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     placeholder="seu@email.com"
-                    className="pl-10"
+                    className="pl-10 text-base"
                     value={formData.email}
                     onChange={handleInputChange("email")}
                     required
