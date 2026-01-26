@@ -15,8 +15,8 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Signup() {
   usePageMeta({
-    title: 'Criar Conta - Aula Click | 7 Dias Grátis',
-    description: 'Crie sua conta na Aula Click e ganhe 7 dias grátis. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
+    title: 'Criar Conta - Aula Click | 2 Dias Grátis',
+    description: 'Crie sua conta na Aula Click e ganhe 2 dias grátis. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
     keywords: 'criar conta, cadastro aula click, teste grátis inglês, aprender inglês grátis',
     canonicalPath: '/signup',
   });
@@ -203,7 +203,7 @@ export default function Signup() {
             <div className="flex items-center justify-center space-x-2 mb-2">
               <Gift className="h-6 w-6 text-primary" />
               <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
-                7 DIAS GRÁTIS
+                2 DIAS GRÁTIS
               </span>
             </div>
             <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
@@ -389,7 +389,7 @@ export default function Signup() {
             {/* Trial Info */}
             <div className="bg-accent/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                ✓ 7 dias de acesso completo grátis<br />
+                ✓ 2 dias de acesso completo grátis<br />
                 ✓ Sem compromisso • Cancele quando quiser
               </p>
             </div>

@@ -489,7 +489,7 @@ export default function ConhecerCursos() {
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
             Faça o teste de nivelamento gratuito e descubra seu nível de inglês. 
-            Experimente 7 dias grátis!
+            Experimente 2 dias grátis!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" asChild>
