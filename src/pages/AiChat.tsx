@@ -893,14 +893,18 @@ export default function AiChat() {
               ))}
               
               {isLoading && (
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 animate-fade-in">
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                     <Bot className="h-4 w-4" />
                   </div>
                   <div className="bg-muted rounded-lg p-3">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">O tutor IA está digitando...</span>
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">ClickAI está pensando...</span>
                     </div>
                   </div>
                 </div>

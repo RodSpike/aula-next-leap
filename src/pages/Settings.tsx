@@ -116,21 +116,21 @@ export default function Settings() {
           </div>
 
           <Tabs defaultValue="subscription" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="subscription" className="transition-all duration-300 data-[state=active]:scale-105">
-                <CreditCard className="w-4 h-4 mr-2" />
+            <TabsList className="flex w-full overflow-x-auto scrollable-tabs gap-1 p-1">
+              <TabsTrigger value="subscription" className="flex-shrink-0 min-w-[80px] transition-all duration-300 data-[state=active]:scale-105">
+                <CreditCard className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Assinatura</span>
               </TabsTrigger>
-              <TabsTrigger value="sounds" className="transition-all duration-300 data-[state=active]:scale-105">
-                <Volume2 className="w-4 h-4 mr-2" />
+              <TabsTrigger value="sounds" className="flex-shrink-0 min-w-[80px] transition-all duration-300 data-[state=active]:scale-105">
+                <Volume2 className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Sons</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="transition-all duration-300 data-[state=active]:scale-105">
-                <Bell className="w-4 h-4 mr-2" />
+              <TabsTrigger value="notifications" className="flex-shrink-0 min-w-[80px] transition-all duration-300 data-[state=active]:scale-105">
+                <Bell className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Notificações</span>
               </TabsTrigger>
-              <TabsTrigger value="privacy" className="transition-all duration-300 data-[state=active]:scale-105">
-                <Shield className="w-4 h-4 mr-2" />
+              <TabsTrigger value="privacy" className="flex-shrink-0 min-w-[80px] transition-all duration-300 data-[state=active]:scale-105">
+                <Shield className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Privacidade</span>
               </TabsTrigger>
             </TabsList>

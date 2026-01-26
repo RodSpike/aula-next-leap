@@ -56,7 +56,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
             <Badge className={getLevelColor(course.level)}>{course.level}</Badge>
             {course.isCurrentLevel && (
               <Badge variant="default" className="bg-primary text-primary-foreground">
-                Current
+                Atual
               </Badge>
             )}
             {course.admin_only && (
@@ -97,12 +97,12 @@ export const CourseCard = ({ course }: CourseCardProps) => {
 
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progress</span>
-            <span>{course.completedLessons}/{course.lessonsCount} lessons</span>
+            <span>Progresso</span>
+            <span>{course.completedLessons}/{course.lessonsCount} lições</span>
           </div>
           <Progress value={progressPercentage} className="h-2" />
           <div className="text-xs text-muted-foreground text-center">
-            {progressPercentage}% Complete
+            {progressPercentage}% Completo
           </div>
         </div>
 
@@ -110,7 +110,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
           <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg">
             <Trophy className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-primary">
-              Continue your journey
+              Continue sua jornada
             </span>
           </div>
         )}
@@ -128,14 +128,14 @@ export const CourseCard = ({ course }: CourseCardProps) => {
               {isEnemCourse 
                 ? 'Acessar Curso ENEM' 
                 : course.completedLessons === 0 
-                  ? 'Start Course' 
-                  : 'Continue Learning'}
+                  ? 'Iniciar Curso' 
+                  : 'Continuar Estudando'}
             </Link>
           </Button>
         ) : (
           <Button disabled className="w-full">
             <Lock className="h-4 w-4 mr-2" />
-            Locked - Complete Previous Level
+            Bloqueado - Complete o Nível Anterior
           </Button>
         )}
       </CardFooter>

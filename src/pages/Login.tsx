@@ -218,17 +218,17 @@ export default function Login() {
             </div>
 
             {/* Email Confirmation Notice */}
-            <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+            <div className="bg-info/10 border border-info/30 rounded-lg p-4 text-sm">
               <div className="flex items-center gap-2 mb-2">
-                <Info className="h-4 w-4 text-blue-600" />
-                <span className="font-medium text-blue-900 dark:text-blue-100">Primeira vez aqui?</span>
+                <Info className="h-4 w-4 text-info" />
+                <span className="font-medium text-foreground">Primeira vez aqui?</span>
               </div>
-              <p className="text-blue-800 dark:text-blue-200 mb-2">
+              <p className="text-muted-foreground mb-2">
                 Se você criou uma conta via email, verifique sua caixa de entrada e clique no link de confirmação antes de fazer login.
               </p>
-              <p className="text-blue-800 dark:text-blue-200">
+              <p className="text-muted-foreground">
                 <strong>Não tem uma conta?</strong>{" "}
-                <Link to="/signup" className="font-medium underline hover:no-underline">
+                <Link to="/signup" className="font-medium text-primary underline hover:no-underline">
                   Crie uma conta gratuitamente
                 </Link>
               </p>
@@ -240,7 +240,7 @@ export default function Login() {
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input id="email" type="email" placeholder="seu@email.com" className="pl-10" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Input id="email" type="email" inputMode="email" autoComplete="email" placeholder="seu@email.com" className="pl-10 text-base" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
               </div>
               

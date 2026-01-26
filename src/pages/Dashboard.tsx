@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { DashboardSkeleton } from "@/components/ui/skeleton-shimmer";
 import { 
   BookOpen, Play, Target, Users, Trophy, 
   MessageCircle, Zap, ChevronRight, Gamepad2,
@@ -164,12 +165,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Carregando...</p>
-          </div>
-        </div>
+        <DashboardSkeleton />
       </AppLayout>
     );
   }
