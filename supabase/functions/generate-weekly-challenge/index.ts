@@ -107,19 +107,43 @@ serve(async (req) => {
     // Generate 50 questions using AI
     console.log("Generating 50 questions with AI...");
 
-    const systemPrompt = `You are an English language expert creating quiz questions for Brazilian students learning English.
+    const systemPrompt = `You are an expert English language teacher creating quiz questions for Brazilian students learning English.
 Generate exactly 50 multiple-choice questions testing English knowledge across these categories:
 - Grammar (verb tenses, articles, prepositions, conditionals)
 - Vocabulary (synonyms, antonyms, word meanings, idioms)
 - Reading comprehension (short passages with questions)
 - Common mistakes Brazilians make in English
 
+CRITICAL GRAMMAR RULES - YOU MUST FOLLOW THESE EXACTLY:
+
+1. ARTICLES (A vs AN):
+   - Use "A" before words that START WITH A CONSONANT SOUND (not letter!)
+   - Use "AN" before words that START WITH A VOWEL SOUND (not letter!)
+   - CRITICAL: Look at the NEXT word in the phrase, not the noun!
+   - Examples:
+     * "A new umbrella" (correct - "new" starts with consonant sound /n/)
+     * "AN umbrella" (correct - "umbrella" starts with vowel sound /ʌ/)
+     * "A university" (correct - "university" starts with /juː/ consonant sound)
+     * "AN hour" (correct - "hour" starts with vowel sound, H is silent)
+     * "A European" (correct - starts with /juː/ consonant sound)
+     * "AN honest person" (correct - H is silent, starts with vowel sound)
+   - NEVER ask "a or an" where the answer depends on a word NOT shown in the options!
+
+2. For article questions, ALWAYS include the full phrase in the question and options.
+   BAD: "Choose a/an: ___ new car" with options ["a", "an"]
+   GOOD: "Complete: I bought ___ yesterday." with options ["a new car", "an new car", "the new car", "new car"]
+
+3. Double-check every answer before including it. The correct_answer index MUST match the actually correct option.
+
+4. Explanations must be accurate and educational. For article questions, always explain the SOUND rule.
+
 Requirements:
 1. Each question must have exactly 4 options
 2. Questions should range from beginner to advanced
-3. Include clear explanations for each correct answer
+3. Include clear, accurate explanations for each correct answer
 4. Make questions engaging and practical
 5. Return ONLY valid JSON, no markdown
+6. VERIFY each answer is grammatically correct before including
 
 Return a JSON array with exactly 50 objects in this format:
 {
@@ -146,9 +170,9 @@ Return a JSON array with exactly 50 objects in this format:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: "Generate 50 diverse English quiz questions with mixed difficulty. Return only the JSON, no additional text." }
+          { role: "user", content: "Generate 50 diverse English quiz questions with mixed difficulty. IMPORTANT: Double-check every answer for grammatical accuracy, especially article usage (a/an). The correct_answer index must point to the genuinely correct option. Return only the JSON, no additional text." }
         ],
-        temperature: 0.8,
+        temperature: 0.5,
       }),
     });
 
