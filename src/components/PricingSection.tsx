@@ -92,7 +92,7 @@ export function PricingSection() {
               <div className="text-4xl font-bold text-primary">R$ 59,90</div>
               <p className="text-sm text-muted-foreground">por mês</p>
               <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                7 dias grátis para testar
+                2 dias grátis para testar
               </Badge>
             </div>
           </CardHeader>
@@ -119,7 +119,7 @@ export function PricingSection() {
               </Button>
               
               <p className="text-xs text-muted-foreground">
-                ✓ Cancele quando quiser • Sem compromisso • Cobrança após 7 dias
+                ✓ Cancele quando quiser • Sem compromisso • Cobrança após 2 dias
               </p>
             </div>
           </CardContent>

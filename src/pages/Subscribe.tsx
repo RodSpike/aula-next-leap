@@ -11,8 +11,8 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Subscribe() {
   usePageMeta({
-    title: 'Assinar - Aula Click | 7 Dias Grátis + Acesso Completo',
-    description: 'Assine a Aula Click por apenas R$59,90/mês. 7 dias grátis, acesso a todos os cursos de inglês, tutor com IA e comunidade ativa.',
+    title: 'Assinar - Aula Click | 2 Dias Grátis + Acesso Completo',
+    description: 'Assine a Aula Click por apenas R$59,90/mês. 2 dias grátis, acesso a todos os cursos de inglês, tutor com IA e comunidade ativa.',
     keywords: 'assinatura aula click, plano inglês online, curso inglês mensal, teste grátis inglês',
     canonicalPath: '/subscribe',
   });
@@ -113,7 +113,7 @@ export default function Subscribe() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Ative seu Período Grátis</CardTitle>
           <CardDescription>
-            Experimente 7 dias grátis. Cancele a qualquer momento.
+            Experimente 2 dias grátis. Cancele a qualquer momento.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -125,7 +125,7 @@ export default function Subscribe() {
             <div className="text-3xl font-bold text-primary">R$ 59,90</div>
             <p className="text-sm text-muted-foreground">por mês após o período grátis</p>
             <Badge className="bg-green-100 text-green-800 border-green-200">
-              7 dias grátis - Sem cobrança agora
+              2 dias grátis - Sem cobrança agora
             </Badge>
           </div>
 
@@ -135,8 +135,8 @@ export default function Subscribe() {
               <span className="font-semibold text-blue-900">Como funciona</span>
             </div>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Use por 7 dias completamente grátis</li>
-              <li>• Cancele antes de 7 dias para não ser cobrado</li>
+              <li>• Use por 2 dias completamente grátis</li>
+              <li>• Cancele antes de 2 dias para não ser cobrado</li>
               <li>• Ou continue e pague apenas R$ 59,90/mês</li>
               <li>• Acesso imediato a todos os recursos</li>
             </ul>
@@ -170,7 +170,7 @@ export default function Subscribe() {
 
           <p className="text-xs text-center text-muted-foreground">
             Você será redirecionado para adicionar um método de pagamento. 
-            Você não será cobrado durante os 7 dias de teste. Cancele a qualquer momento na plataforma.
+            Você não será cobrado durante os 2 dias de teste. Cancele a qualquer momento na plataforma.
           </p>
         </CardContent>
         </Card>

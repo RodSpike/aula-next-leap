@@ -11,7 +11,7 @@ export const CTASection = ({ hasActiveSubscription = false }: CTASectionProps) =
   // Only show dashboard link if user has active subscription
   const showDashboardLink = hasActiveSubscription;
   const benefits = [
-    "7 dias grátis para testar",
+    "2 dias grátis para testar",
     "Cancele quando quiser",
     "Todos os cursos inclusos",
     "Tutor IA + Professores reais"
@@ -85,7 +85,7 @@ export const CTASection = ({ hasActiveSubscription = false }: CTASectionProps) =
                   asChild
                 >
                   <Link to="/signup">
-                    Começar Teste Grátis de 7 Dias
+                    Começar Teste Grátis de 2 Dias
                     <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </Button>

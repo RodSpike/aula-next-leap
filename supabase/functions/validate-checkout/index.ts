@@ -76,7 +76,7 @@ serve(async (req) => {
       user_id: user.id,
       plan: 'premium',
       subscription_status: 'trialing',
-      trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+      trial_ends_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
       stripe_customer_id: session.customer,
       stripe_subscription_id: session.subscription,
       current_period_end: session.mode === 'subscription' 

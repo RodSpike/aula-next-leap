@@ -130,7 +130,7 @@ serve(async (req) => {
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
     } else if (hasTrialSub) {
       const subscription = trialingSubscriptions.data[0];
-      trialEnd = new Date(subscription.trial_end ? subscription.trial_end * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      trialEnd = new Date(subscription.trial_end ? subscription.trial_end * 1000 : Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
       productId = subscription.items.data[0].price.product;
       logStep("Trial subscription found", { subscriptionId: subscription.id, trialEnd });
     } else {
