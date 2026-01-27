@@ -380,16 +380,25 @@ REGRAS:
 
     // Update last run timestamp
     const updateField = action === 'interact' ? 'last_interaction_run' : 'last_tip_run';
-    const { error: updateError } = await supabase
+    
+    // Get the settings ID first
+    const { data: settingsData } = await supabase
       .from('ai_posting_settings')
-      .update({
-        [updateField]: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .limit(1);
+      .select('id')
+      .single();
+    
+    if (settingsData?.id) {
+      const { error: updateError } = await supabase
+        .from('ai_posting_settings')
+        .update({
+          [updateField]: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', settingsData.id);
 
-    if (updateError) {
-      console.error('[AI-POST] Error updating settings:', updateError);
+      if (updateError) {
+        console.error('[AI-POST] Error updating settings:', updateError);
+      }
     }
 
     console.log(`[AI-POST] Completed. Success: ${successCount}, Errors: ${errorCount}`);
