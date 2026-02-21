@@ -38,19 +38,20 @@ serve(async (req) => {
 
     console.log(`Generating challenge for week: ${weekStart} to ${weekEnd}`);
 
-    // Check if challenge already exists for this week
-    const { data: existingChallenge } = await supabase
+    // Delete any existing challenges for this week (allows regeneration)
+    const { data: existingChallenges } = await supabase
       .from('click_of_week_challenges')
       .select('id')
-      .eq('week_start', weekStart)
-      .single();
+      .eq('week_start', weekStart);
 
-    if (existingChallenge) {
-      console.log("Challenge already exists for this week:", existingChallenge.id);
-      return new Response(
-        JSON.stringify({ message: "Challenge already exists", challengeId: existingChallenge.id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (existingChallenges && existingChallenges.length > 0) {
+      console.log("Removing existing challenges for this week:", existingChallenges.map(c => c.id));
+      for (const ch of existingChallenges) {
+        // Delete related data first
+        await supabase.from('click_of_week_attempts').delete().eq('challenge_id', ch.id);
+        await supabase.from('click_of_week_leaderboard').delete().eq('challenge_id', ch.id);
+        await supabase.from('click_of_week_challenges').delete().eq('id', ch.id);
+      }
     }
 
     // Determine previous week winner

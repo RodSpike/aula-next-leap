@@ -657,12 +657,12 @@ export default function AiChat() {
     }
   };
 
-  // Ensure input stays focused
+  // Focus input only when loading/recording state changes, not on every keystroke
   useEffect(() => {
     if (inputRef.current && !isLoading && !isRecording) {
       inputRef.current.focus();
     }
-  }, [inputMessage, isLoading, isRecording]);
+  }, [isLoading, isRecording]);
 
   if (!user) {
     return (
