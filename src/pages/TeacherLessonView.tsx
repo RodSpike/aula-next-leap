@@ -466,7 +466,7 @@ export default function TeacherLessonView() {
               {guide.differentiation_notes && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Diferenciação</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.differentiation_notes}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.differentiation_notes)}</p>
                 </div>
               )}
             </CardContent>
