@@ -205,21 +205,25 @@ export const UnifiedChatInterface = () => {
   if (selectedChat) {
     if (selectedChat.type === 'direct') {
       return (
-        <DirectMessageChat
-          friendId={selectedChat.participantId!}
-          friendName={selectedChat.name}
-          friendAvatar={selectedChat.avatar}
-          onBack={() => setSelectedChat(null)}
-        />
+        <div className="h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)]">
+          <DirectMessageChat
+            friendId={selectedChat.participantId!}
+            friendName={selectedChat.name}
+            friendAvatar={selectedChat.avatar}
+            onBack={() => setSelectedChat(null)}
+          />
+        </div>
       );
     }
     
     return (
-      <SimpleChatWindow
-        groupId={selectedChat.id}
-        groupName={selectedChat.name}
-        onClose={() => setSelectedChat(null)}
-      />
+      <div className="h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)]">
+        <SimpleChatWindow
+          groupId={selectedChat.id}
+          groupName={selectedChat.name}
+          onClose={() => setSelectedChat(null)}
+        />
+      </div>
     );
   }
 

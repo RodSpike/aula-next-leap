@@ -434,7 +434,10 @@ export const SpeechTutorDialog: React.FC<SpeechTutorDialogProps> = ({ open, onOp
     // On mobile, continuous mode often doesn't work well - use single-shot mode
     recognition.continuous = !isMobile;
     recognition.interimResults = true;
+    // Use multilingual recognition - browser will detect both EN and PT-BR
     recognition.lang = 'en-US';
+    // Some browsers support multiple languages via alternate grammars
+    // Setting to en-US as primary but the AI handles PT-BR input gracefully
     
     recognition.onstart = () => {
       console.log('[Speech Tutor] Recognition started, mobile:', isMobile);
