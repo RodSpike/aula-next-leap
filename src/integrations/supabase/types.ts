@@ -1635,6 +1635,167 @@ export type Database = {
           },
         ]
       }
+      teacher_affiliates: {
+        Row: {
+          bio: string | null
+          commission_rate: number
+          cpf: string
+          cpf_verified: boolean
+          created_at: string
+          full_name: string
+          id: string
+          referral_code: string
+          specialties: string[] | null
+          status: string
+          total_earnings: number
+          total_referrals: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          commission_rate?: number
+          cpf: string
+          cpf_verified?: boolean
+          created_at?: string
+          full_name: string
+          id?: string
+          referral_code: string
+          specialties?: string[] | null
+          status?: string
+          total_earnings?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          commission_rate?: number
+          cpf?: string
+          cpf_verified?: boolean
+          created_at?: string
+          full_name?: string
+          id?: string
+          referral_code?: string
+          specialties?: string[] | null
+          status?: string
+          total_earnings?: number
+          total_referrals?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      teacher_guides: {
+        Row: {
+          additional_resources: Json | null
+          assessment_tips: string | null
+          course_id: string
+          created_at: string
+          differentiation_notes: string | null
+          estimated_duration_minutes: number | null
+          generated_at: string | null
+          id: string
+          lesson_id: string
+          objectives: string[] | null
+          practice_activities: Json | null
+          presentation_notes: string | null
+          updated_at: string
+          warm_up: string | null
+        }
+        Insert: {
+          additional_resources?: Json | null
+          assessment_tips?: string | null
+          course_id: string
+          created_at?: string
+          differentiation_notes?: string | null
+          estimated_duration_minutes?: number | null
+          generated_at?: string | null
+          id?: string
+          lesson_id: string
+          objectives?: string[] | null
+          practice_activities?: Json | null
+          presentation_notes?: string | null
+          updated_at?: string
+          warm_up?: string | null
+        }
+        Update: {
+          additional_resources?: Json | null
+          assessment_tips?: string | null
+          course_id?: string
+          created_at?: string
+          differentiation_notes?: string | null
+          estimated_duration_minutes?: number | null
+          generated_at?: string | null
+          id?: string
+          lesson_id?: string
+          objectives?: string[] | null
+          practice_activities?: Json | null
+          presentation_notes?: string | null
+          updated_at?: string
+          warm_up?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_guides_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_guides_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: true
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_referrals: {
+        Row: {
+          commission_amount: number | null
+          commission_paid: boolean | null
+          converted_at: string | null
+          created_at: string
+          id: string
+          referred_email: string | null
+          referred_user_id: string | null
+          status: string
+          teacher_id: string
+        }
+        Insert: {
+          commission_amount?: number | null
+          commission_paid?: boolean | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          status?: string
+          teacher_id: string
+        }
+        Update: {
+          commission_amount?: number | null
+          commission_paid?: boolean | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          status?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_referrals_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
