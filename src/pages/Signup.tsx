@@ -15,12 +15,27 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Signup() {
   usePageMeta({
-    title: 'Criar Conta - Aula Click | 2 Dias Grátis',
-    description: 'Crie sua conta na Aula Click e ganhe 2 dias grátis. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
-    keywords: 'criar conta, cadastro aula click, teste grátis inglês, aprender inglês grátis',
+    title: 'Criar Conta - Aula Click',
+    description: 'Crie sua conta na Aula Click. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
+    keywords: 'criar conta, cadastro aula click, aprender inglês',
     canonicalPath: '/signup',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      // Store in sessionStorage so it persists through Google OAuth redirect
+      sessionStorage.setItem('teacher_referral_code', ref);
+    } else {
+      const stored = sessionStorage.getItem('teacher_referral_code');
+      if (stored) setReferralCode(stored);
+    }
+  }, []);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
