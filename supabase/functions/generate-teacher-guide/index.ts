@@ -166,6 +166,8 @@ Write in English. Be specific and practical. Include 3-5 objectives, a conversat
         differentiation_notes: guideContent.differentiation_notes || null,
         estimated_duration_minutes: guideContent.estimated_duration_minutes || 60,
         additional_resources: guideContent.additional_resources || [],
+        screen_share_content: guideContent.screen_share_content || [],
+        homework_suggestions: guideContent.homework_suggestions || [],
         generated_at: new Date().toISOString(),
       }, {
         onConflict: "lesson_id",
