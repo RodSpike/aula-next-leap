@@ -13,8 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
-  MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video
-, Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon
+  MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video,
+  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -23,38 +23,25 @@ import {
 
 const extractYouTubeId = (url?: string | null): string | null => {
   if (!url) return null;
-
   const patterns = [
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
     /[?&]v=([a-zA-Z0-9_-]{11})/,
   ];
-
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match?.[1]) return match[1];
   }
-
   try {
     const parsedUrl = new URL(url);
     const videoId = parsedUrl.searchParams.get("v");
     if (videoId && videoId.length === 11) return videoId;
-  } catch {
-    return null;
-  }
-
+  } catch { return null; }
   return null;
 };
 
 const normalizeResource = (resource: any) => {
-  if (resource && typeof resource === "object" && !Array.isArray(resource)) {
-    return resource;
-  }
-
-  return {
-    title: String(resource || "Recurso adicional"),
-    type: "resource",
-    url: "",
-  };
+  if (resource && typeof resource === "object" && !Array.isArray(resource)) return resource;
+  return { title: String(resource || "Recurso adicional"), type: "resource", url: "" };
 };
 
 export default function TeacherLessonView() {
@@ -73,6 +60,7 @@ export default function TeacherLessonView() {
   const [newResourceTitle, setNewResourceTitle] = useState("");
   const [newResourceUrl, setNewResourceUrl] = useState("");
   const [savingNewResource, setSavingNewResource] = useState(false);
+  const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -84,11 +72,7 @@ export default function TeacherLessonView() {
   const { data: course } = useQuery({
     queryKey: ["course", courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("courses")
-        .select("*")
-        .eq("id", courseId!)
-        .single();
+      const { data, error } = await supabase.from("courses").select("*").eq("id", courseId!).single();
       if (error) throw error;
       return data;
     },
@@ -98,11 +82,7 @@ export default function TeacherLessonView() {
   const { data: lesson } = useQuery({
     queryKey: ["lesson", lessonId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("*")
-        .eq("id", lessonId!)
-        .single();
+      const { data, error } = await supabase.from("lessons").select("*").eq("id", lessonId!).single();
       if (error) throw error;
       return data;
     },
@@ -112,11 +92,7 @@ export default function TeacherLessonView() {
   const { data: guide, isLoading } = useQuery({
     queryKey: ["teacher-guide", lessonId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teacher_guides")
-        .select("*")
-        .eq("lesson_id", lessonId!)
-        .single();
+      const { data, error } = await supabase.from("teacher_guides").select("*").eq("lesson_id", lessonId!).single();
       if (error) throw error;
       return data;
     },
@@ -138,6 +114,7 @@ export default function TeacherLessonView() {
   const practiceActivities = (guide?.practice_activities as any[] | null) || [];
   const homeworkSuggestions = (guide?.homework_suggestions as string[] | null) || [];
   const additionalResources = ((guide?.additional_resources as any[] | null) || []).map(normalizeResource);
+  const flashcards = ((guide as any)?.flashcards as any[] | null) || [];
 
   const updateNote = useCallback((key: string, value: string) => {
     setNotes(prev => ({ ...prev, [key]: value }));
@@ -153,29 +130,21 @@ export default function TeacherLessonView() {
 
   const openVideoEditor = useCallback((index: number, currentUrl?: string | null) => {
     setEditingVideoIndex(index);
-    setVideoDrafts((prev) => ({
-      ...prev,
-      [index]: currentUrl || "",
-    }));
+    setVideoDrafts((prev) => ({ ...prev, [index]: currentUrl || "" }));
   }, []);
 
-  const closeVideoEditor = useCallback(() => {
-    setEditingVideoIndex(null);
+  const closeVideoEditor = useCallback(() => { setEditingVideoIndex(null); }, []);
+
+  const toggleFlashcard = useCallback((index: number) => {
+    setFlippedCards(prev => ({ ...prev, [index]: !prev[index] }));
   }, []);
 
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
-
     const updatedResources = additionalResources.filter((_, i) => i !== index);
-
     try {
-      const { error } = await supabase
-        .from("teacher_guides")
-        .update({ additional_resources: updatedResources })
-        .eq("lesson_id", lessonId);
-
+      const { error } = await supabase.from("teacher_guides").update({ additional_resources: updatedResources }).eq("lesson_id", lessonId);
       if (error) throw error;
-
       await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
       toast({ title: "Recurso removido" });
     } catch (error: any) {
@@ -185,118 +154,62 @@ export default function TeacherLessonView() {
 
   const addNewResource = useCallback(async () => {
     if (!lessonId || !guide) return;
-
     const title = newResourceTitle.trim();
     const url = newResourceUrl.trim();
-
-    if (!title) {
-      toast({ title: "Título obrigatório", variant: "destructive" });
-      return;
-    }
-
+    if (!title) { toast({ title: "Título obrigatório", variant: "destructive" }); return; }
     if (newResourceType === "video" && url) {
       const videoId = extractYouTubeId(url);
-      if (!videoId) {
-        toast({ title: "Link do YouTube inválido", variant: "destructive" });
-        return;
-      }
+      if (!videoId) { toast({ title: "Link do YouTube inválido", variant: "destructive" }); return; }
     }
-
     const newResource = {
-      title,
-      type: newResourceType,
-      url: newResourceType === "video" && url
-        ? `https://www.youtube.com/watch?v=${extractYouTubeId(url)}`
-        : url,
+      title, type: newResourceType,
+      url: newResourceType === "video" && url ? `https://www.youtube.com/watch?v=${extractYouTubeId(url)}` : url,
     };
-
     const updatedResources = [...additionalResources, newResource];
-
     try {
       setSavingNewResource(true);
-
-      const { error } = await supabase
-        .from("teacher_guides")
-        .update({ additional_resources: updatedResources })
-        .eq("lesson_id", lessonId);
-
+      const { error } = await supabase.from("teacher_guides").update({ additional_resources: updatedResources }).eq("lesson_id", lessonId);
       if (error) throw error;
-
       await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
-      setAddingResource(false);
-      setNewResourceTitle("");
-      setNewResourceUrl("");
+      setAddingResource(false); setNewResourceTitle(""); setNewResourceUrl("");
       toast({ title: "Recurso adicionado" });
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } finally {
-      setSavingNewResource(false);
-    }
+    } finally { setSavingNewResource(false); }
   }, [additionalResources, guide, lessonId, newResourceTitle, newResourceType, newResourceUrl, queryClient, toast]);
 
   const saveVideoResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
-
     const rawUrl = (videoDrafts[index] || "").trim();
     const videoId = extractYouTubeId(rawUrl);
-
     if (!videoId) {
-      toast({
-        title: "Link inválido",
-        description: "Cole um link válido do YouTube para embutir o vídeo nesta aula.",
-        variant: "destructive",
-      });
+      toast({ title: "Link inválido", description: "Cole um link válido do YouTube.", variant: "destructive" });
       return;
     }
-
     const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const updatedResources = additionalResources.map((resource, resourceIndex) =>
-      resourceIndex === index
-        ? {
-            ...resource,
-            type: "video",
-            url: canonicalUrl,
-          }
-        : resource
+    const updatedResources = additionalResources.map((resource, ri) =>
+      ri === index ? { ...resource, type: "video", url: canonicalUrl } : resource
     );
-
     try {
       setSavingVideoIndex(index);
-
-      const { error } = await supabase
-        .from("teacher_guides")
-        .update({ additional_resources: updatedResources })
-        .eq("lesson_id", lessonId);
-
+      const { error } = await supabase.from("teacher_guides").update({ additional_resources: updatedResources }).eq("lesson_id", lessonId);
       if (error) throw error;
-
       await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
       setEditingVideoIndex(null);
-      toast({
-        title: "Vídeo atualizado",
-        description: "O recurso agora aparece embutido dentro da aula e mantém o link no PDF.",
-      });
+      toast({ title: "Vídeo atualizado" });
     } catch (error: any) {
-      toast({
-        title: "Erro ao salvar vídeo",
-        description: error.message || "Não foi possível atualizar o link do YouTube.",
-        variant: "destructive",
-      });
-    } finally {
-      setSavingVideoIndex(null);
-    }
+      toast({ title: "Erro ao salvar vídeo", description: error.message, variant: "destructive" });
+    } finally { setSavingVideoIndex(null); }
   }, [additionalResources, guide, lessonId, queryClient, toast, videoDrafts]);
 
   const exportToPdf = useCallback(async () => {
     const printArea = printRef.current;
     if (!printArea) return;
 
-    // Clone the print area for PDF
     const clone = printArea.cloneNode(true) as HTMLElement;
 
     const replaceInteractiveFields = (selector: string, className: string) => {
       const fields = clone.querySelectorAll<HTMLTextAreaElement>(selector);
-
       fields.forEach((field) => {
         const div = document.createElement('div');
         div.className = className;
@@ -314,6 +227,12 @@ export default function TeacherLessonView() {
       div.className = 'note';
       div.textContent = ta.value || '';
       ta.parentNode?.replaceChild(div, ta);
+    });
+
+    // Show all flashcard backs in PDF
+    const flashcardBacks = clone.querySelectorAll('[data-flashcard-back]');
+    flashcardBacks.forEach((el) => {
+      (el as HTMLElement).style.display = 'block';
     });
 
     const printWindow = window.open('', '_blank');
@@ -336,6 +255,12 @@ export default function TeacherLessonView() {
           .teacher-note, .no-print, .embedded-video { display: none !important; }
           .pdf-video-url { display: block; margin-top: 6px; word-break: break-word; font-size: 12px; color: hsl(215 25% 27%); }
           .footer { margin-top: 32px; text-align: center; font-size: 12px; color: hsl(215 16% 47%); border-top: 1px solid hsl(214 32% 91%); padding-top: 12px; }
+          .flashcard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+          .flashcard-pdf { border: 1px solid hsl(214 32% 91%); border-radius: 8px; padding: 12px; }
+          .flashcard-pdf .front { font-weight: bold; margin-bottom: 4px; }
+          .flashcard-pdf .back { color: hsl(215 16% 47%); font-size: 14px; }
+          .flashcard-pdf img { max-width: 120px; max-height: 80px; margin-top: 8px; border-radius: 4px; }
+          .section-image { max-width: 100%; max-height: 300px; border-radius: 8px; margin: 12px 0; }
           @media print { body { padding: 0; } .no-print { display: none; } }
         </style>
       </head>
@@ -350,10 +275,7 @@ export default function TeacherLessonView() {
       </html>
     `);
     printWindow.document.close();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    setTimeout(() => { printWindow.print(); }, 500);
   }, [lesson, course]);
 
   if (isLoading) {
@@ -390,12 +312,9 @@ export default function TeacherLessonView() {
       </header>
 
       <div className="max-w-4xl mx-auto p-4 py-6 space-y-6">
-        {/* Teacher's Plan - Collapsible (teacher reference only) */}
+        {/* Teacher's Plan - Collapsible */}
         <Card className="border-primary/30 bg-primary/5">
-          <CardHeader
-            className="cursor-pointer"
-            onClick={() => setShowPlan(!showPlan)}
-          >
+          <CardHeader className="cursor-pointer" onClick={() => setShowPlan(!showPlan)}>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Lightbulb className="h-5 w-5 text-primary" />
@@ -409,12 +328,10 @@ export default function TeacherLessonView() {
           </CardHeader>
           {showPlan && guide && (
             <CardContent className="space-y-4">
-              {/* Objectives */}
               {objectives.length > 0 && (
                 <div>
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
-                    <Target className="h-4 w-4 text-primary" />
-                    Objetivos
+                    <Target className="h-4 w-4 text-primary" /> Objetivos
                   </h3>
                   <ul className="space-y-1">
                     {objectives.map((obj, i) => (
@@ -426,44 +343,32 @@ export default function TeacherLessonView() {
                   </ul>
                 </div>
               )}
-
-              {/* Duration */}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 Duração estimada: {guide.estimated_duration_minutes || 60} minutos
               </div>
-
-              {/* Warm-up */}
               {guide.warm_up && (
                 <div>
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    Aquecimento (Warm-up)
+                    <MessageSquare className="h-4 w-4 text-primary" /> Aquecimento (Warm-up)
                   </h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.warm_up}</p>
                 </div>
               )}
-
-              {/* Presentation Notes */}
               {guide.presentation_notes && (
                 <div>
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
-                    <Monitor className="h-4 w-4 text-primary" />
-                    Notas de Apresentação (Screen Share)
+                    <Monitor className="h-4 w-4 text-primary" /> Notas de Apresentação
                   </h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.presentation_notes}</p>
                 </div>
               )}
-
-              {/* Assessment Tips */}
               {guide.assessment_tips && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Dicas de Avaliação</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.assessment_tips}</p>
                 </div>
               )}
-
-              {/* Differentiation Notes */}
               {guide.differentiation_notes && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Diferenciação</h3>
@@ -476,7 +381,7 @@ export default function TeacherLessonView() {
 
         <Separator className="my-4" />
 
-        {/* Screen Share Content - This is the main teaching material */}
+        {/* Screen Share Content */}
         <div ref={printRef} className="space-y-6">
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold text-foreground flex items-center justify-center gap-2">
@@ -503,12 +408,20 @@ export default function TeacherLessonView() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {/* Main content */}
-                  <div className="text-sm whitespace-pre-line leading-relaxed">
-                    {section.content}
-                  </div>
+                  {/* Section image */}
+                  {section.image_url && (
+                    <div className="flex justify-center">
+                      <img
+                        src={section.image_url}
+                        alt={section.title || `Illustration ${i + 1}`}
+                        className="section-image max-w-full max-h-[300px] rounded-xl border border-border object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
 
-                  {/* Teacher notes - visible only to teacher, hidden in PDF */}
+                  <div className="text-sm whitespace-pre-line leading-relaxed">{section.content}</div>
+
                   {section.teacher_notes && (
                     <div className="teacher-note bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary">
                       <p className="font-semibold mb-1">📌 Nota do Professor:</p>
@@ -516,12 +429,10 @@ export default function TeacherLessonView() {
                     </div>
                   )}
 
-                  {/* Exercise answer area */}
                   {section.type === 'exercise' && (
                     <div className="mt-3">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
-                        <PenLine className="h-3 w-3" />
-                        Respostas do Aluno
+                        <PenLine className="h-3 w-3" /> Respostas do Aluno
                       </label>
                       <textarea
                         value={exerciseAnswers[`exercise-${i}`] || ''}
@@ -533,11 +444,9 @@ export default function TeacherLessonView() {
                     </div>
                   )}
 
-                  {/* Teacher annotation area */}
                   <div className="mt-2">
                     <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
-                      <PenLine className="h-3 w-3" />
-                      Anotações
+                      <PenLine className="h-3 w-3" /> Anotações
                     </label>
                     <textarea
                       value={notes[`note-${i}`] || ''}
@@ -551,24 +460,19 @@ export default function TeacherLessonView() {
               </Card>
             ))
           ) : (
-            /* Fallback: use practice activities and lesson content if no screen_share_content */
             <>
               {lesson?.content && (
                 <Card>
                   <CardHeader className="bg-muted/30 py-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-primary" />
-                      Conteúdo da Lição
+                      <BookOpen className="h-4 w-4 text-primary" /> Conteúdo da Lição
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <div className="text-sm whitespace-pre-line leading-relaxed">
-                      {lesson.content.substring(0, 3000)}
-                    </div>
+                    <div className="text-sm whitespace-pre-line leading-relaxed">{lesson.content.substring(0, 3000)}</div>
                     <div className="mt-3">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
-                        <PenLine className="h-3 w-3" />
-                        Anotações
+                        <PenLine className="h-3 w-3" /> Anotações
                       </label>
                       <textarea
                         value={notes['lesson-content'] || ''}
@@ -581,7 +485,6 @@ export default function TeacherLessonView() {
                   </CardContent>
                 </Card>
               )}
-
               {practiceActivities.length > 0 && practiceActivities.map((activity: any, i: number) => (
                 <Card key={i}>
                   <CardHeader className="bg-muted/30 py-3">
@@ -597,8 +500,7 @@ export default function TeacherLessonView() {
                     <p className="text-sm whitespace-pre-line">{activity.description}</p>
                     <div className="mt-3">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
-                        <PenLine className="h-3 w-3" />
-                        Respostas / Anotações
+                        <PenLine className="h-3 w-3" /> Respostas / Anotações
                       </label>
                       <textarea
                         value={exerciseAnswers[`activity-${i}`] || ''}
@@ -614,13 +516,80 @@ export default function TeacherLessonView() {
             </>
           )}
 
+          {/* Flashcards Section */}
+          {flashcards.length > 0 && (
+            <Card>
+              <CardHeader className="bg-muted/30 py-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-primary" />
+                  Flashcards
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Clique para virar e revelar a resposta</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {flashcards.map((card: any, i: number) => {
+                    const isFlipped = flippedCards[i] || false;
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => toggleFlashcard(i)}
+                        className="cursor-pointer rounded-xl border-2 border-primary/20 bg-background p-4 min-h-[120px] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/50 hover:shadow-md"
+                      >
+                        {card.category && (
+                          <Badge variant="outline" className="text-xs mb-2 capitalize">{card.category}</Badge>
+                        )}
+                        {!isFlipped ? (
+                          <>
+                            {card.image_url && (
+                              <img
+                                src={card.image_url}
+                                alt={card.front}
+                                className="max-w-[140px] max-h-[90px] rounded-lg mb-2 object-contain"
+                                loading="lazy"
+                              />
+                            )}
+                            <p className="font-semibold text-foreground">{card.front}</p>
+                            <p className="text-xs text-muted-foreground mt-2">Toque para ver a resposta</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-primary font-medium">{card.back}</p>
+                            <p className="text-xs text-muted-foreground mt-2">Toque para voltar</p>
+                          </>
+                        )}
+                        {/* Hidden back for PDF export */}
+                        <div data-flashcard-back className="hidden">
+                          <p className="text-sm"><strong>{card.front}</strong> → {card.back}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* PDF-only flashcard table */}
+                <div className="hidden" data-pdf-flashcard-table>
+                  <h3 style={{ marginTop: '16px', fontSize: '14px', fontWeight: 'bold' }}>Flashcards - Referência</h3>
+                  <div className="flashcard-grid">
+                    {flashcards.map((card: any, i: number) => (
+                      <div key={i} className="flashcard-pdf">
+                        <div className="front">{card.front}</div>
+                        <div className="back">{card.back}</div>
+                        {card.image_url && <img src={card.image_url} alt={card.front} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Homework Suggestions */}
           {homeworkSuggestions.length > 0 && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <HomeIcon className="h-4 w-4 text-primary" />
-                  Sugestões de Homework
+                  <HomeIcon className="h-4 w-4 text-primary" /> Sugestões de Homework
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
@@ -636,22 +605,15 @@ export default function TeacherLessonView() {
             </Card>
           )}
 
-          {/* Additional Resources — always show for admin so they can add */}
+          {/* Additional Resources */}
           {(additionalResources.length > 0 || isAdmin) && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Recursos Adicionais</CardTitle>
                   {isAdmin && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="no-print"
-                      onClick={() => setAddingResource(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Adicionar
+                    <Button type="button" variant="outline" size="sm" className="no-print" onClick={() => setAddingResource(true)}>
+                      <Plus className="h-4 w-4" /> Adicionar
                     </Button>
                   )}
                 </div>
@@ -669,48 +631,25 @@ export default function TeacherLessonView() {
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{res.title}</span>
-                            {res.type && (
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {res.type}
-                              </Badge>
-                            )}
+                            {res.type && <Badge variant="outline" className="text-xs capitalize">{res.type}</Badge>}
                           </div>
-
                           {isVideoResource && !resourceUrl && (
-                            <p className="text-sm text-muted-foreground">
-                              Adicione um link do YouTube para que o vídeo possa ser reproduzido dentro do site.
-                            </p>
-                          )}
-
-                          {isVideoResource && resourceUrl && !youtubeId && (
-                            <p className="text-sm text-muted-foreground">
-                              Esse recurso ainda usa um link externo. Troque por um link do YouTube para incorporar o vídeo aqui.
-                            </p>
+                            <p className="text-sm text-muted-foreground">Adicione um link do YouTube.</p>
                           )}
                         </div>
-
                         <div className="no-print flex flex-shrink-0 flex-wrap items-center gap-2">
                           {resourceUrl && (
                             <Button asChild variant="outline" size="sm">
                               <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                                Abrir link
+                                <ExternalLink className="h-4 w-4" /> Abrir link
                               </a>
                             </Button>
                           )}
-
-                          {isAdmin && (res.type === "video" || isVideoResource) && (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => openVideoEditor(i, resourceUrl)}
-                            >
-                              <Video className="h-4 w-4" />
-                              {youtubeId ? "Editar YouTube" : "Adicionar YouTube"}
+                          {isAdmin && isVideoResource && (
+                            <Button type="button" variant="secondary" size="sm" onClick={() => openVideoEditor(i, resourceUrl)}>
+                              <Video className="h-4 w-4" /> {youtubeId ? "Editar YouTube" : "Adicionar YouTube"}
                             </Button>
                           )}
-
                           {isAdmin && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -721,15 +660,11 @@ export default function TeacherLessonView() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Remover recurso</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja remover "{res.title}"? Essa ação não pode ser desfeita.
-                                  </AlertDialogDescription>
+                                  <AlertDialogDescription>Tem certeza que deseja remover "{res.title}"?</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteResource(i)}>
-                                    Remover
-                                  </AlertDialogAction>
+                                  <AlertDialogAction onClick={() => deleteResource(i)}>Remover</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -737,35 +672,16 @@ export default function TeacherLessonView() {
                         </div>
                       </div>
 
-                      {isAdmin && (res.type === "video" || isVideoResource) && isEditingThisVideo && (
+                      {isAdmin && isVideoResource && isEditingThisVideo && (
                         <div className="no-print space-y-3 rounded-lg border border-border bg-muted/40 p-3">
-                          <p className="text-sm font-medium">
-                            Cole um link do YouTube para tocar o vídeo dentro da aula.
-                          </p>
+                          <p className="text-sm font-medium">Cole um link do YouTube.</p>
                           <div className="flex flex-col gap-2 sm:flex-row">
-                            <Input
-                              value={videoDrafts[i] ?? resourceUrl}
-                              onChange={(e) => updateVideoDraft(i, e.target.value)}
-                              placeholder="https://www.youtube.com/watch?v=..."
-                            />
+                            <Input value={videoDrafts[i] ?? resourceUrl} onChange={(e) => updateVideoDraft(i, e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
                             <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => saveVideoResource(i)}
-                                disabled={savingVideoIndex === i}
-                              >
+                              <Button type="button" size="sm" onClick={() => saveVideoResource(i)} disabled={savingVideoIndex === i}>
                                 {savingVideoIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                               </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={closeVideoEditor}
-                                disabled={savingVideoIndex === i}
-                              >
-                                Cancelar
-                              </Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={closeVideoEditor} disabled={savingVideoIndex === i}>Cancelar</Button>
                             </div>
                           </div>
                         </div>
@@ -790,12 +706,8 @@ export default function TeacherLessonView() {
 
                       {resourceUrl && (
                         <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            Link para o aluno revisar depois da aula
-                          </p>
-                          <p className="pdf-video-url mt-1 break-all text-sm text-foreground">
-                            {resourceUrl}
-                          </p>
+                          <p className="text-xs font-medium text-muted-foreground">Link para o aluno revisar</p>
+                          <p className="pdf-video-url mt-1 break-all text-sm text-foreground">{resourceUrl}</p>
                         </div>
                       )}
                     </div>
@@ -806,60 +718,21 @@ export default function TeacherLessonView() {
                 {isAdmin && addingResource && (
                   <div className="no-print space-y-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
                     <p className="text-sm font-semibold">Novo Recurso</p>
-
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={newResourceType === "video" ? "default" : "outline"}
-                        onClick={() => setNewResourceType("video")}
-                      >
-                        <Video className="h-4 w-4" />
-                        Vídeo YouTube
+                      <Button type="button" size="sm" variant={newResourceType === "video" ? "default" : "outline"} onClick={() => setNewResourceType("video")}>
+                        <Video className="h-4 w-4" /> Vídeo YouTube
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={newResourceType === "worksheet" ? "default" : "outline"}
-                        onClick={() => setNewResourceType("worksheet")}
-                      >
-                        <FileTextIcon className="h-4 w-4" />
-                        Worksheet / Link
+                      <Button type="button" size="sm" variant={newResourceType === "worksheet" ? "default" : "outline"} onClick={() => setNewResourceType("worksheet")}>
+                        <FileTextIcon className="h-4 w-4" /> Worksheet / Link
                       </Button>
                     </div>
-
-                    <Input
-                      value={newResourceTitle}
-                      onChange={(e) => setNewResourceTitle(e.target.value)}
-                      placeholder="Título do recurso (ex: Pronunciation Practice Video)"
-                    />
-
-                    <Input
-                      value={newResourceUrl}
-                      onChange={(e) => setNewResourceUrl(e.target.value)}
-                      placeholder={
-                        newResourceType === "video"
-                          ? "https://www.youtube.com/watch?v=..."
-                          : "https://docs.google.com/... ou link do arquivo"
-                      }
-                    />
-
+                    <Input value={newResourceTitle} onChange={(e) => setNewResourceTitle(e.target.value)} placeholder="Título do recurso" />
+                    <Input value={newResourceUrl} onChange={(e) => setNewResourceUrl(e.target.value)} placeholder={newResourceType === "video" ? "https://www.youtube.com/watch?v=..." : "https://docs.google.com/..."} />
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addNewResource}
-                        disabled={savingNewResource}
-                      >
+                      <Button type="button" size="sm" onClick={addNewResource} disabled={savingNewResource}>
                         {savingNewResource ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setAddingResource(false); setNewResourceTitle(""); setNewResourceUrl(""); }}
-                        disabled={savingNewResource}
-                      >
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setAddingResource(false); setNewResourceTitle(""); setNewResourceUrl(""); }} disabled={savingNewResource}>
                         Cancelar
                       </Button>
                     </div>
@@ -867,7 +740,7 @@ export default function TeacherLessonView() {
                 )}
 
                 {additionalResources.length === 0 && !addingResource && (
-                  <p className="text-sm text-muted-foreground">Nenhum recurso adicional ainda. Clique em "Adicionar" para incluir vídeos ou worksheets.</p>
+                  <p className="text-sm text-muted-foreground">Nenhum recurso adicional ainda.</p>
                 )}
               </CardContent>
             </Card>

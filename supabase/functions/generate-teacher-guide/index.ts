@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { decode as base64Decode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,6 +70,88 @@ async function callAI(prompt: string): Promise<string> {
   throw new Error("All AI providers failed");
 }
 
+async function generateImage(prompt: string, style: string): Promise<string | null> {
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) return null;
+
+  try {
+    const fullPrompt = style === "realistic"
+      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background.`
+      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background.`;
+
+    console.log(`Generating image: ${prompt.substring(0, 60)}...`);
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: fullPrompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Image gen failed: ${response.status}`);
+      return null;
+    }
+
+    const result = await response.json();
+    const imageData = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (!imageData) {
+      console.error("No image in response");
+      return null;
+    }
+
+    return imageData; // data:image/png;base64,...
+  } catch (e) {
+    console.error("Image generation error:", e);
+    return null;
+  }
+}
+
+async function uploadImageToStorage(
+  supabaseClient: any,
+  base64DataUrl: string,
+  lessonId: string,
+  index: number
+): Promise<string | null> {
+  try {
+    // Extract base64 data
+    const match = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!match) return null;
+
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    const base64Data = match[2];
+    const bytes = base64Decode(base64Data);
+
+    const fileName = `${lessonId}/${Date.now()}-${index}.${ext}`;
+
+    const { error } = await supabaseClient.storage
+      .from("teacher-guide-images")
+      .upload(fileName, bytes, {
+        contentType: `image/${match[1]}`,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+
+    const { data: publicUrlData } = supabaseClient.storage
+      .from("teacher-guide-images")
+      .getPublicUrl(fileName);
+
+    return publicUrlData?.publicUrl || null;
+  } catch (e) {
+    console.error("Upload error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -109,6 +192,7 @@ serve(async (req) => {
       .eq("id", lesson.course_id)
       .single();
 
+    // Step 1: Generate guide JSON with flashcards and image suggestions
     const prompt = `You are an experienced ESL/EFL curriculum designer specializing in private, 1-on-1 online English lessons. The teacher will be alone with the student via Google Meet, sharing their screen to present material.
 
 Generate a comprehensive Teacher's Guide for this lesson that works for this online, private class format.
@@ -120,30 +204,41 @@ Lesson Content Summary: ${lesson.content.substring(0, 2000)}
 Generate a Teacher's Guide in JSON format with the following structure:
 {
   "objectives": ["objective 1", "objective 2", ...],
-  "warm_up": "A conversational warm-up activity suitable for 1-on-1 online class (5-10 min). Suggest natural conversation starters the teacher can use to engage the student and introduce the topic.",
-  "presentation_notes": "Step-by-step notes on how to present the material to the student via screen sharing. Include talking points, questions to ask the student, and moments to pause for student interaction.",
+  "warm_up": "A conversational warm-up activity suitable for 1-on-1 online class (5-10 min).",
+  "presentation_notes": "Step-by-step notes on how to present the material via screen sharing.",
   "screen_share_content": [
-    {"title": "Section title", "type": "explanation|example|exercise|vocabulary|dialogue", "content": "Rich content that the teacher will display on screen while teaching. Use clear formatting. For exercises, include blank spaces or prompts for the student to answer.", "teacher_notes": "Private notes for the teacher on how to guide this section"}
+    {"title": "Section title", "type": "explanation|example|exercise|vocabulary|dialogue", "content": "Rich content for screen sharing.", "teacher_notes": "Private notes for the teacher"}
   ],
   "practice_activities": [
-    {"title": "Activity name", "description": "Detailed description adapted for 1-on-1 online format via Google Meet", "duration": "10 min", "interaction_type": "conversation|role-play|screen-activity|writing"}
+    {"title": "Activity name", "description": "Detailed description for 1-on-1 online format", "duration": "10 min", "interaction_type": "conversation|role-play|screen-activity|writing"}
   ],
-  "assessment_tips": "How to assess student understanding in a private online lesson context",
-  "differentiation_notes": "How to adapt the lesson if the student finds it too easy or too difficult",
+  "assessment_tips": "How to assess student understanding",
+  "differentiation_notes": "How to adapt if too easy or difficult",
   "estimated_duration_minutes": 60,
   "homework_suggestions": ["Suggestion 1", "Suggestion 2"],
   "additional_resources": [
     {"title": "Resource name", "url": "", "type": "video/article/worksheet"}
+  ],
+  "flashcards": [
+    {"front": "English word, phrase, or question", "back": "Definition, translation hint, or answer", "category": "vocabulary|grammar|expression|comprehension"}
+  ],
+  "image_suggestions": [
+    {"description": "A clear description of an educational illustration to generate", "style": "illustration|realistic", "placement": "section index number or flashcard index", "placement_type": "section|flashcard"}
   ]
 }
 
-IMPORTANT: Return ONLY valid JSON. No markdown, no code blocks, just the JSON object.
-Write in English. Be specific and practical. Include 3-5 objectives, a conversational warm-up, detailed presentation notes for screen sharing, 4-8 screen share content sections (mix of explanations, examples, vocabulary, and interactive exercises with blanks for student answers), 2-3 practice activities suitable for 1-on-1 online format, and practical assessment tips. The screen_share_content is the core teaching material that will be displayed on screen - make it visually clear, well-structured, and interactive.`;
+IMPORTANT RULES:
+- Return ONLY valid JSON. No markdown, no code blocks.
+- Write in English. Be specific and practical.
+- Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
+- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. The "front" should be the term/question and "back" should be the definition/answer.
+- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles.
+- For image placement, use the index of the section or flashcard where the image belongs.`;
 
     const rawContent = await callAI(prompt);
-    
-    // Parse JSON - handle potential markdown wrapping
-    let guideContent;
+
+    // Parse JSON
+    let guideContent: any;
     try {
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found in response");
@@ -152,7 +247,47 @@ Write in English. Be specific and practical. Include 3-5 objectives, a conversat
       console.error("JSON parse error:", parseErr, "Raw:", rawContent.substring(0, 500));
       throw new Error("Failed to parse AI response as JSON");
     }
-    // Upsert guide
+
+    // Step 2: Generate images from image_suggestions
+    const imageSuggestions = guideContent.image_suggestions || [];
+    const maxImages = Math.min(imageSuggestions.length, 4); // Limit to 4 images
+    const screenShareContent = guideContent.screen_share_content || [];
+    const flashcards = guideContent.flashcards || [];
+
+    for (let i = 0; i < maxImages; i++) {
+      const suggestion = imageSuggestions[i];
+      if (!suggestion?.description) continue;
+
+      try {
+        const base64DataUrl = await generateImage(suggestion.description, suggestion.style || "illustration");
+        if (!base64DataUrl) continue;
+
+        // Upload to storage
+        const publicUrl = await uploadImageToStorage(supabaseClient, base64DataUrl, lesson.id, i);
+        if (!publicUrl) continue;
+
+        // Place image in the correct location
+        const placementIndex = parseInt(suggestion.placement, 10);
+        if (suggestion.placement_type === "flashcard" && !isNaN(placementIndex) && flashcards[placementIndex]) {
+          flashcards[placementIndex].image_url = publicUrl;
+        } else if (suggestion.placement_type === "section" && !isNaN(placementIndex) && screenShareContent[placementIndex]) {
+          screenShareContent[placementIndex].image_url = publicUrl;
+        } else {
+          // Default: add to a section if possible
+          const targetIdx = Math.min(i, screenShareContent.length - 1);
+          if (targetIdx >= 0 && screenShareContent[targetIdx]) {
+            screenShareContent[targetIdx].image_url = publicUrl;
+          }
+        }
+
+        console.log(`Image ${i + 1}/${maxImages} generated and uploaded`);
+      } catch (imgErr) {
+        console.error(`Image ${i} failed:`, imgErr);
+        // Continue without image - guide still works
+      }
+    }
+
+    // Step 3: Upsert guide with flashcards and images
     const { error: upsertError } = await supabaseClient
       .from("teacher_guides")
       .upsert({
@@ -166,8 +301,9 @@ Write in English. Be specific and practical. Include 3-5 objectives, a conversat
         differentiation_notes: guideContent.differentiation_notes || null,
         estimated_duration_minutes: guideContent.estimated_duration_minutes || 60,
         additional_resources: guideContent.additional_resources || [],
-        screen_share_content: guideContent.screen_share_content || [],
+        screen_share_content: screenShareContent,
         homework_suggestions: guideContent.homework_suggestions || [],
+        flashcards: flashcards,
         generated_at: new Date().toISOString(),
       }, {
         onConflict: "lesson_id",
