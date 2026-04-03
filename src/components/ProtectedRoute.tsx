@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
+  const [recoveringSession, setRecoveringSession] = useState(false);
   
   // Track the user ID we last checked so we only re-check on actual user change
   const lastCheckedUserId = useRef<string | null>(null);
@@ -31,6 +32,24 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
+        if (previousAccessGranted.current) {
+          setRecoveringSession(true);
+
+          try {
+            const { data: sessionData } = await supabase.auth.getSession();
+
+            if (sessionData.session?.user) {
+              setLoading(false);
+              setAccessChecked(true);
+              return;
+            }
+          } catch (error) {
+            console.warn('[ProtectedRoute] Session recovery check failed:', error);
+          } finally {
+            setRecoveringSession(false);
+          }
+        }
+
         lastCheckedUserId.current = null;
         previousAccessGranted.current = false;
         setSubscriptionStatus(null);
@@ -39,6 +58,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         setAccessChecked(true);
         return;
       }
+
+      setRecoveringSession(false);
 
       // If we already checked this exact user, skip re-checking
       if (lastCheckedUserId.current === user.id && accessChecked) {
@@ -125,7 +146,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     checkAccess();
   }, [user?.id]); // Only re-run when the actual user ID changes, not on object reference changes
 
-  if (authLoading || (loading && !previousAccessGranted.current) || (!accessChecked && !previousAccessGranted.current)) {
+  if (authLoading || recoveringSession || (loading && !previousAccessGranted.current) || (!accessChecked && !previousAccessGranted.current)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user && previousAccessGranted.current) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
