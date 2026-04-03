@@ -30,7 +30,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  GraduationCap
 } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 
@@ -71,6 +72,7 @@ export const AppSidebar = () => {
   const unreadCount = useUnreadMessages();
   const { gamificationData, getProgressToNextLevel, getXPForNextLevel } = useGamification();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -96,6 +98,13 @@ export const AppSidebar = () => {
           });
           setIsAdmin(data === true);
         }
+
+        // Check teacher role
+        const { data: teacherData } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'teacher'
+        });
+        setIsTeacher(teacherData === true);
 
         const { data: profileData } = await supabase
           .from('profiles')
@@ -275,6 +284,12 @@ export const AppSidebar = () => {
             <NavSection title="Social" items={socialNav} />
             <NavSection title="Ferramentas" items={toolsNav} />
             
+            {isTeacher && (
+              <NavSection title="Professor" items={[
+                { name: "Painel do Professor", href: "/teacher-dashboard", icon: GraduationCap, color: "text-blue-600" },
+              ]} />
+            )}
+
             {isAdmin && (
               <NavSection title="Admin" items={[
                 { name: "Painel Admin", href: "/admin", icon: Shield, color: "text-red-500" },
