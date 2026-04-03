@@ -223,8 +223,8 @@ export default function TeacherLessonView() {
     } finally {
       setSavingSectionContent(false);
     }
+  }, [editingSectionContent, lessonId, guide, screenContent, sectionContentDraft, queryClient, toast]);
 
-  const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
     const updatedResources = additionalResources.filter((_, i) => i !== index);
     try {
