@@ -9,8 +9,6 @@ interface ProtectedRouteProps {
 
 interface SubscriptionStatus {
   subscribed: boolean;
-  in_trial?: boolean;
-  trial_ends_at?: string;
   product_id?: string;
 }
 
