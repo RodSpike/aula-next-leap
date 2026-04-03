@@ -197,10 +197,7 @@ export function SubscriptionManager() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {isTrialing 
-                      ? "Se você cancelar agora durante o período de teste, perderá o acesso imediatamente."
-                      : "Sua assinatura será cancelada, mas você continuará tendo acesso até o fim do período pago."
-                    }
+                    Sua assinatura será cancelada, mas você continuará tendo acesso até o fim do período pago.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

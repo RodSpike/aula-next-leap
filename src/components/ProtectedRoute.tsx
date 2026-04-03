@@ -126,8 +126,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  // Admins have unrestricted access to all content (no subscription or placement test required)
-  // Regular users need valid subscription/trial to access any protected content
+  // Admins have unrestricted access to all content (no subscription required)
+  // Regular users need valid subscription to access any protected content
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   
   // Only these pages are allowed without subscription
