@@ -66,6 +66,9 @@ export default function TeacherLessonView() {
   const [uploadingSectionImage, setUploadingSectionImage] = useState<number | null>(null);
   const sectionImageInputRef = useRef<HTMLInputElement>(null);
   const [pendingSectionIndex, setPendingSectionIndex] = useState<number | null>(null);
+  const [editingSectionContent, setEditingSectionContent] = useState<number | null>(null);
+  const [sectionContentDraft, setSectionContentDraft] = useState("");
+  const [savingSectionContent, setSavingSectionContent] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
