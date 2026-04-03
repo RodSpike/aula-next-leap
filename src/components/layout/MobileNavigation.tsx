@@ -23,6 +23,7 @@ export const MobileNavigation = () => {
   const [moreOpen, setMoreOpen] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
   const { theme, setTheme } = useTheme();
   
   const isDark = theme === "dark";
