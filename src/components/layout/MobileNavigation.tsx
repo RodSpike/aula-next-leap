@@ -49,6 +49,13 @@ export const MobileNavigation = () => {
         _role: 'admin'
       });
       setIsAdmin(!!data);
+
+      // Check teacher role
+      const { data: teacherData } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'teacher'
+      });
+      setIsTeacher(!!teacherData);
     };
 
     checkAdminStatus();
