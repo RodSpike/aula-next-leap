@@ -580,7 +580,7 @@ export default function TeacherLessonView() {
                   {section.teacher_notes && (
                     <div className="teacher-note bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary">
                       <p className="font-semibold mb-1">📌 Nota do Professor:</p>
-                      <p>{section.teacher_notes}</p>
+                      <p>{cleanHtmlContent(section.teacher_notes)}</p>
                     </div>
                   )}
 
