@@ -75,9 +75,10 @@ async function generateImage(prompt: string, style: string): Promise<string | nu
   if (!lovableKey) return null;
 
   try {
+    const textWarning = "CRITICAL: If the image contains any English text, words, or phrases, they MUST be spelled correctly with perfect grammar. Double-check every word. No typos allowed — this is for English language learners and errors cause confusion.";
     const fullPrompt = style === "realistic"
-      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background.`
-      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background.`;
+      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background. DO NOT include any text or words in the image unless absolutely necessary. If text must appear, keep it to 1-3 simple words maximum. ${textWarning}`
+      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background. DO NOT include any text or words in the image unless absolutely necessary. If text must appear, keep it to 1-3 simple words maximum. ${textWarning}`;
 
     console.log(`Generating image: ${prompt.substring(0, 60)}...`);
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
