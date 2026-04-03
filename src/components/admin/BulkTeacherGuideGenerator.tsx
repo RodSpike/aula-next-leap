@@ -55,14 +55,17 @@ export function BulkTeacherGuideGenerator() {
 
       if (error || !lessons) throw new Error("Failed to fetch lessons");
 
-      // Filter out lessons that already have guides
-      const existingLessonIds = new Set(
-        existingGuides?.filter((g) => g.course_id === courseId).map((g) => g.lesson_id) || []
-      );
-      const lessonsToGenerate = lessons.filter((l) => !existingLessonIds.has(l.id));
+      // Filter out lessons that already have guides (unless regenerating)
+      let lessonsToGenerate = lessons;
+      if (!regenerateMode) {
+        const existingLessonIds = new Set(
+          existingGuides?.filter((g) => g.course_id === courseId).map((g) => g.lesson_id) || []
+        );
+        lessonsToGenerate = lessons.filter((l) => !existingLessonIds.has(l.id));
+      }
 
       if (lessonsToGenerate.length === 0) {
-        toast({ title: "Completo", description: "Todas as lições já possuem guias." });
+        toast({ title: "Completo", description: "Todas as lições já possuem guias. Ative 'Regerar existentes' para atualizar." });
         setGenerating(false);
         setSelectedCourseId(null);
         return;
