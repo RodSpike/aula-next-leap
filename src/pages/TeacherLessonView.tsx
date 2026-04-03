@@ -438,7 +438,6 @@ export default function TeacherLessonView() {
                   {/* Exercise answer area */}
                   {section.type === 'exercise' && (
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Respostas do Aluno
@@ -486,7 +485,6 @@ export default function TeacherLessonView() {
                       {lesson.content.substring(0, 3000)}
                     </div>
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Anotações
@@ -517,7 +515,6 @@ export default function TeacherLessonView() {
                   <CardContent className="p-6">
                     <p className="text-sm whitespace-pre-line">{activity.description}</p>
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
                       <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Respostas / Anotações
