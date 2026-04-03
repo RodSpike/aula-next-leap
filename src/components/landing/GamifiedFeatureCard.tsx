@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { LucideIcon } from "lucide-react";
 
 interface GamifiedFeatureCardProps {
@@ -13,34 +12,34 @@ interface GamifiedFeatureCardProps {
 
 const colorClasses = {
   primary: {
-    bg: "bg-primary/10 hover:bg-primary/20",
-    icon: "bg-primary text-white",
-    border: "border-primary/30",
-    badge: "bg-primary text-white"
+    bg: "bg-card hover:bg-primary/5",
+    icon: "bg-primary text-primary-foreground",
+    border: "border-border hover:border-primary/40",
+    badge: "bg-primary text-primary-foreground"
   },
   secondary: {
-    bg: "bg-secondary/10 hover:bg-secondary/20",
-    icon: "bg-secondary text-white",
-    border: "border-secondary/30",
-    badge: "bg-secondary text-white"
+    bg: "bg-card hover:bg-secondary/5",
+    icon: "bg-secondary text-secondary-foreground",
+    border: "border-border hover:border-secondary/40",
+    badge: "bg-secondary text-secondary-foreground"
   },
   success: {
-    bg: "bg-success/10 hover:bg-success/20",
-    icon: "bg-success text-white",
-    border: "border-success/30",
-    badge: "bg-success text-white"
+    bg: "bg-card hover:bg-success/5",
+    icon: "bg-success text-success-foreground",
+    border: "border-border hover:border-success/40",
+    badge: "bg-success text-success-foreground"
   },
   warning: {
-    bg: "bg-warning/10 hover:bg-warning/20",
+    bg: "bg-card hover:bg-warning/5",
     icon: "bg-warning text-warning-foreground",
-    border: "border-warning/30",
+    border: "border-border hover:border-warning/40",
     badge: "bg-warning text-warning-foreground"
   },
   info: {
-    bg: "bg-info/10 hover:bg-info/20",
-    icon: "bg-info text-white",
-    border: "border-info/30",
-    badge: "bg-info text-white"
+    bg: "bg-card hover:bg-info/5",
+    icon: "bg-info text-info-foreground",
+    border: "border-border hover:border-info/40",
+    badge: "bg-info text-info-foreground"
   }
 };
 
@@ -59,32 +58,32 @@ export const GamifiedFeatureCard = ({
     <div 
       onClick={onClick}
       className={`
-        relative p-6 rounded-2xl border-2 cursor-pointer
+        relative p-6 rounded-2xl border cursor-pointer
         ${colors.bg} ${colors.border}
         transition-all duration-300 ease-out
-        hover:scale-105 hover:shadow-lg
-        group
+        hover:scale-[1.03] hover:shadow-xl
+        group h-full
       `}
     >
       {/* Badge */}
       {badge && (
-        <div className={`absolute -top-3 -right-3 px-3 py-1 rounded-full text-xs font-bold ${colors.badge} shadow-md`}>
+        <div className={`absolute -top-2.5 -right-2.5 px-3 py-1 rounded-full text-xs font-bold ${colors.badge} shadow-md`}>
           {badge}
         </div>
       )}
 
       {/* Icon */}
       <div className={`
-        w-14 h-14 rounded-xl flex items-center justify-center mb-4
+        w-12 h-12 rounded-xl flex items-center justify-center mb-4
         ${colors.icon}
-        transform transition-transform group-hover:rotate-6 group-hover:scale-110
+        transform transition-all duration-300 group-hover:rotate-3 group-hover:scale-110
         shadow-md
       `}>
-        <Icon className="h-7 w-7" />
+        <Icon className="h-6 w-6" />
       </div>
 
       {/* Content */}
-      <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
+      <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
         {title}
       </h3>
       <p className="text-sm text-muted-foreground leading-relaxed">
