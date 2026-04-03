@@ -75,9 +75,10 @@ async function generateImage(prompt: string, style: string): Promise<string | nu
   if (!lovableKey) return null;
 
   try {
+    const textWarning = "CRITICAL: If the image contains any English text, words, or phrases, they MUST be spelled correctly with perfect grammar. Double-check every word. No typos allowed — this is for English language learners and errors cause confusion.";
     const fullPrompt = style === "realistic"
-      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background.`
-      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background.`;
+      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background. DO NOT include any text or words in the image unless absolutely necessary. If text must appear, keep it to 1-3 simple words maximum. ${textWarning}`
+      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background. DO NOT include any text or words in the image unless absolutely necessary. If text must appear, keep it to 1-3 simple words maximum. ${textWarning}`;
 
     console.log(`Generating image: ${prompt.substring(0, 60)}...`);
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -232,7 +233,7 @@ IMPORTANT RULES:
 - Write in English. Be specific and practical.
 - Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
 - Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. The "front" should be the term/question and "back" should be the definition/answer.
-- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles.
+- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles. IMPORTANT: Image descriptions must NOT include any text, words, sentences, or speech bubbles — images should be purely visual illustrations without any written English to avoid spelling errors.
 - For image placement, use the index of the section or flashcard where the image belongs.`;
 
     const rawContent = await callAI(prompt);
