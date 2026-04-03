@@ -130,6 +130,7 @@ const App = () => (
                   <Route path="/pixel-mascot-preview" element={<PixelMascotPreview />} />
                   <Route path="/mascot-comparison" element={<MascotComparison />} />
                   <Route path="/install" element={<Install />} />
+                  <Route path="/para-professores" element={<TeacherLanding />} />
                   <Route path="/teacher/register" element={<TeacherRegister />} />
                   <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
                   <Route path="/teacher/guide/:courseId" element={<ProtectedRoute><TeacherGuide /></ProtectedRoute>} />

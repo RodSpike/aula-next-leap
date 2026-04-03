@@ -111,6 +111,9 @@ const Index = () => {
       {/* Student Testimonials */}
       <StudentTestimonials />
 
+      {/* Teacher Recruitment */}
+      <TeacherRecruitSection />
+
       {/* Final CTA - pass subscription status */}
       <CTASection hasActiveSubscription={hasActiveSubscription} />
     </>
