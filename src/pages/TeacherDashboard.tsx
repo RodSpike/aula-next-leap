@@ -22,7 +22,7 @@ export default function TeacherDashboard() {
 
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  
 
   const { data: isAdmin, isLoading: adminLoading } = useQuery({
     queryKey: ["is-admin", user?.id],
