@@ -24,6 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let hasHandledInitialSession = false;
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -31,8 +33,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Handle successful email confirmation (defer Supabase calls)
-        if (event === 'SIGNED_IN' && session?.user) {
+        // Only handle navigation on actual login events, NOT token refreshes
+        // TOKEN_REFRESHED and INITIAL_SESSION should never trigger redirects
+        const isRealLogin = event === 'SIGNED_IN' && !hasHandledInitialSession;
+        
+        if (event === 'INITIAL_SESSION') {
+          hasHandledInitialSession = true;
+          return;
+        }
+        
+        if (event === 'TOKEN_REFRESHED') {
+          return; // Never redirect on token refresh
+        }
+        
+        if (isRealLogin && session?.user) {
+          hasHandledInitialSession = true;
           setTimeout(async () => {
             try {
               const { data: profile } = await supabase
@@ -53,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               if (isAuthContext) {
                 if (hasAdminRole) {
-                  // Admins go directly to dashboard
                   navigate('/dashboard');
                 } else if (!profile?.birthdate) {
                   navigate('/onboarding');
@@ -65,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const currentPath = window.location.pathname;
               const isAuthContext = currentPath === '/' || currentPath === '/login' || currentPath === '/signup';
               if (isAuthContext) {
-                // If profile doesn't exist, go to onboarding
                 navigate('/onboarding');
               }
             }
