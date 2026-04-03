@@ -8,6 +8,7 @@ import { PricingSection } from "@/components/PricingSection";
 import { FeaturedCourses } from "@/components/FeaturedCourses";
 import { StudentTestimonials } from "@/components/StudentTestimonials";
 import { CTASection } from "@/components/landing/CTASection";
+import { TeacherRecruitSection } from "@/components/landing/TeacherRecruitSection";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/layout/AppLayout";
