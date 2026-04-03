@@ -1695,11 +1695,13 @@ export type Database = {
           differentiation_notes: string | null
           estimated_duration_minutes: number | null
           generated_at: string | null
+          homework_suggestions: string[] | null
           id: string
           lesson_id: string
           objectives: string[] | null
           practice_activities: Json | null
           presentation_notes: string | null
+          screen_share_content: Json | null
           updated_at: string
           warm_up: string | null
         }
@@ -1711,11 +1713,13 @@ export type Database = {
           differentiation_notes?: string | null
           estimated_duration_minutes?: number | null
           generated_at?: string | null
+          homework_suggestions?: string[] | null
           id?: string
           lesson_id: string
           objectives?: string[] | null
           practice_activities?: Json | null
           presentation_notes?: string | null
+          screen_share_content?: Json | null
           updated_at?: string
           warm_up?: string | null
         }
@@ -1727,11 +1731,13 @@ export type Database = {
           differentiation_notes?: string | null
           estimated_duration_minutes?: number | null
           generated_at?: string | null
+          homework_suggestions?: string[] | null
           id?: string
           lesson_id?: string
           objectives?: string[] | null
           practice_activities?: Json | null
           presentation_notes?: string | null
+          screen_share_content?: Json | null
           updated_at?: string
           warm_up?: string | null
         }
