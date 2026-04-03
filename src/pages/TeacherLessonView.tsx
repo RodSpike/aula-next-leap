@@ -446,7 +446,7 @@ export default function TeacherLessonView() {
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
                     <MessageSquare className="h-4 w-4 text-primary" /> Aquecimento (Warm-up)
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.warm_up}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.warm_up)}</p>
                 </div>
               )}
               {guide.presentation_notes && (
