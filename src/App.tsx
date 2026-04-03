@@ -61,6 +61,7 @@ const TeacherRegister = lazy(() => import("./pages/TeacherRegister"));
 const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
 const TeacherGuide = lazy(() => import("./pages/TeacherGuide"));
 const TeacherLessonView = lazy(() => import("./pages/TeacherLessonView"));
+const TeacherLanding = lazy(() => import("./pages/TeacherLanding"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -129,6 +130,7 @@ const App = () => (
                   <Route path="/pixel-mascot-preview" element={<PixelMascotPreview />} />
                   <Route path="/mascot-comparison" element={<MascotComparison />} />
                   <Route path="/install" element={<Install />} />
+                  <Route path="/para-professores" element={<TeacherLanding />} />
                   <Route path="/teacher/register" element={<TeacherRegister />} />
                   <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
                   <Route path="/teacher/guide/:courseId" element={<ProtectedRoute><TeacherGuide /></ProtectedRoute>} />
