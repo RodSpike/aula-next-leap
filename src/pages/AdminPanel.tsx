@@ -1613,6 +1613,12 @@ export default function AdminPanel() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Teachers Tab */}
+          <TabsContent value="teachers" className="space-y-6">
+            <TeacherAffiliatesManager />
+            <BulkTeacherGuideGenerator />
+          </TabsContent>
         </Tabs>
       </div>
 
