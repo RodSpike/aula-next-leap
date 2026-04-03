@@ -9,8 +9,6 @@ interface ProtectedRouteProps {
 
 interface SubscriptionStatus {
   subscribed: boolean;
-  in_trial?: boolean;
-  trial_ends_at?: string;
   product_id?: string;
 }
 
@@ -84,16 +82,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         try {
           const { data: subRow } = await supabase
             .from('user_subscriptions')
-            .select('subscription_status, trial_ends_at, current_period_end')
+            .select('subscription_status, current_period_end')
             .eq('user_id', user.id)
             .maybeSingle();
 
           const now = new Date();
-          const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
-          const isActive = (subRow?.subscription_status === 'active') || (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
+          const isActive = (subRow?.subscription_status === 'active') || 
+                          (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
 
-          if (!finalStatus.subscribed && (inTrial || isActive)) {
-            finalStatus = { subscribed: true, in_trial: inTrial, trial_ends_at: subRow?.trial_ends_at ?? undefined };
+          if (!finalStatus.subscribed && isActive) {
+            finalStatus = { subscribed: true };
           }
         } catch (e) {
           console.warn('Subscription fallback check failed', e);
@@ -128,8 +126,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  // Admins have unrestricted access to all content (no subscription or placement test required)
-  // Regular users need valid subscription/trial to access any protected content
+  // Admins have unrestricted access to all content (no subscription required)
+  // Regular users need valid subscription to access any protected content
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
   
   // Only these pages are allowed without subscription

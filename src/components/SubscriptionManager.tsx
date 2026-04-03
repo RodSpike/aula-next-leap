@@ -110,13 +110,9 @@ export function SubscriptionManager() {
     );
   }
 
-  const isTrialing = subscription.subscription_status === 'trialing';
   const isCanceled = subscription.canceled_at !== null;
-  const trialEndsAt = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
   const periodEndsAt = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
-  const daysRemaining = trialEndsAt 
-    ? Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : periodEndsAt
+  const daysRemaining = periodEndsAt
     ? Math.ceil((periodEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
 
@@ -128,9 +124,9 @@ export function SubscriptionManager() {
             <CardTitle>Sua Assinatura</CardTitle>
             <CardDescription>Gerencie sua assinatura e pagamentos</CardDescription>
           </div>
-          {isTrialing && (
+          {subscription.subscription_status === 'active' && !isCanceled && (
             <Badge className="bg-green-100 text-green-800 border-green-200">
-              Período Grátis
+              Ativa
             </Badge>
           )}
           {isCanceled && (
@@ -146,29 +142,11 @@ export function SubscriptionManager() {
             <CreditCard className="w-5 h-5 text-muted-foreground" />
             <div>
               <p className="font-semibold">Plano Premium</p>
-              <p className="text-sm text-muted-foreground">R$ 59,90 / mês</p>
+              <p className="text-sm text-muted-foreground">Assinatura ativa</p>
             </div>
           </div>
 
-          {isTrialing && trialEndsAt && (
-            <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-blue-900">Período de teste</p>
-                <p className="text-sm text-blue-800">
-                  {daysRemaining > 0 
-                    ? `Faltam ${daysRemaining} dias do seu período grátis`
-                    : 'Seu período grátis termina hoje'
-                  }
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  Você será cobrado em {trialEndsAt.toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {!isTrialing && periodEndsAt && (
+          {periodEndsAt && !isCanceled && (
             <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
               <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div>
@@ -219,10 +197,7 @@ export function SubscriptionManager() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {isTrialing 
-                      ? "Se você cancelar agora durante o período de teste, perderá o acesso imediatamente."
-                      : "Sua assinatura será cancelada, mas você continuará tendo acesso até o fim do período pago."
-                    }
+                    Sua assinatura será cancelada, mas você continuará tendo acesso até o fim do período pago.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
