@@ -23,6 +23,8 @@ import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
 import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
 import { AITeachersManager } from "@/components/admin/AITeachersManager";
+import { TeacherAffiliatesManager } from "@/components/admin/TeacherAffiliatesManager";
+import { BulkTeacherGuideGenerator } from "@/components/admin/BulkTeacherGuideGenerator";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText, GraduationCap, Bot } from "lucide-react";
 
 interface UserData {
@@ -683,6 +685,10 @@ export default function AdminPanel() {
               <TabsTrigger value="audit" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
                 <History className="h-4 w-4" />
                 <span className="hidden sm:inline">Audit</span>
+              </TabsTrigger>
+              <TabsTrigger value="teachers" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <GraduationCap className="h-4 w-4" />
+                <span className="hidden sm:inline">Teachers</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1606,6 +1612,12 @@ export default function AdminPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Teachers Tab */}
+          <TabsContent value="teachers" className="space-y-6">
+            <TeacherAffiliatesManager />
+            <BulkTeacherGuideGenerator />
           </TabsContent>
         </Tabs>
       </div>

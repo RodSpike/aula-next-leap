@@ -15,12 +15,27 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Signup() {
   usePageMeta({
-    title: 'Criar Conta - Aula Click | 2 Dias Grátis',
-    description: 'Crie sua conta na Aula Click e ganhe 2 dias grátis. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
-    keywords: 'criar conta, cadastro aula click, teste grátis inglês, aprender inglês grátis',
+    title: 'Criar Conta - Aula Click',
+    description: 'Crie sua conta na Aula Click. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
+    keywords: 'criar conta, cadastro aula click, aprender inglês',
     canonicalPath: '/signup',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      // Store in sessionStorage so it persists through Google OAuth redirect
+      sessionStorage.setItem('teacher_referral_code', ref);
+    } else {
+      const stored = sessionStorage.getItem('teacher_referral_code');
+      if (stored) setReferralCode(stored);
+    }
+  }, []);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -131,13 +146,24 @@ export default function Signup() {
         return;
       }
 
-      // Success message (specific access type determined by backend)
+      // Track teacher referral if present
+      const refCode = referralCode || sessionStorage.getItem('teacher_referral_code');
+      if (refCode) {
+        try {
+          await supabase.functions.invoke('track-teacher-referral', {
+            body: { referral_code: refCode, referred_email: formData.email.trim().toLowerCase() },
+          });
+          sessionStorage.removeItem('teacher_referral_code');
+        } catch (refError) {
+          console.log('Referral tracking failed (non-blocking):', refError);
+        }
+      }
+
       toast({
         title: "✅ Conta criada com sucesso!",
         description: "Verifique seu email para confirmar sua conta e ter acesso à plataforma.",
       });
 
-      // Let auth state handle redirect
       setLoading(false);
       
     } catch (error) {
@@ -200,12 +226,14 @@ export default function Signup() {
       <div className="flex items-center justify-center px-4 sm:px-6 lg:px-8 py-20">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center space-y-2">
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <Gift className="h-6 w-6 text-primary" />
-              <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
-                2 DIAS GRÁTIS
-              </span>
-            </div>
+            {referralCode ? (
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Gift className="h-6 w-6 text-primary" />
+                <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
+                  Indicação de Professor
+                </span>
+              </div>
+            ) : null}
             <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
             <p className="text-muted-foreground">
               Comece sua jornada de aprendizado hoje mesmo
@@ -377,7 +405,7 @@ export default function Signup() {
               </div>
               
               <Button type="submit" variant="hero" className="w-full" disabled={loading}>
-                {loading ? "Criando conta..." : "Começar Teste Grátis"}
+                {loading ? "Criando conta..." : "Criar Conta"}
               </Button>
             </form>
             
@@ -388,11 +416,10 @@ export default function Signup() {
               </Link>
             </div>
             
-            {/* Trial Info */}
             <div className="bg-accent/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                ✓ 2 dias de acesso completo grátis<br />
-                ✓ Sem compromisso • Cancele quando quiser
+                ✓ Acesso a cursos interativos<br />
+                ✓ Comunidade ativa de estudantes
               </p>
             </div>
           </CardContent>

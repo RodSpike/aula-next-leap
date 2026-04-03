@@ -2355,6 +2355,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_teacher_referrals: {
+        Args: { _teacher_id: string }
+        Returns: undefined
+      }
       is_ai_teacher: { Args: { user_email: string }; Returns: boolean }
       is_group_creator: {
         Args: { group_uuid: string; user_uuid: string }
