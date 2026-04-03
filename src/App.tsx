@@ -128,6 +128,9 @@ const App = () => (
                   <Route path="/pixel-mascot-preview" element={<PixelMascotPreview />} />
                   <Route path="/mascot-comparison" element={<MascotComparison />} />
                   <Route path="/install" element={<Install />} />
+                  <Route path="/teacher/register" element={<TeacherRegister />} />
+                  <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
+                  <Route path="/teacher/guide/:courseId" element={<ProtectedRoute><TeacherGuide /></ProtectedRoute>} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
