@@ -146,13 +146,24 @@ export default function Signup() {
         return;
       }
 
-      // Success message (specific access type determined by backend)
+      // Track teacher referral if present
+      const refCode = referralCode || sessionStorage.getItem('teacher_referral_code');
+      if (refCode) {
+        try {
+          await supabase.functions.invoke('track-teacher-referral', {
+            body: { referral_code: refCode, referred_email: formData.email.trim().toLowerCase() },
+          });
+          sessionStorage.removeItem('teacher_referral_code');
+        } catch (refError) {
+          console.log('Referral tracking failed (non-blocking):', refError);
+        }
+      }
+
       toast({
         title: "✅ Conta criada com sucesso!",
         description: "Verifique seu email para confirmar sua conta e ter acesso à plataforma.",
       });
 
-      // Let auth state handle redirect
       setLoading(false);
       
     } catch (error) {
