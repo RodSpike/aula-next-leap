@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, X } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
@@ -61,7 +61,6 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
   }, [messages]);
 
   const fetchMessages = async () => {
-    // Optimized query: fetch messages with profiles in a single query
     const { data } = await supabase
       .from('group_chat_messages')
       .select(`
@@ -74,7 +73,7 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
       `)
       .eq('group_id', groupId)
       .order('created_at', { ascending: true })
-      .limit(100); // Limit to last 100 messages for performance
+      .limit(100);
 
     if (data) {
       const messagesWithProfiles = data.map(msg => ({
@@ -103,20 +102,24 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] bg-card md:border md:rounded-lg md:shadow-lg flex flex-col z-50">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between bg-muted/50 safe-area-top">
-        <h3 className="font-semibold truncate flex-1">{groupName}</h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
-        </Button>
+      <div className="flex-none bg-card border-b px-3 md:px-6 py-3 md:py-4 safe-area-top">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h3 className="font-semibold truncate flex-1">{groupName}</h3>
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground text-sm py-8">
-            No messages yet. Start the conversation!
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-muted-foreground text-sm">
+              <p>Nenhuma mensagem ainda. Comece a conversar!</p>
+            </div>
           </div>
         ) : (
           messages.map((message) => {
@@ -140,12 +143,12 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
                     userId={message.sender_id}
                     avatarUrl={message.sender?.avatar_url}
                     fallback={message.sender?.display_name?.charAt(0) || 'U'}
-                    className="w-8 h-8 mr-2 flex-shrink-0"
+                    className="w-8 h-8 mr-2 mt-1 flex-shrink-0"
                   />
                 )}
-                <div className={`max-w-[75%] ${isFromCurrentUser ? 'ml-4' : 'mr-4'}`}>
+                <div className={`max-w-[80%] md:max-w-[70%] ${isFromCurrentUser ? 'ml-auto' : ''}`}>
                   {!isFromCurrentUser && (
-                    <div className="text-xs text-muted-foreground mb-1">
+                    <div className="text-xs text-muted-foreground mb-1 ml-1">
                       {message.sender?.display_name || message.sender?.username || 'Anonymous'}
                     </div>
                   )}
@@ -155,7 +158,7 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
                       : 'bg-muted rounded-tl-sm'
                   }`}>
                     <p className="text-sm break-words">{message.content}</p>
-                    <span className={`text-xs ${
+                    <span className={`text-xs mt-1 block ${
                       isFromCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
                     }`}>
                       {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -167,7 +170,7 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
                     userId={message.sender_id}
                     avatarUrl={message.sender?.avatar_url}
                     fallback={message.sender?.display_name?.charAt(0) || 'U'}
-                    className="w-8 h-8 ml-2 flex-shrink-0"
+                    className="w-8 h-8 ml-2 mt-1 flex-shrink-0"
                   />
                 )}
               </div>
@@ -178,19 +181,19 @@ export const SimpleChatWindow: React.FC<SimpleChatWindowProps> = ({
       </div>
 
       {/* Input */}
-      <form onSubmit={sendMessage} className="p-4 border-t bg-muted/50" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-        <div className="flex gap-2">
+      <div className="flex-none bg-card border-t px-3 md:px-6 py-3 md:py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <form onSubmit={sendMessage} className="flex gap-2 md:gap-3">
           <Input
-            placeholder="Type a message..."
+            placeholder="Digite sua mensagem..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1 h-12"
           />
-          <Button type="submit" size="icon" className="h-12 w-12" disabled={!newMessage.trim()}>
+          <Button type="submit" size="lg" className="px-4 md:px-8 h-12" disabled={!newMessage.trim()}>
             <Send className="h-5 w-5" />
           </Button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

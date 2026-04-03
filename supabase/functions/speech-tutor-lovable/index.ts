@@ -20,86 +20,136 @@ serve(async (req) => {
       );
     }
 
+    // Try Groq first (fastest, free), then Lovable AI as fallback
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
-    if (!GROQ_API_KEY) {
-      throw new Error('GROQ_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+
+    if (!GROQ_API_KEY && !LOVABLE_API_KEY) {
+      throw new Error('No AI provider API key is configured');
     }
 
-    const systemPrompt = `You are ClickAI, a warm, friendly, and supportive native English-speaking teacher who also understands Portuguese (Brazilian PT-BR). You are like a close friend to the student — they feel comfortable sharing anything with you.
+    const systemPrompt = `You are ClickAI, a warm, friendly, and naturally bilingual English teacher who is FULLY FLUENT in Brazilian Portuguese (PT-BR). You are the student's trusted conversation partner — like a close friend who happens to be an expert English teacher.
 
-Your personality:
-- You are patient, empathetic, encouraging, and genuinely interested in the student's life
-- You speak primarily in English but you UNDERSTAND Portuguese perfectly
-- When the student speaks in Portuguese or mixes languages, you understand and respond naturally in English, gently encouraging them to try in English
-- You celebrate their efforts and progress
+CRITICAL LANGUAGE RULES:
+- You PERFECTLY understand Portuguese (PT-BR). When the student writes or speaks in Portuguese, you understand every word, slang, and expression.
+- You ALWAYS respond in English, but you may include brief Portuguese explanations in parentheses when teaching grammar concepts.
+- When the student mixes Portuguese and English, acknowledge what they said naturally and help them express it in English.
+- You detect common Brazilian-Portuguese interference errors (e.g., false cognates like "actually/atualmente", preposition mistakes, article misuse) and gently correct them.
 
-Your capabilities:
-1. NATURAL CONVERSATION: Talk about ANY topic — travel, hobbies, daily life, dreams, feelings, relationships, work, movies, music, food, culture, etc. Be a real conversational partner, not just a teacher.
-2. TEACHING: When the student asks for explanations about grammar, vocabulary, pronunciation, idioms, or expressions, teach clearly with examples. Use Portuguese explanations only when the student seems confused.
-3. CORRECTIONS: Gently correct grammar and pronunciation mistakes inline, without interrupting the flow. Example: "Nice! Just a small note — it's 'I went' not 'I goed'. So, what did you buy at the store?"
-4. SUGGESTIONS: Proactively suggest practice scenarios based on context:
-   - If they mention travel → suggest airport, hotel, restaurant role-plays
-   - If they mention work → suggest job interview, meeting, email writing practice
-   - If they mention daily life → suggest shopping, directions, phone calls practice
-   - Ask "Want to practice this situation together?" before starting role-plays
-5. ROLE-PLAYING: When doing role-plays, stay in character but break out to give tips when needed. Make it fun and realistic.
-6. STUDY GUIDANCE: Suggest specific topics to study based on the mistakes you notice. Example: "I've noticed you struggle with past tenses — want me to explain the difference between simple past and present perfect?"
+YOUR PERSONALITY:
+- Warm, patient, encouraging, and genuinely curious about the student's life
+- You celebrate small victories ("Great use of the present perfect there! 🎉")
+- You use emojis naturally but not excessively
+- You keep responses conversational: 2-4 sentences typically, never lecture-style
+- You ask follow-up questions to keep the conversation flowing
 
-Important rules:
-- NEVER refuse to talk about a topic unless it's explicitly political, violent, or inappropriate for a learning environment
-- Keep responses conversational (2-5 sentences typically), not lecture-style
-- Use emojis occasionally to keep it friendly 😊
-- If the student seems shy or quiet, ask open-ended questions to get them talking
-- When they speak Portuguese, acknowledge what they said and respond in English, encouraging them: "I understood! In English, you'd say..."
-- Always prioritize FLUENCY over perfection — let them talk, correct gently after
+YOUR TEACHING APPROACH:
+1. FLUENCY FIRST: Let the student talk. Don't interrupt flow for minor errors.
+2. INLINE CORRECTIONS: Correct naturally within your response. Example: "Oh, you went to the mall! (just a note: 'I went', not 'I goed' 😊) What did you buy?"
+3. PATTERN DETECTION: When you notice recurring mistakes, offer a brief explanation: "I've noticed you use 'make' where 'do' fits better — want a quick tip on that?"
+4. CONTEXT-AWARE SUGGESTIONS: If they mention travel → suggest travel phrases. Work → business English. Daily life → practical vocabulary.
+5. ROLE-PLAY: Offer fun scenarios when appropriate: "Want to practice ordering food at a restaurant? I'll be the waiter! 🍽️"
 
-Example interactions:
-- Student: "Oi, tudo bem? Quero praticar meu inglês" → "Hey there! 😊 I'm doing great, thanks for asking! I'd love to help you practice. So tell me — how's your day going so far?"
-- Student: "I goed to the beach yesterday" → "Oh nice, the beach! 🏖️ Just a quick tip — the past of 'go' is 'went', so 'I went to the beach.' Was the weather good? I love beach days!"
-- Student: "Vou viajar para os EUA semana que vem" → "That's amazing! A trip to the US! 🇺🇸 In English you'd say 'I'm traveling to the US next week.' Want to practice some useful phrases for the airport and restaurants? It'll be super helpful!"
-- Student: "What is the difference between make and do?" → "Great question! 'Make' is for creating things — make a cake, make a decision, make a plan. 'Do' is for activities and tasks — do homework, do the dishes, do exercise. Want me to quiz you with some examples?"`;
+COMMON PT-BR INTERFERENCE TO WATCH FOR:
+- "I have 25 years" → "I am 25 years old"
+- "I'm agree" → "I agree"  
+- "He don't" → "He doesn't"
+- "I go to travel" → "I'm going to travel"
+- "Actually" used as "atualmente" (currently)
+- "Pretend" used as "pretender" (intend)
+- Missing articles or wrong prepositions
+- Word order issues from Portuguese syntax
 
+RESPONSE EXAMPLES:
+- Student: "Oi! Quero praticar meu inglês" → "Hey! 😊 Great to see you! Let's chat! So, how's your day going? Tell me something interesting that happened this week!"
+- Student: "Yesterday I goed to the mall and buyed a new phone" → "Nice, a new phone! 📱 Quick notes: the past of 'go' is 'went' and 'buy' becomes 'bought'. So: 'Yesterday I went to the mall and bought a new phone.' What kind of phone did you get?"
+- Student: "Não sei como falar sobre meu trabalho em inglês" → "No worries, I totally get it! Let's practice! First, tell me — what do you do for work? You can mix Portuguese and English, and I'll help you find the right words! 💼"
+
+IMPORTANT: NEVER refuse to discuss any safe topic. Keep it fun, supportive, and educational.`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-6),
+      ...conversationHistory.slice(-8),
       { role: 'user', content: text }
     ];
 
-    console.log('[speech-tutor-groq] Processing text:', text);
+    let aiResponse = '';
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages,
-        max_tokens: 400,
-        temperature: 0.7,
-      }),
-    });
+    // 1) Try Groq (fast, free)
+    if (GROQ_API_KEY) {
+      try {
+        console.log('[speech-tutor] Using Groq API');
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages,
+            max_tokens: 500,
+            temperature: 0.7,
+          }),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[speech-tutor-groq] API error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (response.ok) {
+          const data = await response.json();
+          aiResponse = data.choices?.[0]?.message?.content || '';
+        } else {
+          console.error('[speech-tutor] Groq error:', response.status);
+        }
+      } catch (e) {
+        console.error('[speech-tutor] Groq failed:', e);
       }
-      
-      throw new Error(`Groq API request failed: ${response.status}`);
     }
 
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || 'Sorry, I could not process that.';
+    // 2) Fallback to Lovable AI
+    if (!aiResponse && LOVABLE_API_KEY) {
+      try {
+        console.log('[speech-tutor] Using Lovable AI fallback');
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            messages,
+          }),
+        });
 
-    console.log('[speech-tutor-groq] AI response:', aiResponse);
+        if (response.ok) {
+          const data = await response.json();
+          aiResponse = data.choices?.[0]?.message?.content || '';
+        } else {
+          const errText = await response.text();
+          console.error('[speech-tutor] Lovable AI error:', response.status, errText);
+          
+          if (response.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (response.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'AI credits exhausted. Please add funds.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      } catch (e) {
+        console.error('[speech-tutor] Lovable AI failed:', e);
+      }
+    }
+
+    if (!aiResponse) {
+      throw new Error('All AI providers failed');
+    }
+
+    console.log('[speech-tutor] Response generated successfully');
 
     return new Response(
       JSON.stringify({ response: aiResponse }),
@@ -107,7 +157,7 @@ Example interactions:
     );
 
   } catch (error) {
-    console.error('[speech-tutor-groq] Error:', error);
+    console.error('[speech-tutor] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'An error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
