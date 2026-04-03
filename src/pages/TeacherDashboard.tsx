@@ -24,6 +24,16 @@ export default function TeacherDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      return data === true;
+    },
+    enabled: !!user,
+  });
+
   const { data: affiliate, isLoading } = useQuery({
     queryKey: ["teacher-affiliate", user?.id],
     queryFn: async () => {
@@ -79,14 +89,16 @@ export default function TeacherDashboard() {
     return null;
   }
 
-  if (!affiliate) {
+  // Admins can access even without affiliate record
+  if (!affiliate && !isAdmin) {
     navigate("/teacher/register");
     return null;
   }
 
-  const referralUrl = `${window.location.origin}/signup?ref=${affiliate.referral_code}`;
+  const referralUrl = affiliate ? `${window.location.origin}/signup?ref=${affiliate.referral_code}` : '';
 
   const copyLink = () => {
+    if (!referralUrl) return;
     navigator.clipboard.writeText(referralUrl);
     toast({ title: "Link copiado!", description: "Compartilhe com seus alunos." });
   };
@@ -98,14 +110,14 @@ export default function TeacherDashboard() {
     suspended: { label: "Suspenso", variant: "destructive", icon: XCircle },
   };
 
-  const status = statusConfig[affiliate.status] || statusConfig.pending;
+  const status = affiliate ? (statusConfig[affiliate.status] || statusConfig.pending) : statusConfig.pending;
   const StatusIcon = status.icon;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <header className="w-full border-b bg-background/95 backdrop-blur">
         <div className="container flex h-14 items-center px-4">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Voltar</span>
           </Link>
@@ -118,6 +130,7 @@ export default function TeacherDashboard() {
 
       <div className="max-w-6xl mx-auto p-4 py-8 space-y-6">
         {/* Status + Name */}
+        {affiliate && (
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">Olá, {affiliate.full_name.split(" ")[0]}!</h1>
@@ -134,8 +147,18 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Admin greeting when no affiliate */}
+        {!affiliate && isAdmin && (
+          <div>
+            <h1 className="text-2xl font-bold">Painel do Professor</h1>
+            <p className="text-muted-foreground">Acesso administrativo aos guias e materiais didáticos.</p>
+          </div>
+        )}
 
         {/* Stats */}
+        {affiliate && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
@@ -173,9 +196,10 @@ export default function TeacherDashboard() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Referral Link */}
-        {affiliate.status === "approved" && (
+        {affiliate?.status === "approved" && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Seu Link de Indicação</CardTitle>
