@@ -454,7 +454,7 @@ export default function TeacherLessonView() {
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
                     <Monitor className="h-4 w-4 text-primary" /> Notas de Apresentação
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.presentation_notes}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.presentation_notes)}</p>
                 </div>
               )}
               {guide.assessment_tips && (
