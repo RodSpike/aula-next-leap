@@ -81,6 +81,8 @@ export function BulkTeacherGuideGenerator() {
 
           if (fnError) {
             console.error(`Failed for ${lesson.title}:`, fnError);
+          } else if (data?.error) {
+            console.error(`API error for ${lesson.title}:`, data.error);
           } else {
             successCount++;
           }
@@ -88,8 +90,8 @@ export function BulkTeacherGuideGenerator() {
           console.error(`Error generating guide for ${lesson.title}:`, err);
         }
 
-        // Small delay to avoid rate limiting
-        await new Promise((r) => setTimeout(r, 1500));
+        // Delay to avoid rate limiting (3s for AI API calls)
+        await new Promise((r) => setTimeout(r, 3000));
       }
 
       setProgress((p) => ({ ...p, current: lessonsToGenerate.length }));
