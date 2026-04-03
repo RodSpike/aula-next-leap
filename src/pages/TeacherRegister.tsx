@@ -65,6 +65,15 @@ export default function TeacherRegister() {
     enabled: !!user,
   });
 
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    cpf: "",
+    bio: "",
+    specialties: "",
+  });
+  const [cpfError, setCpfError] = useState("");
+
   // If user already has teacher access, redirect to dashboard
   if (!authLoading && !accessLoading && user && hasTeacherAccess) {
     return <Navigate to="/teacher/dashboard" replace />;
@@ -77,14 +86,6 @@ export default function TeacherRegister() {
       </div>
     );
   }
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    fullName: "",
-    cpf: "",
-    bio: "",
-    specialties: "",
-  });
-  const [cpfError, setCpfError] = useState("");
 
   const handleCPFChange = (value: string) => {
     const formatted = formatCPF(value);
