@@ -116,7 +116,7 @@ export default function ConhecerCursos() {
 
   usePageMeta({
     title: 'Conheça Nossos Cursos de Inglês - Aula Click | A1 ao C2',
-    description: 'Descubra os cursos de inglês da Aula Click. Do iniciante ao avançado, aprenda com IA, professores reais e uma comunidade ativa. Comece seu teste grátis!',
+    description: 'Descubra os cursos de inglês da Aula Click. Do iniciante ao avançado, aprenda com IA, professores reais e uma comunidade ativa. Assine agora!',
     keywords: 'cursos de inglês, inglês online, aprender inglês, curso A1, curso C2, inglês para iniciantes, inglês avançado',
     canonicalPath: '/conhecer-cursos',
   });
@@ -176,7 +176,7 @@ export default function ConhecerCursos() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button variant="hero" size="lg" asChild>
                 <Link to="/signup">
-                  Começar Teste Grátis
+                  Assinar Agora
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -488,13 +488,13 @@ export default function ConhecerCursos() {
             Pronto para Começar?
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Faça o teste de nivelamento gratuito e descubra seu nível de inglês. 
-            Experimente 2 dias grátis!
+            Faça o teste de nivelamento e descubra seu nível de inglês. 
+            Assine e comece a aprender hoje!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/signup">
-                Fazer Teste Grátis
+                Assinar Agora
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

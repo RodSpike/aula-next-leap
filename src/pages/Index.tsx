@@ -20,7 +20,7 @@ const Index = () => {
 
   usePageMeta({
     title: 'Aula Click - Aprenda Inglês Online | Cursos de Inglês A1 ao C2',
-    description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Comece seu teste grátis hoje!',
+    description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Assine agora!',
     keywords: 'curso de inglês online, aprender inglês, aula de inglês, inglês para iniciantes, inglês intermediário, inglês avançado, curso de inglês Brasil',
     canonicalPath: '/',
   });
@@ -57,22 +57,21 @@ const Index = () => {
 
         // Check subscription status
         const { data: subData } = await supabase.functions.invoke('check-subscription');
-        if (subData?.subscribed || subData?.in_trial) {
+        if (subData?.subscribed) {
           setHasActiveSubscription(true);
         } else {
           // Fallback: check user_subscriptions table
           const { data: subRow } = await supabase
             .from('user_subscriptions')
-            .select('subscription_status, trial_ends_at, current_period_end')
+            .select('subscription_status, current_period_end')
             .eq('user_id', user.id)
             .maybeSingle();
 
           const now = new Date();
-          const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
           const isActive = (subRow?.subscription_status === 'active') || 
                           (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
 
-          setHasActiveSubscription(inTrial || isActive);
+          setHasActiveSubscription(isActive);
         }
       } catch (error) {
         console.error('Error checking subscription:', error);

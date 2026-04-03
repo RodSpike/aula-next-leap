@@ -4,8 +4,8 @@ import { UserPlus, Target, BookOpen, TrendingUp } from "lucide-react";
 const steps = [
   {
     number: 1,
-    title: "Crie sua conta grátis",
-    description: "Cadastro rápido, sem cartão de crédito. Acesso imediato à plataforma.",
+    title: "Crie sua conta",
+    description: "Cadastro rápido e fácil. Escolha seu plano e comece a aprender imediatamente.",
     icon: UserPlus,
   },
   {

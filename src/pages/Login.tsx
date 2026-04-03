@@ -67,7 +67,7 @@ export default function Login() {
 
         // Check subscription status
         const { data: subData } = await supabase.functions.invoke('check-subscription');
-        if (subData?.subscribed || subData?.in_trial) {
+        if (subData?.subscribed) {
           navigate("/dashboard");
           return;
         }
@@ -75,16 +75,15 @@ export default function Login() {
         // Fallback: check user_subscriptions table
         const { data: subRow } = await supabase
           .from('user_subscriptions')
-          .select('subscription_status, trial_ends_at, current_period_end')
+          .select('subscription_status, current_period_end')
           .eq('user_id', user.id)
           .maybeSingle();
 
         const now = new Date();
-        const inTrial = subRow?.trial_ends_at ? new Date(subRow.trial_ends_at) > now : false;
         const isActive = (subRow?.subscription_status === 'active') || 
                         (subRow?.current_period_end ? new Date(subRow.current_period_end) > now : false);
 
-        if (inTrial || isActive) {
+        if (isActive) {
           navigate("/dashboard");
         } else {
           // User doesn't have active subscription, redirect to subscribe

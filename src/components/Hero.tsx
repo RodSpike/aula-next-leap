@@ -54,9 +54,9 @@ export const Hero = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" asChild>
-                <Link to="/signup" className="group" title="Criar conta e começar teste grátis de 2 dias">
+                <Link to="/signup" className="group" title="Criar conta na Aula Click">
                   <BookOpen className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Começar Teste Grátis
+                  Assinar Agora
                 </Link>
               </Button>
               
