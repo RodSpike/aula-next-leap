@@ -196,9 +196,10 @@ export default function TeacherDashboard() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Referral Link */}
-        {affiliate.status === "approved" && (
+        {affiliate?.status === "approved" && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Seu Link de Indicação</CardTitle>
