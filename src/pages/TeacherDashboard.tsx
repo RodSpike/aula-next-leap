@@ -87,7 +87,9 @@ export default function TeacherDashboard() {
     },
   });
 
-  if (authLoading || isLoading) {
+  const rolesLoading = adminLoading || teacherLoading;
+
+  if (authLoading || isLoading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -96,14 +98,12 @@ export default function TeacherDashboard() {
   }
 
   if (!user) {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
-  // Admins can access even without affiliate record
-  if (!affiliate && !isAdmin) {
-    navigate("/teacher/register");
-    return null;
+  // Admins and teachers can access even without affiliate record
+  if (!affiliate && !isAdmin && !isTeacher) {
+    return <Navigate to="/teacher/register" replace />;
   }
 
   const referralUrl = affiliate ? `${window.location.origin}/signup?ref=${affiliate.referral_code}` : '';
