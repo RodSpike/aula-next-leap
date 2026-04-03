@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { decode as base64Decode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,89 +69,6 @@ async function callAI(prompt: string): Promise<string> {
   throw new Error("All AI providers failed");
 }
 
-async function generateImage(prompt: string, style: string): Promise<string | null> {
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableKey) return null;
-
-  try {
-    const textWarning = "CRITICAL: If the image contains any English text, words, or phrases, they MUST be spelled correctly with perfect grammar. Double-check every single word and letter. No typos allowed — this is for English language learners and errors cause confusion and loss of credibility.";
-    const fullPrompt = style === "realistic"
-      ? `Photorealistic educational illustration: ${prompt}. Clean, clear, suitable for ESL teaching material. White background. Text in the image is allowed if it supports the lesson context, but every word MUST be grammatically correct and properly spelled. ${textWarning}`
-      : `Simple, colorful cartoon illustration for language learning: ${prompt}. Clean lines, educational style, white background. Text in the image is allowed if it supports the lesson context, but every word MUST be grammatically correct and properly spelled. ${textWarning}`;
-
-    console.log(`Generating image: ${prompt.substring(0, 60)}...`);
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: fullPrompt }],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`Image gen failed: ${response.status}`);
-      return null;
-    }
-
-    const result = await response.json();
-    const imageData = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageData) {
-      console.error("No image in response");
-      return null;
-    }
-
-    return imageData; // data:image/png;base64,...
-  } catch (e) {
-    console.error("Image generation error:", e);
-    return null;
-  }
-}
-
-async function uploadImageToStorage(
-  supabaseClient: any,
-  base64DataUrl: string,
-  lessonId: string,
-  index: number
-): Promise<string | null> {
-  try {
-    // Extract base64 data
-    const match = base64DataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!match) return null;
-
-    const ext = match[1] === "jpeg" ? "jpg" : match[1];
-    const base64Data = match[2];
-    const bytes = base64Decode(base64Data);
-
-    const fileName = `${lessonId}/${Date.now()}-${index}.${ext}`;
-
-    const { error } = await supabaseClient.storage
-      .from("teacher-guide-images")
-      .upload(fileName, bytes, {
-        contentType: `image/${match[1]}`,
-        upsert: true,
-      });
-
-    if (error) {
-      console.error("Upload error:", error);
-      return null;
-    }
-
-    const { data: publicUrlData } = supabaseClient.storage
-      .from("teacher-guide-images")
-      .getPublicUrl(fileName);
-
-    return publicUrlData?.publicUrl || null;
-  } catch (e) {
-    console.error("Upload error:", e);
-    return null;
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -193,7 +109,6 @@ serve(async (req) => {
       .eq("id", lesson.course_id)
       .single();
 
-    // Step 1: Generate guide JSON with flashcards and image suggestions
     const prompt = `You are an experienced ESL/EFL curriculum designer specializing in private, 1-on-1 online English lessons. The teacher will be alone with the student via Google Meet, sharing their screen to present material.
 
 Generate a comprehensive Teacher's Guide for this lesson that works for this online, private class format.
@@ -222,9 +137,6 @@ Generate a Teacher's Guide in JSON format with the following structure:
   ],
   "flashcards": [
     {"front": "A clue, definition, or description in English", "back": "The English word, phrase, or correct answer", "category": "vocabulary|grammar|expression|comprehension"}
-  ],
-  "image_suggestions": [
-    {"description": "A clear description of an educational illustration to generate", "style": "illustration|realistic", "placement": "section index number or flashcard index", "placement_type": "section|flashcard"}
   ]
 }
 
@@ -232,13 +144,10 @@ IMPORTANT RULES:
 - Return ONLY valid JSON. No markdown, no code blocks.
 - Write in English. Be specific and practical.
 - Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
-- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. IMPORTANT: Flashcards are used as a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?"). The teacher shows the front and the student tries to guess the answer before flipping.
-- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office with a speech bubble saying 'Hello!'", "A clock showing different times of day with labels 'morning', 'afternoon', 'evening'"). Mix illustration and realistic styles. Images MAY include English text if it's relevant to the lesson — but every word MUST be spelled correctly with perfect grammar. Describe the exact text you want in the image within the description.
-- For image placement, use the index of the section or flashcard where the image belongs.`;
+- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. IMPORTANT: Flashcards are used as a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?"). The teacher shows the front and the student tries to guess the answer before flipping.`;
 
     const rawContent = await callAI(prompt);
 
-    // Parse JSON
     let guideContent: any;
     try {
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
@@ -249,46 +158,33 @@ IMPORTANT RULES:
       throw new Error("Failed to parse AI response as JSON");
     }
 
-    // Step 2: Generate images from image_suggestions
-    const imageSuggestions = guideContent.image_suggestions || [];
-    const maxImages = Math.min(imageSuggestions.length, 4); // Limit to 4 images
     const screenShareContent = guideContent.screen_share_content || [];
     const flashcards = guideContent.flashcards || [];
 
-    for (let i = 0; i < maxImages; i++) {
-      const suggestion = imageSuggestions[i];
-      if (!suggestion?.description) continue;
+    // Preserve existing images if regenerating
+    const { data: existingGuide } = await supabaseClient
+      .from("teacher_guides")
+      .select("screen_share_content, flashcards")
+      .eq("lesson_id", lesson.id)
+      .maybeSingle();
 
-      try {
-        const base64DataUrl = await generateImage(suggestion.description, suggestion.style || "illustration");
-        if (!base64DataUrl) continue;
-
-        // Upload to storage
-        const publicUrl = await uploadImageToStorage(supabaseClient, base64DataUrl, lesson.id, i);
-        if (!publicUrl) continue;
-
-        // Place image in the correct location
-        const placementIndex = parseInt(suggestion.placement, 10);
-        if (suggestion.placement_type === "flashcard" && !isNaN(placementIndex) && flashcards[placementIndex]) {
-          flashcards[placementIndex].image_url = publicUrl;
-        } else if (suggestion.placement_type === "section" && !isNaN(placementIndex) && screenShareContent[placementIndex]) {
-          screenShareContent[placementIndex].image_url = publicUrl;
-        } else {
-          // Default: add to a section if possible
-          const targetIdx = Math.min(i, screenShareContent.length - 1);
-          if (targetIdx >= 0 && screenShareContent[targetIdx]) {
-            screenShareContent[targetIdx].image_url = publicUrl;
-          }
+    if (existingGuide) {
+      const oldSections = (existingGuide.screen_share_content as any[] | null) || [];
+      const oldFlashcards = (existingGuide.flashcards as any[] | null) || [];
+      
+      // Carry over admin-uploaded images by matching section index
+      oldSections.forEach((oldSection: any, idx: number) => {
+        if (oldSection?.image_url && idx < screenShareContent.length) {
+          screenShareContent[idx].image_url = oldSection.image_url;
         }
-
-        console.log(`Image ${i + 1}/${maxImages} generated and uploaded`);
-      } catch (imgErr) {
-        console.error(`Image ${i} failed:`, imgErr);
-        // Continue without image - guide still works
-      }
+      });
+      oldFlashcards.forEach((oldCard: any, idx: number) => {
+        if (oldCard?.image_url && idx < flashcards.length) {
+          flashcards[idx].image_url = oldCard.image_url;
+        }
+      });
     }
 
-    // Step 3: Upsert guide with flashcards and images
     const { error: upsertError } = await supabaseClient
       .from("teacher_guides")
       .upsert({

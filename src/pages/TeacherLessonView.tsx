@@ -61,6 +61,9 @@ export default function TeacherLessonView() {
   const [newResourceUrl, setNewResourceUrl] = useState("");
   const [savingNewResource, setSavingNewResource] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+  const [uploadingSectionImage, setUploadingSectionImage] = useState<number | null>(null);
+  const sectionImageInputRef = useRef<HTMLInputElement>(null);
+  const [pendingSectionIndex, setPendingSectionIndex] = useState<number | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
