@@ -23,6 +23,8 @@ import { ClickOfWeekAdmin } from "@/components/ClickOfWeekAdmin";
 import { CertificatePreview } from "@/components/admin/CertificatePreview";
 import { PlacementTestManager } from "@/components/admin/PlacementTestManager";
 import { AITeachersManager } from "@/components/admin/AITeachersManager";
+import { TeacherAffiliatesManager } from "@/components/admin/TeacherAffiliatesManager";
+import { BulkTeacherGuideGenerator } from "@/components/admin/BulkTeacherGuideGenerator";
 import { Search, Users, BookOpen, Star, Clock, Trash2, UserPlus, Shield, History, Settings, MessageSquare, Edit, RotateCcw, UserMinus, Archive, CreditCard, Sparkles, Award, ClipboardCheck, FileText, GraduationCap, Bot } from "lucide-react";
 
 interface UserData {
