@@ -13,6 +13,7 @@ export function BulkTeacherGuideGenerator() {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentLesson: "" });
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [regenerateMode, setRegenerateMode] = useState(false);
 
   const { data: courses } = useQuery({
     queryKey: ["admin-courses-for-guides"],
