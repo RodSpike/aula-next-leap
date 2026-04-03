@@ -14,7 +14,12 @@ import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
   MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video
+, Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const extractYouTubeId = (url?: string | null): string | null => {
   if (!url) return null;
@@ -63,6 +68,11 @@ export default function TeacherLessonView() {
   const [editingVideoIndex, setEditingVideoIndex] = useState<number | null>(null);
   const [videoDrafts, setVideoDrafts] = useState<Record<number, string>>({});
   const [savingVideoIndex, setSavingVideoIndex] = useState<number | null>(null);
+  const [addingResource, setAddingResource] = useState(false);
+  const [newResourceType, setNewResourceType] = useState<"video" | "worksheet">("video");
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceUrl, setNewResourceUrl] = useState("");
+  const [savingNewResource, setSavingNewResource] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -152,6 +162,77 @@ export default function TeacherLessonView() {
   const closeVideoEditor = useCallback(() => {
     setEditingVideoIndex(null);
   }, []);
+
+  const deleteResource = useCallback(async (index: number) => {
+    if (!lessonId || !guide) return;
+
+    const updatedResources = additionalResources.filter((_, i) => i !== index);
+
+    try {
+      const { error } = await supabase
+        .from("teacher_guides")
+        .update({ additional_resources: updatedResources })
+        .eq("lesson_id", lessonId);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Recurso removido" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [additionalResources, guide, lessonId, queryClient, toast]);
+
+  const addNewResource = useCallback(async () => {
+    if (!lessonId || !guide) return;
+
+    const title = newResourceTitle.trim();
+    const url = newResourceUrl.trim();
+
+    if (!title) {
+      toast({ title: "Título obrigatório", variant: "destructive" });
+      return;
+    }
+
+    if (newResourceType === "video" && url) {
+      const videoId = extractYouTubeId(url);
+      if (!videoId) {
+        toast({ title: "Link do YouTube inválido", variant: "destructive" });
+        return;
+      }
+    }
+
+    const newResource = {
+      title,
+      type: newResourceType,
+      url: newResourceType === "video" && url
+        ? `https://www.youtube.com/watch?v=${extractYouTubeId(url)}`
+        : url,
+    };
+
+    const updatedResources = [...additionalResources, newResource];
+
+    try {
+      setSavingNewResource(true);
+
+      const { error } = await supabase
+        .from("teacher_guides")
+        .update({ additional_resources: updatedResources })
+        .eq("lesson_id", lessonId);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setAddingResource(false);
+      setNewResourceTitle("");
+      setNewResourceUrl("");
+      toast({ title: "Recurso adicionado" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingNewResource(false);
+    }
+  }, [additionalResources, guide, lessonId, newResourceTitle, newResourceType, newResourceUrl, queryClient, toast]);
 
   const saveVideoResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
@@ -555,11 +636,25 @@ export default function TeacherLessonView() {
             </Card>
           )}
 
-          {/* Additional Resources */}
-          {additionalResources.length > 0 && (
+          {/* Additional Resources — always show for admin so they can add */}
+          {(additionalResources.length > 0 || isAdmin) && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
-                <CardTitle className="text-base">Recursos Adicionais</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Recursos Adicionais</CardTitle>
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="no-print"
+                      onClick={() => setAddingResource(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {additionalResources.map((res: any, i: number) => {
@@ -594,7 +689,7 @@ export default function TeacherLessonView() {
                           )}
                         </div>
 
-                        <div className="no-print flex flex-wrap items-center gap-2">
+                        <div className="no-print flex flex-shrink-0 flex-wrap items-center gap-2">
                           {resourceUrl && (
                             <Button asChild variant="outline" size="sm">
                               <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
@@ -604,7 +699,7 @@ export default function TeacherLessonView() {
                             </Button>
                           )}
 
-                          {isAdmin && isVideoResource && (
+                          {isAdmin && (res.type === "video" || isVideoResource) && (
                             <Button
                               type="button"
                               variant="secondary"
@@ -615,10 +710,34 @@ export default function TeacherLessonView() {
                               {youtubeId ? "Editar YouTube" : "Adicionar YouTube"}
                             </Button>
                           )}
+
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover recurso</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja remover "{res.title}"? Essa ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteResource(i)}>
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </div>
 
-                      {isAdmin && isVideoResource && isEditingThisVideo && (
+                      {isAdmin && (res.type === "video" || isVideoResource) && isEditingThisVideo && (
                         <div className="no-print space-y-3 rounded-lg border border-border bg-muted/40 p-3">
                           <p className="text-sm font-medium">
                             Cole um link do YouTube para tocar o vídeo dentro da aula.
@@ -682,6 +801,74 @@ export default function TeacherLessonView() {
                     </div>
                   );
                 })}
+
+                {/* Add new resource form */}
+                {isAdmin && addingResource && (
+                  <div className="no-print space-y-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
+                    <p className="text-sm font-semibold">Novo Recurso</p>
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={newResourceType === "video" ? "default" : "outline"}
+                        onClick={() => setNewResourceType("video")}
+                      >
+                        <Video className="h-4 w-4" />
+                        Vídeo YouTube
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={newResourceType === "worksheet" ? "default" : "outline"}
+                        onClick={() => setNewResourceType("worksheet")}
+                      >
+                        <FileTextIcon className="h-4 w-4" />
+                        Worksheet / Link
+                      </Button>
+                    </div>
+
+                    <Input
+                      value={newResourceTitle}
+                      onChange={(e) => setNewResourceTitle(e.target.value)}
+                      placeholder="Título do recurso (ex: Pronunciation Practice Video)"
+                    />
+
+                    <Input
+                      value={newResourceUrl}
+                      onChange={(e) => setNewResourceUrl(e.target.value)}
+                      placeholder={
+                        newResourceType === "video"
+                          ? "https://www.youtube.com/watch?v=..."
+                          : "https://docs.google.com/... ou link do arquivo"
+                      }
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={addNewResource}
+                        disabled={savingNewResource}
+                      >
+                        {savingNewResource ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setAddingResource(false); setNewResourceTitle(""); setNewResourceUrl(""); }}
+                        disabled={savingNewResource}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {additionalResources.length === 0 && !addingResource && (
+                  <p className="text-sm text-muted-foreground">Nenhum recurso adicional ainda. Clique em "Adicionar" para incluir vídeos ou worksheets.</p>
+                )}
               </CardContent>
             </Card>
           )}
