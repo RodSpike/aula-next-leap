@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { cleanHtmlContent } from "@/utils/cleanHtmlContent";
 import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
   MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video,
-  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon
+  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -64,6 +66,9 @@ export default function TeacherLessonView() {
   const [uploadingSectionImage, setUploadingSectionImage] = useState<number | null>(null);
   const sectionImageInputRef = useRef<HTMLInputElement>(null);
   const [pendingSectionIndex, setPendingSectionIndex] = useState<number | null>(null);
+  const [editingSectionContent, setEditingSectionContent] = useState<number | null>(null);
+  const [sectionContentDraft, setSectionContentDraft] = useState("");
+  const [savingSectionContent, setSavingSectionContent] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -196,6 +201,29 @@ export default function TeacherLessonView() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   }, [lessonId, guide, screenContent, queryClient, toast]);
+
+  const startEditingSectionContent = useCallback((sectionIndex: number, currentContent: string) => {
+    setEditingSectionContent(sectionIndex);
+    setSectionContentDraft(cleanHtmlContent(currentContent || ""));
+  }, []);
+
+  const saveSectionContent = useCallback(async () => {
+    if (editingSectionContent === null || !lessonId || !guide) return;
+    try {
+      setSavingSectionContent(true);
+      const updatedContent = [...screenContent];
+      updatedContent[editingSectionContent] = { ...updatedContent[editingSectionContent], content: sectionContentDraft };
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setEditingSectionContent(null);
+      toast({ title: "Conteúdo atualizado" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingSectionContent(false);
+    }
+  }, [editingSectionContent, lessonId, guide, screenContent, sectionContentDraft, queryClient, toast]);
 
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
@@ -418,7 +446,7 @@ export default function TeacherLessonView() {
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
                     <MessageSquare className="h-4 w-4 text-primary" /> Aquecimento (Warm-up)
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.warm_up}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.warm_up)}</p>
                 </div>
               )}
               {guide.presentation_notes && (
@@ -426,19 +454,19 @@ export default function TeacherLessonView() {
                   <h3 className="font-semibold flex items-center gap-2 mb-2 text-sm">
                     <Monitor className="h-4 w-4 text-primary" /> Notas de Apresentação
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.presentation_notes}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.presentation_notes)}</p>
                 </div>
               )}
               {guide.assessment_tips && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Dicas de Avaliação</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.assessment_tips}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.assessment_tips)}</p>
                 </div>
               )}
               {guide.differentiation_notes && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Diferenciação</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.differentiation_notes}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.differentiation_notes)}</p>
                 </div>
               )}
             </CardContent>
@@ -514,12 +542,45 @@ export default function TeacherLessonView() {
                     </div>
                   )}
 
-                  <div className="text-sm whitespace-pre-line leading-relaxed">{section.content}</div>
+                  {/* Section content - with HTML cleaning */}
+                  {editingSectionContent === i && isAdmin ? (
+                    <div className="space-y-2 no-print">
+                      <Textarea
+                        value={sectionContentDraft}
+                        onChange={(e) => setSectionContentDraft(e.target.value)}
+                        className="min-h-[200px] text-sm"
+                        placeholder="Edite o conteúdo da seção..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="gap-1" onClick={saveSectionContent} disabled={savingSectionContent}>
+                          {savingSectionContent ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingSectionContent(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <div className="text-sm whitespace-pre-line leading-relaxed">{cleanHtmlContent(section.content)}</div>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity no-print"
+                          onClick={() => startEditingSectionContent(i, section.content)}
+                        >
+                          <PenLine className="h-3 w-3" /> Editar Conteúdo
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {section.teacher_notes && (
                     <div className="teacher-note bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary">
                       <p className="font-semibold mb-1">📌 Nota do Professor:</p>
-                      <p>{section.teacher_notes}</p>
+                      <p>{cleanHtmlContent(section.teacher_notes)}</p>
                     </div>
                   )}
 

@@ -142,6 +142,7 @@ Generate a Teacher's Guide in JSON format with the following structure:
 
 IMPORTANT RULES:
 - Return ONLY valid JSON. No markdown, no code blocks.
+- CRITICAL: Do NOT include ANY HTML tags in the content. No <p>, <h3>, <ul>, <li>, <b>, <strong>, <em>, <i>, <div>, or any other HTML tags. Write plain text only. Use line breaks (\\n) for formatting, dashes (-) for lists, and asterisks (*word*) for emphasis if needed.
 - Write in English. Be specific and practical.
 - Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
 - Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. IMPORTANT: Flashcards are used as a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?"). The teacher shows the front and the student tries to guess the answer before flipping.`;
