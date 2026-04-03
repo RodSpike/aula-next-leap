@@ -147,8 +147,18 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Admin greeting when no affiliate */}
+        {!affiliate && isAdmin && (
+          <div>
+            <h1 className="text-2xl font-bold">Painel do Professor</h1>
+            <p className="text-muted-foreground">Acesso administrativo aos guias e materiais didáticos.</p>
+          </div>
+        )}
 
         {/* Stats */}
+        {affiliate && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
