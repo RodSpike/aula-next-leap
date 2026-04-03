@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { GraduationCap, Shield, Users, DollarSign, ArrowLeft, Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { GraduationCap, Shield, Users, DollarSign, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function formatCPF(value: string) {
