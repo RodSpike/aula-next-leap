@@ -346,6 +346,14 @@ export default function TeacherLessonView() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Hidden file input for section image uploads */}
+      <input
+        ref={sectionImageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSectionImageUpload}
+      />
       {/* Header */}
       <header className="w-full border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container flex h-14 items-center px-4 gap-4">
