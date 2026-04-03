@@ -6,6 +6,69 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function callAI(prompt: string): Promise<string> {
+  const providers = [
+    {
+      name: "Groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: Deno.env.get("GROQ_API_KEY"),
+      model: "llama-3.3-70b-versatile",
+    },
+    {
+      name: "Lovable",
+      url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+      key: Deno.env.get("LOVABLE_API_KEY"),
+      model: "google/gemini-2.5-flash",
+    },
+    {
+      name: "OpenAI",
+      url: "https://api.openai.com/v1/chat/completions",
+      key: Deno.env.get("OPENAI_API_KEY"),
+      model: "gpt-4o-mini",
+    },
+  ];
+
+  for (const provider of providers) {
+    if (!provider.key) continue;
+    try {
+      console.log(`Trying ${provider.name}...`);
+      const response = await fetch(provider.url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${provider.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+          ...(provider.name !== "Lovable" ? { response_format: { type: "json_object" } } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error(`${provider.name} failed: ${err}`);
+        continue;
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content;
+      if (!content) {
+        console.error(`${provider.name}: empty response`);
+        continue;
+      }
+      console.log(`${provider.name} succeeded`);
+      return content;
+    } catch (e) {
+      console.error(`${provider.name} error:`, e);
+      continue;
+    }
+  }
+
+  throw new Error("All AI providers failed");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +81,6 @@ serve(async (req) => {
   );
 
   try {
-    // Auth check - only admins
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Not authorized");
     const token = authHeader.replace("Bearer ", "");
@@ -34,7 +96,6 @@ serve(async (req) => {
     const { course_id, lesson_id } = await req.json();
     if (!lesson_id) throw new Error("lesson_id required");
 
-    // Get lesson details
     const { data: lesson, error: lessonError } = await supabaseClient
       .from("lessons")
       .select("id, title, content, course_id")
@@ -42,15 +103,11 @@ serve(async (req) => {
       .single();
     if (lessonError || !lesson) throw new Error("Lesson not found");
 
-    // Get course details
     const { data: course } = await supabaseClient
       .from("courses")
       .select("title, level, course_type")
       .eq("id", lesson.course_id)
       .single();
-
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) throw new Error("OPENAI_API_KEY not set");
 
     const prompt = `You are an experienced ESL/EFL curriculum designer. Generate a comprehensive Teacher's Guide for this lesson.
 
@@ -64,8 +121,7 @@ Generate a Teacher's Guide in JSON format with the following structure:
   "warm_up": "Detailed warm-up activity description (5-10 min)",
   "presentation_notes": "Step-by-step notes on how to present the material to students",
   "practice_activities": [
-    {"title": "Activity name", "description": "Detailed description", "duration": "10 min", "grouping": "pairs/groups/individual"},
-    ...
+    {"title": "Activity name", "description": "Detailed description", "duration": "10 min", "grouping": "pairs/groups/individual"}
   ],
   "assessment_tips": "How to assess student understanding",
   "differentiation_notes": "How to adapt for different levels within the class",
@@ -75,30 +131,21 @@ Generate a Teacher's Guide in JSON format with the following structure:
   ]
 }
 
-Write in English for the teacher's guide content. Be specific and practical. Include 3-5 objectives, a creative warm-up, detailed presentation notes, 3-4 practice activities, and practical assessment tips.`;
+IMPORTANT: Return ONLY valid JSON. No markdown, no code blocks, just the JSON object.
+Write in English. Be specific and practical. Include 3-5 objectives, a creative warm-up, detailed presentation notes, 3-4 practice activities, and practical assessment tips.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI error: ${err}`);
+    const rawContent = await callAI(prompt);
+    
+    // Parse JSON - handle potential markdown wrapping
+    let guideContent;
+    try {
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in response");
+      guideContent = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr, "Raw:", rawContent.substring(0, 500));
+      throw new Error("Failed to parse AI response as JSON");
     }
-
-    const aiResult = await response.json();
-    const guideContent = JSON.parse(aiResult.choices[0].message.content);
-
     // Upsert guide
     const { error: upsertError } = await supabaseClient
       .from("teacher_guides")
