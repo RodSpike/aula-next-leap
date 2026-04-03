@@ -89,14 +89,16 @@ export default function TeacherDashboard() {
     return null;
   }
 
-  if (!affiliate) {
+  // Admins can access even without affiliate record
+  if (!affiliate && !isAdmin) {
     navigate("/teacher/register");
     return null;
   }
 
-  const referralUrl = `${window.location.origin}/signup?ref=${affiliate.referral_code}`;
+  const referralUrl = affiliate ? `${window.location.origin}/signup?ref=${affiliate.referral_code}` : '';
 
   const copyLink = () => {
+    if (!referralUrl) return;
     navigator.clipboard.writeText(referralUrl);
     toast({ title: "Link copiado!", description: "Compartilhe com seus alunos." });
   };
