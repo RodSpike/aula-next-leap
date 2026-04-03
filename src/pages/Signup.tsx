@@ -403,7 +403,7 @@ export default function Signup() {
               </div>
               
               <Button type="submit" variant="hero" className="w-full" disabled={loading}>
-                {loading ? "Criando conta..." : "Começar Teste Grátis"}
+                {loading ? "Criando conta..." : "Criar Conta"}
               </Button>
             </form>
             
