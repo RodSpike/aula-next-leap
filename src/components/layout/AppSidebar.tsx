@@ -284,9 +284,9 @@ export const AppSidebar = () => {
             <NavSection title="Social" items={socialNav} />
             <NavSection title="Ferramentas" items={toolsNav} />
             
-            {isTeacher && (
+            {(isTeacher || isAdmin) && (
               <NavSection title="Professor" items={[
-                { name: "Painel do Professor", href: "/teacher-dashboard", icon: GraduationCap, color: "text-blue-600" },
+                { name: "Painel do Professor", href: "/teacher/dashboard", icon: GraduationCap, color: "text-blue-600" },
               ]} />
             )}
 

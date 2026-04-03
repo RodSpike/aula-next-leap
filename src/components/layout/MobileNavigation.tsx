@@ -78,6 +78,10 @@ export const MobileNavigation = () => {
     { name: "Configurações", href: "/settings", icon: Settings },
   ];
 
+  const teacherItems = [
+    { name: "Painel do Professor", href: "/teacher/dashboard", icon: GraduationCap },
+  ];
+
   const adminItems = [
     { name: "Painel Admin", href: "/admin", icon: Shield },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
