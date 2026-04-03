@@ -202,6 +202,28 @@ export default function TeacherLessonView() {
     }
   }, [lessonId, guide, screenContent, queryClient, toast]);
 
+  const startEditingSectionContent = useCallback((sectionIndex: number, currentContent: string) => {
+    setEditingSectionContent(sectionIndex);
+    setSectionContentDraft(cleanHtmlContent(currentContent || ""));
+  }, []);
+
+  const saveSectionContent = useCallback(async () => {
+    if (editingSectionContent === null || !lessonId || !guide) return;
+    try {
+      setSavingSectionContent(true);
+      const updatedContent = [...screenContent];
+      updatedContent[editingSectionContent] = { ...updatedContent[editingSectionContent], content: sectionContentDraft };
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setEditingSectionContent(null);
+      toast({ title: "Conteúdo atualizado" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSavingSectionContent(false);
+    }
+
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
     const updatedResources = additionalResources.filter((_, i) => i !== index);
