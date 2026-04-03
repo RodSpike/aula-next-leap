@@ -123,7 +123,7 @@ Generate a Teacher's Guide in JSON format with the following structure:
   "warm_up": "A conversational warm-up activity suitable for 1-on-1 online class (5-10 min).",
   "presentation_notes": "Step-by-step notes on how to present the material via screen sharing.",
   "screen_share_content": [
-    {"title": "Section title", "type": "explanation|example|exercise|vocabulary|dialogue", "content": "Rich content for screen sharing.", "teacher_notes": "Private notes for the teacher"}
+    {"title": "Section title", "type": "explanation|example|exercise|vocabulary|dialogue", "content": "THE ACTUAL TEACHING CONTENT (see rules below)", "teacher_notes": "Private notes for the teacher"}
   ],
   "practice_activities": [
     {"title": "Activity name", "description": "Detailed description for 1-on-1 online format", "duration": "10 min", "interaction_type": "conversation|role-play|screen-activity|writing"}
@@ -140,12 +140,35 @@ Generate a Teacher's Guide in JSON format with the following structure:
   ]
 }
 
-IMPORTANT RULES:
+CRITICAL RULES FOR "screen_share_content" — THIS IS THE MOST IMPORTANT PART:
+
+The "content" field in each screen_share_content section is what the teacher SHARES ON SCREEN with the student. It must contain ACTUAL TEACHING MATERIAL, NOT instructions for the teacher. The student will READ this content on the shared screen.
+
+Each "content" field MUST include:
+1. For "explanation" type: The actual grammar rule or concept explained clearly with examples. Write the full explanation as if it were a textbook page. Include the rule, when to use it, and 3-5 example sentences with translations in parentheses.
+   Example: "The Past Simple is used to talk about completed actions in the past.\\n\\nRegular verbs: Add -ed to the base form.\\n- I walked to school. (Eu andei até a escola.)\\n- She played tennis yesterday. (Ela jogou tênis ontem.)\\n- They watched a movie last night. (Eles assistiram um filme onite.)\\n\\nSpelling rules:\\n- Verbs ending in -e: just add -d (live -> lived, dance -> danced)\\n- Verbs ending in consonant + y: change y to i and add -ed (study -> studied, carry -> carried)\\n- Short verbs ending in consonant-vowel-consonant: double the last consonant (stop -> stopped, plan -> planned)"
+
+2. For "vocabulary" type: A list of 8-12 words/phrases with clear definitions, example sentences, and pronunciation tips. Format each entry on its own line.
+   Example: "Key Vocabulary:\\n\\n- *appointment* - a scheduled meeting or visit (I have a doctor's appointment at 3 PM.)\\n- *available* - free, not busy (Are you available on Friday?)\\n- *cancel* - to decide not to do something planned (I need to cancel my reservation.)\\n..."
+
+3. For "exercise" type: An actual interactive exercise with clear instructions and items the student must complete. Include 5-8 items.
+   Example: "Complete the sentences with the correct form of the verb in parentheses:\\n\\n1. Yesterday, I ______ (go) to the supermarket.\\n2. She ______ (study) English for two hours last night.\\n3. They ______ (not/watch) TV yesterday.\\n...\\n\\nAnswers (teacher only - do not show yet):\\n1. went\\n2. studied\\n3. didn't watch"
+
+4. For "example" type: Real-world dialogues or usage examples. Write complete dialogues (4-8 lines) with context.
+   Example: "At a Restaurant - Ordering Food:\\n\\nWaiter: Good evening! Are you ready to order?\\nCustomer: Yes, I'd like the grilled chicken, please.\\nWaiter: Would you like a side dish with that?\\nCustomer: Yes, I'll have the salad, please.\\nWaiter: And to drink?\\nCustomer: Just water, please.\\nWaiter: Great choice! I'll be right back."
+
+5. For "dialogue" type: A full role-play dialogue with stage directions. After the dialogue, include comprehension questions and pronunciation focus words.
+
+DO NOT write vague instructions like "Explain the past tense to the student" or "Present vocabulary items". Write the ACTUAL content that appears on screen.
+
+The "teacher_notes" field is where you put private instructions for the teacher (e.g., "Ask the student to read aloud", "Pause here to check understanding", "If the student struggles, simplify by...").
+
+OTHER RULES:
 - Return ONLY valid JSON. No markdown, no code blocks.
-- CRITICAL: Do NOT include ANY HTML tags in the content. No <p>, <h3>, <ul>, <li>, <b>, <strong>, <em>, <i>, <div>, or any other HTML tags. Write plain text only. Use line breaks (\\n) for formatting, dashes (-) for lists, and asterisks (*word*) for emphasis if needed.
+- CRITICAL: Do NOT include ANY HTML tags. No <p>, <h3>, <ul>, <li>, <b>, <strong>, <em>, <i>, <div>, or any other HTML tags. Write plain text only. Use line breaks (\\n) for formatting, dashes (-) for lists, and asterisks (*word*) for emphasis.
 - Write in English. Be specific and practical.
-- Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
-- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. IMPORTANT: Flashcards are used as a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?"). The teacher shows the front and the student tries to guess the answer before flipping.`;
+- Include 3-5 objectives, 6-10 screen share content sections (mix of explanation, vocabulary, exercise, example, and dialogue types), 2-3 practice activities.
+- Include 5-8 flashcards. Flashcards are a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?").`;
 
     const rawContent = await callAI(prompt);
 
