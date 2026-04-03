@@ -53,19 +53,47 @@ export default function Subscribe() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (!user) return;
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const { data: adminResp } = await supabase.functions.invoke('check-admin', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      if (adminResp?.is_admin) {
-        navigate('/dashboard', { replace: true });
+    const checkAccess = async () => {
+      if (!user) {
+        setCheckingAccess(false);
+        return;
+      }
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+
+        // Check admin
+        const { data: adminResp } = await supabase.functions.invoke('check-admin', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (adminResp?.is_admin) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
+        // Check free access
+        const { data: freeData } = await supabase.functions.invoke('check-free-access');
+        if (freeData?.has_free_access) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
+        // Check subscription
+        const { data: subData } = await supabase.functions.invoke('check-subscription');
+        if (subData?.subscribed) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+      } catch (e) {
+        console.error('[Subscribe] Access check error:', e);
+      } finally {
+        setCheckingAccess(false);
       }
     };
-    checkAdmin();
+    checkAccess();
   }, [user, navigate]);
 
   const handleSubscribe = async (plan: PlanKey) => {
