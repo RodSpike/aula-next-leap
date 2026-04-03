@@ -98,6 +98,13 @@ export const AppSidebar = () => {
           setIsAdmin(data === true);
         }
 
+        // Check teacher role
+        const { data: teacherData } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'teacher'
+        });
+        setIsTeacher(teacherData === true);
+
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
