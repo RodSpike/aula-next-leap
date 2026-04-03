@@ -1,28 +1,58 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard, ArrowLeft } from "lucide-react";
+import { Check, CreditCard, ArrowLeft, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
+type PlanKey = "monthly" | "semester" | "annual";
+
+const plans: { key: PlanKey; name: string; price: string; period: string; monthly: string; badge?: string; discount?: string; popular?: boolean }[] = [
+  {
+    key: "monthly",
+    name: "Mensal",
+    price: "R$ 99,90",
+    period: "/mês",
+    monthly: "R$ 99,90/mês",
+  },
+  {
+    key: "semester",
+    name: "Semestral",
+    price: "R$ 479,52",
+    period: "/6 meses",
+    monthly: "R$ 79,92/mês",
+    badge: "20% OFF",
+    discount: "Economize R$ 119,88",
+    popular: true,
+  },
+  {
+    key: "annual",
+    name: "Anual",
+    price: "R$ 838,44",
+    period: "/ano",
+    monthly: "R$ 69,87/mês",
+    badge: "30% OFF",
+    discount: "Economize R$ 360,36",
+  },
+];
+
 export default function Subscribe() {
   usePageMeta({
-    title: 'Assinar - Aula Click | 2 Dias Grátis + Acesso Completo',
-    description: 'Assine a Aula Click por apenas R$59,90/mês. 2 dias grátis, acesso a todos os cursos de inglês, tutor com IA e comunidade ativa.',
-    keywords: 'assinatura aula click, plano inglês online, curso inglês mensal, teste grátis inglês',
+    title: 'Assinar - Aula Click | Acesso Completo a Todos os Cursos',
+    description: 'Assine a Aula Click a partir de R$69,87/mês. Acesso a todos os cursos de inglês, tutor com IA e comunidade ativa.',
+    keywords: 'assinatura aula click, plano inglês online, curso inglês mensal',
     canonicalPath: '/subscribe',
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<PlanKey | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Admins should never see this page
   useEffect(() => {
     const checkAdmin = async () => {
       if (!user) return;
@@ -38,9 +68,8 @@ export default function Subscribe() {
     checkAdmin();
   }, [user, navigate]);
 
-  // For logged-in users, directly go to Stripe checkout
-  const handleStartTrial = async () => {
-    setLoading(true);
+  const handleSubscribe = async (plan: PlanKey) => {
+    setLoading(plan);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -56,15 +85,13 @@ export default function Subscribe() {
       }
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        body: { plan },
       });
-      
-      if (error) {
-        throw error;
-      }
-      
+
+      if (error) throw error;
+
       if (data?.url) {
-        // Open Stripe in same window so user can complete payment
         window.location.href = data.url;
       }
     } catch (error: any) {
@@ -75,7 +102,7 @@ export default function Subscribe() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
@@ -92,7 +119,6 @@ export default function Subscribe() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Header */}
       <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center px-4">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -104,76 +130,89 @@ export default function Subscribe() {
               Aula Click
             </Link>
           </div>
-          <div className="w-16" /> {/* Spacer for centering */}
+          <div className="w-16" />
         </div>
       </header>
 
-      <div className="flex items-center justify-center p-4 py-8">
-        <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Ative seu Período Grátis</CardTitle>
-          <CardDescription>
-            Experimente 2 dias grátis. Cancele a qualquer momento.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg text-muted-foreground line-through">R$ 99,90</span>
-              <Badge variant="destructive">-40%</Badge>
-            </div>
-            <div className="text-3xl font-bold text-primary">R$ 59,90</div>
-            <p className="text-sm text-muted-foreground">por mês após o período grátis</p>
-            <Badge className="bg-green-100 text-green-800 border-green-200">
-              2 dias grátis - Sem cobrança agora
-            </Badge>
-          </div>
+      <div className="max-w-5xl mx-auto p-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Escolha seu Plano</h1>
+          <p className="text-muted-foreground">Acesso completo a toda a plataforma Aula Click</p>
+        </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="font-semibold text-blue-900">Como funciona</span>
-            </div>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Use por 2 dias completamente grátis</li>
-              <li>• Cancele antes de 2 dias para não ser cobrado</li>
-              <li>• Ou continue e pague apenas R$ 59,90/mês</li>
-              <li>• Acesso imediato a todos os recursos</li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <h4 className="font-semibold text-center">Incluído no plano:</h4>
-            <div className="grid grid-cols-1 gap-2">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span>{feature}</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {plans.map((plan) => (
+            <Card
+              key={plan.key}
+              className={`relative transition-all hover:shadow-lg ${
+                plan.popular
+                  ? "border-2 border-primary ring-2 ring-primary/20 scale-[1.02]"
+                  : "border border-border"
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground px-4">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Mais Popular
+                  </Badge>
                 </div>
-              ))}
-            </div>
+              )}
+              <CardHeader className="text-center pb-2 pt-6">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                {plan.badge && (
+                  <Badge variant="destructive" className="mx-auto w-fit mt-1">
+                    {plan.badge}
+                  </Badge>
+                )}
+                <div className="mt-4">
+                  <div className="text-3xl font-bold text-primary">{plan.price}</div>
+                  <p className="text-sm text-muted-foreground">{plan.period}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    equivalente a {plan.monthly}
+                  </p>
+                </div>
+                {plan.discount && (
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mt-2">
+                    {plan.discount}
+                  </p>
+                )}
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={() => handleSubscribe(plan.key)}
+                  disabled={loading !== null}
+                  className="w-full"
+                  variant={plan.popular ? "hero" : "default"}
+                  size="lg"
+                >
+                  {loading === plan.key ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background mr-2" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  {loading === plan.key ? "Carregando..." : "Assinar Agora"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  ✓ Cancele quando quiser • Sem compromisso
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="max-w-md mx-auto">
+          <h3 className="font-semibold text-center mb-4">Incluído em todos os planos:</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                <span>{feature}</span>
+              </div>
+            ))}
           </div>
-
-          <Button 
-            onClick={handleStartTrial}
-            className="w-full" 
-            size="lg"
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background mr-2"></div>
-            ) : (
-              <CreditCard className="w-4 h-4 mr-2" />
-            )}
-            Começar Período Grátis
-          </Button>
-
-          <p className="text-xs text-center text-muted-foreground">
-            Você será redirecionado para adicionar um método de pagamento. 
-            Você não será cobrado durante os 2 dias de teste. Cancele a qualquer momento na plataforma.
-          </p>
-        </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );

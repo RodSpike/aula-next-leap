@@ -137,8 +137,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const isAllowedWithoutSub = allowedWithoutSubscription.some(p => path === p || path.startsWith(p + '/'));
   
   const hasAccess = userRole?.role === 'admin' || 
-                    subscriptionStatus?.subscribed || 
-                    subscriptionStatus?.in_trial;
+                    subscriptionStatus?.subscribed;
 
   // If no access and not on an allowed page, redirect to subscribe
   if (!hasAccess && !isAllowedWithoutSub) {

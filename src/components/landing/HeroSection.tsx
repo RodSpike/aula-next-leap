@@ -201,8 +201,8 @@ export const HeroSection = ({ hasActiveSubscription = false }: HeroSectionProps)
                 <p className="text-xs text-muted-foreground">Suporte IA</p>
               </div>
               <div className="bg-card/80 rounded-xl p-4 text-center border border-border">
-                <p className="text-2xl font-bold text-success">2 dias</p>
-                <p className="text-xs text-muted-foreground">Teste grátis</p>
+                <p className="text-2xl font-bold text-success">10k+</p>
+                <p className="text-xs text-muted-foreground">Estudantes</p>
               </div>
             </div>
           </div>
