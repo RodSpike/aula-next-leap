@@ -116,7 +116,7 @@ export default function ConhecerCursos() {
 
   usePageMeta({
     title: 'Conheça Nossos Cursos de Inglês - Aula Click | A1 ao C2',
-    description: 'Descubra os cursos de inglês da Aula Click. Do iniciante ao avançado, aprenda com IA, professores reais e uma comunidade ativa. Comece seu teste grátis!',
+    description: 'Descubra os cursos de inglês da Aula Click. Do iniciante ao avançado, aprenda com IA, professores reais e uma comunidade ativa. Assine agora!',
     keywords: 'cursos de inglês, inglês online, aprender inglês, curso A1, curso C2, inglês para iniciantes, inglês avançado',
     canonicalPath: '/conhecer-cursos',
   });
