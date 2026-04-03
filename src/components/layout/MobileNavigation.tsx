@@ -208,28 +208,31 @@ export const MobileNavigation = () => {
               </div>
               
               {/* Teacher Section */}
-              {isTeacher && (
+              {(isTeacher || isAdmin) && (
                 <>
                   <Separator className="my-4" />
                   <div className="mb-2">
                     <div className="flex items-center gap-2 px-2 mb-3">
-                      <GraduationCap className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-600">Área do Professor</span>
+                      <GraduationCap className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-primary">Área do Professor</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
-                      <Link
-                        to="/teacher-dashboard"
-                        onClick={() => setMoreOpen(false)}
-                        className={cn(
-                          "flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 hover:scale-105 border border-blue-200",
-                          isActive("/teacher-dashboard")
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-muted-foreground hover:bg-blue-50/50"
-                        )}
-                      >
-                        <GraduationCap className="h-5 w-5 mb-1.5" />
-                        <span className="text-[10px] font-medium text-center leading-tight">Painel do Professor</span>
-                      </Link>
+                      {teacherItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          onClick={() => setMoreOpen(false)}
+                          className={cn(
+                            "flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 hover:scale-105 border border-primary/20",
+                            isActive(item.href)
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-primary/5"
+                          )}
+                        >
+                          <item.icon className="h-5 w-5 mb-1.5" />
+                          <span className="text-[10px] font-medium text-center leading-tight">{item.name}</span>
+                        </Link>
+                      ))}
                     </div>
                   </div>
                 </>
