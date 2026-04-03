@@ -460,7 +460,7 @@ export default function TeacherLessonView() {
               {guide.assessment_tips && (
                 <div>
                   <h3 className="font-semibold mb-2 text-sm">Dicas de Avaliação</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.assessment_tips}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{cleanHtmlContent(guide.assessment_tips)}</p>
                 </div>
               )}
               {guide.differentiation_notes && (
