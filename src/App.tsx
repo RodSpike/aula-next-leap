@@ -132,6 +132,7 @@ const App = () => (
                   <Route path="/teacher/register" element={<TeacherRegister />} />
                   <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
                   <Route path="/teacher/guide/:courseId" element={<ProtectedRoute><TeacherGuide /></ProtectedRoute>} />
+                  <Route path="/teacher/guide/:courseId/lesson/:lessonId" element={<ProtectedRoute><TeacherLessonView /></ProtectedRoute>} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
