@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, Users, MessageSquare } from "lucide-react";
+import { Menu, X, BookOpen, Users, MessageSquare, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 export const Navigation = () => {
@@ -9,7 +9,6 @@ export const Navigation = () => {
   
   const isHomePage = location.pathname === '/';
   
-  // Navigation is only shown for non-subscribed users, so always show visitor navigation
   const navigation = isHomePage ? [] : [
     { name: "Início", href: "/", icon: BookOpen },
     { name: "Cursos", href: "/courses", icon: BookOpen },
@@ -20,15 +19,15 @@ export const Navigation = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
+    <nav className="bg-background/80 backdrop-blur-md border-b border-border/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+          <Link to="/" className="flex items-center space-x-2.5 group">
+            <div className="w-9 h-9 bg-gradient-primary rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">Aula Click</span>
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">Aula Click</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -37,9 +36,9 @@ export const Navigation = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-1 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
+                className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive(item.href)
-                    ? "text-primary bg-accent"
+                    ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
               >
@@ -49,23 +48,22 @@ export const Navigation = () => {
             ))}
           </div>
 
-          {/* CTA Buttons - always show visitor buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
+          {/* CTA Buttons */}
+          <div className="hidden md:flex items-center space-x-3">
+            <Button variant="ghost" size="sm" asChild className="font-medium">
               <Link to="/login">Entrar</Link>
             </Button>
-            <Button variant="hero" size="sm" asChild>
-              <Link to="/signup">Começar</Link>
+            <Button variant="hero" size="sm" asChild className="shadow-md hover:shadow-lg transition-shadow group">
+              <Link to="/signup">
+                Começar
+                <ChevronRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
             </Button>
           </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
@@ -74,15 +72,15 @@ export const Navigation = () => {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-background border-t border-border">
+        <div className="md:hidden animate-fade-in">
+          <div className="px-3 pt-2 pb-4 space-y-1 bg-background/95 backdrop-blur-md border-t border-border/50">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium relative ${
+                className={`flex items-center space-x-2 px-3 py-2.5 rounded-xl text-base font-medium transition-all ${
                   isActive(item.href)
-                    ? "text-primary bg-accent"
+                    ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
                 onClick={() => setIsOpen(false)}
@@ -91,7 +89,7 @@ export const Navigation = () => {
                 <span>{item.name}</span>
               </Link>
             ))}
-            <div className="flex flex-col space-y-2 pt-4 border-t border-border">
+            <div className="flex flex-col space-y-2 pt-4 border-t border-border/50">
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
               </Button>

@@ -214,28 +214,31 @@ export default function Dashboard() {
     <AppLayout>
       <div className="p-4 md:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl mx-auto space-y-6">
         {/* Welcome Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Olá, {userProfile?.display_name?.split(' ')[0] || 'Estudante'}! 👋
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Continue sua jornada de aprendizado
-            </p>
-          </div>
-          {gamificationData && (
-            <div className="flex items-center gap-4 bg-card p-3 rounded-xl border">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{gamificationData.total_xp} XP</p>
-                  <p className="text-xs text-muted-foreground">Nível {gamificationData.current_level}</p>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 border border-primary/10 p-6 md:p-8">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-foreground">
+                Olá, {userProfile?.display_name?.split(' ')[0] || 'Estudante'}! 👋
+              </h1>
+              <p className="text-muted-foreground mt-1.5 text-base">
+                Continue sua jornada de aprendizado
+              </p>
+            </div>
+            {gamificationData && (
+              <div className="flex items-center gap-4 bg-card/80 backdrop-blur-sm p-4 rounded-xl border border-border shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-warning to-warning/80 rounded-xl flex items-center justify-center shadow-md">
+                    <Zap className="h-6 w-6 text-warning-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-foreground">{gamificationData.total_xp} XP</p>
+                    <p className="text-xs text-muted-foreground">Nível {gamificationData.current_level}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Mascot with contextual message */}
