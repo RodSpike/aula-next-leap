@@ -20,7 +20,7 @@ const Index = () => {
 
   usePageMeta({
     title: 'Aula Click - Aprenda Inglês Online | Cursos de Inglês A1 ao C2',
-    description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Comece seu teste grátis hoje!',
+    description: 'Aprenda inglês online com a Aula Click. Cursos interativos do nível A1 ao C2, comunidade ativa, tutor com IA e certificados reconhecidos. Assine agora!',
     keywords: 'curso de inglês online, aprender inglês, aula de inglês, inglês para iniciantes, inglês intermediário, inglês avançado, curso de inglês Brasil',
     canonicalPath: '/',
   });
