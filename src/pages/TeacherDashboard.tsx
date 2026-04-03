@@ -110,14 +110,14 @@ export default function TeacherDashboard() {
     suspended: { label: "Suspenso", variant: "destructive", icon: XCircle },
   };
 
-  const status = statusConfig[affiliate.status] || statusConfig.pending;
+  const status = affiliate ? (statusConfig[affiliate.status] || statusConfig.pending) : statusConfig.pending;
   const StatusIcon = status.icon;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <header className="w-full border-b bg-background/95 backdrop-blur">
         <div className="container flex h-14 items-center px-4">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Voltar</span>
           </Link>
@@ -130,6 +130,7 @@ export default function TeacherDashboard() {
 
       <div className="max-w-6xl mx-auto p-4 py-8 space-y-6">
         {/* Status + Name */}
+        {affiliate && (
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">Olá, {affiliate.full_name.split(" ")[0]}!</h1>
