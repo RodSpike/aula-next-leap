@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb, Users, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, BookOpen, Target, Clock, CheckCircle } from "lucide-react";
 
 export default function TeacherGuide() {
   const { courseId } = useParams<{ courseId: string }>();
