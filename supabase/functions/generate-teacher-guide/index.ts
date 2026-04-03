@@ -233,7 +233,7 @@ IMPORTANT RULES:
 - Write in English. Be specific and practical.
 - Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
 - Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. The "front" should be the term/question and "back" should be the definition/answer.
-- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles.
+- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles. IMPORTANT: Image descriptions must NOT include any text, words, sentences, or speech bubbles — images should be purely visual illustrations without any written English to avoid spelling errors.
 - For image placement, use the index of the section or flashcard where the image belongs.`;
 
     const rawContent = await callAI(prompt);
