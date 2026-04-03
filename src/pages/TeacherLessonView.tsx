@@ -542,7 +542,40 @@ export default function TeacherLessonView() {
                     </div>
                   )}
 
-                  <div className="text-sm whitespace-pre-line leading-relaxed">{section.content}</div>
+                  {/* Section content - with HTML cleaning */}
+                  {editingSectionContent === i && isAdmin ? (
+                    <div className="space-y-2 no-print">
+                      <Textarea
+                        value={sectionContentDraft}
+                        onChange={(e) => setSectionContentDraft(e.target.value)}
+                        className="min-h-[200px] text-sm"
+                        placeholder="Edite o conteúdo da seção..."
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="gap-1" onClick={saveSectionContent} disabled={savingSectionContent}>
+                          {savingSectionContent ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingSectionContent(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <div className="text-sm whitespace-pre-line leading-relaxed">{cleanHtmlContent(section.content)}</div>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity no-print"
+                          onClick={() => startEditingSectionContent(i, section.content)}
+                        >
+                          <PenLine className="h-3 w-3" /> Editar Conteúdo
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {section.teacher_notes && (
                     <div className="teacher-note bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary">
