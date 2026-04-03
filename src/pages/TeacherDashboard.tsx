@@ -69,7 +69,8 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("courses")
-        .select("id, title, level, course_type")
+        .select("id, title, level, course_type, admin_only")
+        .or("admin_only.is.null,admin_only.eq.false")
         .order("order_index");
       if (error) throw error;
       return data || [];

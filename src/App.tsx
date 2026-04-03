@@ -60,6 +60,7 @@ const Install = lazy(() => import("./pages/Install"));
 const TeacherRegister = lazy(() => import("./pages/TeacherRegister"));
 const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
 const TeacherGuide = lazy(() => import("./pages/TeacherGuide"));
+const TeacherLessonView = lazy(() => import("./pages/TeacherLessonView"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -131,6 +132,7 @@ const App = () => (
                   <Route path="/teacher/register" element={<TeacherRegister />} />
                   <Route path="/teacher/dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
                   <Route path="/teacher/guide/:courseId" element={<ProtectedRoute><TeacherGuide /></ProtectedRoute>} />
+                  <Route path="/teacher/guide/:courseId/lesson/:lessonId" element={<ProtectedRoute><TeacherLessonView /></ProtectedRoute>} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

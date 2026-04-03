@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb, Users, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, BookOpen, Target, Clock, CheckCircle } from "lucide-react";
 
 export default function TeacherGuide() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -23,6 +22,7 @@ export default function TeacherGuide() {
         .from("courses")
         .select("*")
         .eq("id", courseId!)
+        .or("admin_only.is.null,admin_only.eq.false")
         .single();
       if (error) throw error;
       return data;
@@ -91,110 +91,42 @@ export default function TeacherGuide() {
         {lessons?.map((lesson) => {
           const guide = guideMap.get(lesson.id);
           return (
-            <Card key={lesson.id} className="overflow-hidden">
-              <CardHeader className="bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Lição {lesson.order_index + 1}: {lesson.title}
-                  </CardTitle>
-                  {guide ? (
-                    <Badge variant="default">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Guia Disponível
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Em breve</Badge>
-                  )}
-                </div>
-              </CardHeader>
-
-              {guide && (
-                <CardContent className="p-6 space-y-6">
-                  {/* Objectives */}
-                  {guide.objectives && (guide.objectives as string[]).length > 0 && (
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2 mb-2">
-                        <Target className="h-4 w-4 text-primary" />
-                        Objetivos da Aula
-                      </h3>
-                      <ul className="space-y-1">
-                        {(guide.objectives as string[]).map((obj, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                            <span>{obj}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Duration */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    Duração estimada: {guide.estimated_duration_minutes} minutos
+            <Card key={lesson.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <Link to={`/teacher/guide/${courseId}/lesson/${lesson.id}`} className="block">
+                <CardHeader className="bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Lição {lesson.order_index + 1}: {lesson.title}
+                    </CardTitle>
+                    {guide ? (
+                      <Badge variant="default">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Guia Disponível
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Em breve</Badge>
+                    )}
                   </div>
-
-                  {/* Warm-up */}
-                  {guide.warm_up && (
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2 mb-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-500" />
-                        Aquecimento (Warm-up)
-                      </h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.warm_up}</p>
+                </CardHeader>
+                {guide && (
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">
+                      Clique para abrir o material de aula interativo com plano de aula e conteúdo para compartilhar tela.
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {guide.estimated_duration_minutes || 60} min
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        {(guide.objectives as string[] | null)?.length || 0} objetivos
+                      </span>
                     </div>
-                  )}
-
-                  {/* Presentation Notes */}
-                  {guide.presentation_notes && (
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2 mb-2">
-                        <BookOpen className="h-4 w-4 text-blue-500" />
-                        Notas de Apresentação
-                      </h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.presentation_notes}</p>
-                    </div>
-                  )}
-
-                  {/* Practice Activities */}
-                  {guide.practice_activities && Array.isArray(guide.practice_activities) && (guide.practice_activities as any[]).length > 0 && (
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2 mb-2">
-                        <Users className="h-4 w-4 text-purple-500" />
-                        Atividades Práticas
-                      </h3>
-                      <div className="space-y-3">
-                        {(guide.practice_activities as any[]).map((activity: any, i: number) => (
-                          <div key={i} className="bg-muted/50 rounded-lg p-3">
-                            <p className="font-medium text-sm">{activity.title || `Atividade ${i + 1}`}</p>
-                            <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
-                            {activity.duration && (
-                              <p className="text-xs text-muted-foreground mt-1">⏱ {activity.duration}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Assessment Tips */}
-                  {guide.assessment_tips && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Dicas de Avaliação</h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.assessment_tips}</p>
-                    </div>
-                  )}
-
-                  {/* Differentiation Notes */}
-                  {guide.differentiation_notes && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Diferenciação</h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{guide.differentiation_notes}</p>
-                    </div>
-                  )}
-                </CardContent>
-              )}
+                  </CardContent>
+                )}
+              </Link>
             </Card>
           );
         })}

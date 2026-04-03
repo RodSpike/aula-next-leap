@@ -109,7 +109,9 @@ serve(async (req) => {
       .eq("id", lesson.course_id)
       .single();
 
-    const prompt = `You are an experienced ESL/EFL curriculum designer. Generate a comprehensive Teacher's Guide for this lesson.
+    const prompt = `You are an experienced ESL/EFL curriculum designer specializing in private, 1-on-1 online English lessons. The teacher will be alone with the student via Google Meet, sharing their screen to present material.
+
+Generate a comprehensive Teacher's Guide for this lesson that works for this online, private class format.
 
 Course: ${course?.title || "Unknown"} (Level: ${course?.level || "Unknown"})
 Lesson Title: ${lesson.title}
@@ -118,21 +120,25 @@ Lesson Content Summary: ${lesson.content.substring(0, 2000)}
 Generate a Teacher's Guide in JSON format with the following structure:
 {
   "objectives": ["objective 1", "objective 2", ...],
-  "warm_up": "Detailed warm-up activity description (5-10 min)",
-  "presentation_notes": "Step-by-step notes on how to present the material to students",
-  "practice_activities": [
-    {"title": "Activity name", "description": "Detailed description", "duration": "10 min", "grouping": "pairs/groups/individual"}
+  "warm_up": "A conversational warm-up activity suitable for 1-on-1 online class (5-10 min). Suggest natural conversation starters the teacher can use to engage the student and introduce the topic.",
+  "presentation_notes": "Step-by-step notes on how to present the material to the student via screen sharing. Include talking points, questions to ask the student, and moments to pause for student interaction.",
+  "screen_share_content": [
+    {"title": "Section title", "type": "explanation|example|exercise|vocabulary|dialogue", "content": "Rich content that the teacher will display on screen while teaching. Use clear formatting. For exercises, include blank spaces or prompts for the student to answer.", "teacher_notes": "Private notes for the teacher on how to guide this section"}
   ],
-  "assessment_tips": "How to assess student understanding",
-  "differentiation_notes": "How to adapt for different levels within the class",
+  "practice_activities": [
+    {"title": "Activity name", "description": "Detailed description adapted for 1-on-1 online format via Google Meet", "duration": "10 min", "interaction_type": "conversation|role-play|screen-activity|writing"}
+  ],
+  "assessment_tips": "How to assess student understanding in a private online lesson context",
+  "differentiation_notes": "How to adapt the lesson if the student finds it too easy or too difficult",
   "estimated_duration_minutes": 60,
+  "homework_suggestions": ["Suggestion 1", "Suggestion 2"],
   "additional_resources": [
     {"title": "Resource name", "url": "", "type": "video/article/worksheet"}
   ]
 }
 
 IMPORTANT: Return ONLY valid JSON. No markdown, no code blocks, just the JSON object.
-Write in English. Be specific and practical. Include 3-5 objectives, a creative warm-up, detailed presentation notes, 3-4 practice activities, and practical assessment tips.`;
+Write in English. Be specific and practical. Include 3-5 objectives, a conversational warm-up, detailed presentation notes for screen sharing, 4-8 screen share content sections (mix of explanations, examples, vocabulary, and interactive exercises with blanks for student answers), 2-3 practice activities suitable for 1-on-1 online format, and practical assessment tips. The screen_share_content is the core teaching material that will be displayed on screen - make it visually clear, well-structured, and interactive.`;
 
     const rawContent = await callAI(prompt);
     
@@ -160,6 +166,8 @@ Write in English. Be specific and practical. Include 3-5 objectives, a creative 
         differentiation_notes: guideContent.differentiation_notes || null,
         estimated_duration_minutes: guideContent.estimated_duration_minutes || 60,
         additional_resources: guideContent.additional_resources || [],
+        screen_share_content: guideContent.screen_share_content || [],
+        homework_suggestions: guideContent.homework_suggestions || [],
         generated_at: new Date().toISOString(),
       }, {
         onConflict: "lesson_id",
