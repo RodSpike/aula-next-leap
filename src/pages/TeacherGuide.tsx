@@ -23,6 +23,7 @@ export default function TeacherGuide() {
         .from("courses")
         .select("*")
         .eq("id", courseId!)
+        .or("admin_only.is.null,admin_only.eq.false")
         .single();
       if (error) throw error;
       return data;
