@@ -466,15 +466,43 @@ export default function TeacherLessonView() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
+                  {/* Admin image upload */}
+                  {isAdmin && !section.image_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 no-print"
+                      onClick={() => triggerSectionImageUpload(i)}
+                      disabled={uploadingSectionImage === i}
+                    >
+                      {uploadingSectionImage === i ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4" />
+                      )}
+                      Adicionar Imagem
+                    </Button>
+                  )}
+
                   {/* Section image */}
                   {section.image_url && (
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center gap-2">
                       <img
                         src={section.image_url}
                         alt={section.title || `Illustration ${i + 1}`}
                         className="section-image max-w-full max-h-[300px] rounded-xl border border-border object-contain"
                         loading="lazy"
                       />
+                      {isAdmin && (
+                        <div className="flex gap-2 no-print">
+                          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => triggerSectionImageUpload(i)}>
+                            <RotateCcw className="h-3 w-3" /> Trocar
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => removeSectionImage(i)}>
+                            <Trash2 className="h-3 w-3" /> Remover
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
