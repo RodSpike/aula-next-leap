@@ -61,6 +61,7 @@ const TeacherRegister = lazy(() => import("./pages/TeacherRegister"));
 const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
 const TeacherGuide = lazy(() => import("./pages/TeacherGuide"));
 const TeacherLessonView = lazy(() => import("./pages/TeacherLessonView"));
+const TeacherLanding = lazy(() => import("./pages/TeacherLanding"));
 
 // Loading fallback component
 const PageLoader = () => (
