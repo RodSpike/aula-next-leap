@@ -61,6 +61,9 @@ export default function TeacherLessonView() {
   const [newResourceUrl, setNewResourceUrl] = useState("");
   const [savingNewResource, setSavingNewResource] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+  const [uploadingSectionImage, setUploadingSectionImage] = useState<number | null>(null);
+  const sectionImageInputRef = useRef<HTMLInputElement>(null);
+  const [pendingSectionIndex, setPendingSectionIndex] = useState<number | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -138,6 +141,61 @@ export default function TeacherLessonView() {
   const toggleFlashcard = useCallback((index: number) => {
     setFlippedCards(prev => ({ ...prev, [index]: !prev[index] }));
   }, []);
+
+  const triggerSectionImageUpload = useCallback((sectionIndex: number) => {
+    setPendingSectionIndex(sectionIndex);
+    setTimeout(() => sectionImageInputRef.current?.click(), 0);
+  }, []);
+
+  const handleSectionImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const sectionIndex = pendingSectionIndex;
+    if (!file || sectionIndex === null || !lessonId || !guide) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 5MB", variant: "destructive" });
+      return;
+    }
+    try {
+      setUploadingSectionImage(sectionIndex);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `${lessonId}/${Date.now()}-section-${sectionIndex}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("teacher-guide-images")
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage.from("teacher-guide-images").getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const updatedContent = [...screenContent];
+      updatedContent[sectionIndex] = { ...updatedContent[sectionIndex], image_url: publicUrl };
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Imagem adicionada com sucesso" });
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar imagem", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingSectionImage(null);
+      setPendingSectionIndex(null);
+      if (sectionImageInputRef.current) sectionImageInputRef.current.value = '';
+    }
+  }, [pendingSectionIndex, lessonId, guide, screenContent, queryClient, toast]);
+
+  const removeSectionImage = useCallback(async (sectionIndex: number) => {
+    if (!lessonId || !guide) return;
+    const updatedContent = [...screenContent];
+    const { image_url, ...rest } = updatedContent[sectionIndex];
+    updatedContent[sectionIndex] = rest;
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Imagem removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
 
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
@@ -288,6 +346,14 @@ export default function TeacherLessonView() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Hidden file input for section image uploads */}
+      <input
+        ref={sectionImageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSectionImageUpload}
+      />
       {/* Header */}
       <header className="w-full border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container flex h-14 items-center px-4 gap-4">
@@ -408,15 +474,43 @@ export default function TeacherLessonView() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
+                  {/* Admin image upload */}
+                  {isAdmin && !section.image_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 no-print"
+                      onClick={() => triggerSectionImageUpload(i)}
+                      disabled={uploadingSectionImage === i}
+                    >
+                      {uploadingSectionImage === i ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4" />
+                      )}
+                      Adicionar Imagem
+                    </Button>
+                  )}
+
                   {/* Section image */}
                   {section.image_url && (
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center gap-2">
                       <img
                         src={section.image_url}
                         alt={section.title || `Illustration ${i + 1}`}
                         className="section-image max-w-full max-h-[300px] rounded-xl border border-border object-contain"
                         loading="lazy"
                       />
+                      {isAdmin && (
+                        <div className="flex gap-2 no-print">
+                          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => triggerSectionImageUpload(i)}>
+                            <RotateCcw className="h-3 w-3" /> Trocar
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => removeSectionImage(i)}>
+                            <Trash2 className="h-3 w-3" /> Remover
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
