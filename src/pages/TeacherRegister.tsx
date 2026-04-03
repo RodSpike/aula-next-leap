@@ -45,9 +45,38 @@ export default function TeacherRegister() {
     canonicalPath: '/teacher/register',
   });
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Check if user already has teacher role or affiliate record
+  const { data: hasTeacherAccess, isLoading: accessLoading } = useQuery({
+    queryKey: ["teacher-access-check", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      
+      const [roleRes, affiliateRes] = await Promise.all([
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'teacher' }),
+        supabase.from("teacher_affiliates").select("id").eq("user_id", user.id).maybeSingle(),
+      ]);
+      
+      return roleRes.data === true || !!affiliateRes.data;
+    },
+    enabled: !!user,
+  });
+
+  // If user already has teacher access, redirect to dashboard
+  if (!authLoading && !accessLoading && user && hasTeacherAccess) {
+    return <Navigate to="/teacher/dashboard" replace />;
+  }
+
+  if (authLoading || accessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
