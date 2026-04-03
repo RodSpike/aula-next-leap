@@ -95,7 +95,7 @@ export const HeroSection = ({ hasActiveSubscription = false }: HeroSectionProps)
                 <>
                   <Button variant="hero" size="xl" asChild className="group text-lg">
                     <Link to="/signup">
-                      Começar Teste Grátis
+                      Assinar Agora
                       <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
@@ -201,8 +201,8 @@ export const HeroSection = ({ hasActiveSubscription = false }: HeroSectionProps)
                 <p className="text-xs text-muted-foreground">Suporte IA</p>
               </div>
               <div className="bg-card/80 rounded-xl p-4 text-center border border-border">
-                <p className="text-2xl font-bold text-success">2 dias</p>
-                <p className="text-xs text-muted-foreground">Teste grátis</p>
+                <p className="text-2xl font-bold text-success">10k+</p>
+                <p className="text-xs text-muted-foreground">Estudantes</p>
               </div>
             </div>
           </div>

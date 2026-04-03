@@ -1,38 +1,68 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Zap } from "lucide-react";
+import { Check, Star, Zap, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+type PlanKey = "monthly" | "semester" | "annual";
+
+const plans: { key: PlanKey; name: string; price: string; period: string; monthly: string; badge?: string; discount?: string; popular?: boolean }[] = [
+  {
+    key: "monthly",
+    name: "Mensal",
+    price: "R$ 99,90",
+    period: "/mês",
+    monthly: "R$ 99,90/mês",
+  },
+  {
+    key: "semester",
+    name: "Semestral",
+    price: "R$ 479,52",
+    period: "/6 meses",
+    monthly: "R$ 79,92/mês",
+    badge: "20% OFF",
+    discount: "Economize R$ 119,88",
+    popular: true,
+  },
+  {
+    key: "annual",
+    name: "Anual",
+    price: "R$ 838,44",
+    period: "/ano",
+    monthly: "R$ 69,87/mês",
+    badge: "30% OFF",
+    discount: "Economize R$ 360,36",
+  },
+];
+
 export function PricingSection() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<PlanKey | null>(null);
 
-  const handleSubscribe = async () => {
-    setLoading(true);
+  const handleSubscribe = async (plan: PlanKey) => {
+    setLoading(plan);
     try {
-      // Check if user is authenticated
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
       if (!token) {
-        // Redirect to signup if not authenticated
         window.location.href = '/signup';
         return;
       }
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        body: { plan },
       });
 
       if (error) throw error;
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (error) {
       console.error('Subscription error:', error);
@@ -42,7 +72,7 @@ export function PricingSection() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
@@ -61,69 +91,91 @@ export function PricingSection() {
 
   return (
     <section className="py-20 bg-gradient-subtle">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="mb-12">
           <Badge variant="secondary" className="mb-4">
             <Star className="h-4 w-4 mr-2" />
-            Oferta Especial para Novos Alunos
+            Escolha seu Plano
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Aprenda Inglês Sem Limites
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Tenha acesso completo à plataforma Aula Click, incluindo testes de nivelamento, 
-            cursos completos, suporte 24/7 com Tutor de IA, comunidades interativas, 
-            grupos de estudo, sistema de mensagens e diversos outros recursos para 
-            potencializar sua aprendizagem.
+            Tenha acesso completo à plataforma Aula Click com todos os cursos,
+            tutor IA, comunidades e muito mais.
           </p>
         </div>
 
-        <Card className="max-w-md mx-auto shadow-xl border-2 border-primary/20">
-          <CardHeader className="text-center pb-2">
-            <div className="flex justify-center mb-2">
-              <Zap className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Plano Premium</CardTitle>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-2xl text-muted-foreground line-through">R$ 99,90</span>
-                <Badge variant="destructive">50% OFF</Badge>
-              </div>
-              <div className="text-4xl font-bold text-primary">R$ 59,90</div>
-              <p className="text-sm text-muted-foreground">por mês</p>
-              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                2 dias grátis para testar
-              </Badge>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center text-sm">
-                  <Check className="h-4 w-4 text-primary mr-3 flex-shrink-0" />
-                  <span>{feature}</span>
+        {/* Plan Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {plans.map((plan) => (
+            <Card
+              key={plan.key}
+              className={`relative shadow-lg transition-all hover:shadow-xl ${
+                plan.popular
+                  ? "border-2 border-primary ring-2 ring-primary/20 scale-[1.02]"
+                  : "border border-border"
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground px-4">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Mais Popular
+                  </Badge>
                 </div>
-              ))}
-            </div>
+              )}
+              <CardHeader className="text-center pb-2 pt-6">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                {plan.badge && (
+                  <Badge variant="destructive" className="mx-auto w-fit mt-1">
+                    {plan.badge}
+                  </Badge>
+                )}
+                <div className="mt-4">
+                  <div className="text-3xl font-bold text-primary">{plan.price}</div>
+                  <p className="text-sm text-muted-foreground">{plan.period}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    equivalente a {plan.monthly}
+                  </p>
+                </div>
+                {plan.discount && (
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mt-2">
+                    {plan.discount}
+                  </p>
+                )}
+              </CardHeader>
 
-            <div className="space-y-3">
-              <Button 
-                onClick={handleSubscribe}
-                disabled={loading}
-                className="w-full"
-                variant="hero"
-                size="lg"
-              >
-                {loading ? "Carregando..." : "Começar Teste Grátis"}
-              </Button>
-              
-              <p className="text-xs text-muted-foreground">
-                ✓ Cancele quando quiser • Sem compromisso • Cobrança após 2 dias
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={() => handleSubscribe(plan.key)}
+                  disabled={loading !== null}
+                  className="w-full"
+                  variant={plan.popular ? "hero" : "default"}
+                  size="lg"
+                >
+                  {loading === plan.key ? "Carregando..." : "Assinar Agora"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  ✓ Cancele quando quiser
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Features list */}
+        <div className="max-w-md mx-auto">
+          <h3 className="font-semibold text-lg mb-4">Incluído em todos os planos:</h3>
+          <div className="space-y-3">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center text-sm">
+                <Check className="h-4 w-4 text-primary mr-3 flex-shrink-0" />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -22,7 +22,6 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -31,65 +30,53 @@ serve(async (req) => {
     );
 
     const { session_id } = await req.json();
-    if (!session_id) {
-      throw new Error("Session ID is required");
-    }
+    if (!session_id) throw new Error("Session ID is required");
     logStep("Session ID received", { session_id });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    
-    // Retrieve the checkout session
     const session = await stripe.checkout.sessions.retrieve(session_id);
-    logStep("Checkout session retrieved", { 
+    logStep("Checkout session retrieved", {
       payment_status: session.payment_status,
       customer: session.customer,
-      subscription: session.subscription 
+      subscription: session.subscription
     });
-
-    if (session.payment_status !== 'paid' && session.mode === 'payment') {
-      throw new Error('Payment not completed');
-    }
 
     if (session.mode === 'subscription' && !session.subscription) {
       throw new Error('Subscription not found');
     }
 
-    // Update user subscription in database
     const customerEmail = session.customer_details?.email;
-    if (!customerEmail) {
-      throw new Error('Customer email not found in session');
-    }
+    if (!customerEmail) throw new Error('Customer email not found in session');
     logStep("Customer email found", { email: customerEmail });
 
-    // Get user by email
     const { data: userData, error: userError } = await supabaseClient.auth.admin.listUsers();
     if (userError) throw userError;
 
     const user = userData.users.find(u => u.email === customerEmail);
-    if (!user) {
-      throw new Error('User not found');
-    }
+    if (!user) throw new Error('User not found');
     logStep("User found", { userId: user.id });
 
-    // Update subscription in database
+    // Get subscription details from Stripe
+    let currentPeriodEnd: string | null = null;
+    if (session.subscription) {
+      const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+      currentPeriodEnd = new Date(sub.current_period_end * 1000).toISOString();
+    }
+
     const subscriptionData = {
       user_id: user.id,
       plan: 'premium',
-      subscription_status: 'trialing',
-      trial_ends_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+      subscription_status: 'active',
       stripe_customer_id: session.customer,
       stripe_subscription_id: session.subscription,
-      current_period_end: session.mode === 'subscription' 
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days for subscription
-        : null
+      current_period_end: currentPeriodEnd,
     };
 
-    // Upsert user subscription
     const { error: upsertError } = await supabaseClient
       .from('user_subscriptions')
-      .upsert(subscriptionData, { 
+      .upsert(subscriptionData, {
         onConflict: 'user_id',
-        ignoreDuplicates: false 
+        ignoreDuplicates: false
       });
 
     if (upsertError) {
@@ -99,21 +86,19 @@ serve(async (req) => {
 
     logStep("Subscription updated successfully");
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
-      message: "Subscription activated successfully" 
+      message: "Subscription activated successfully"
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in validate-checkout", { message: errorMessage });
-    
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: false,
-      error: errorMessage 
+      error: errorMessage
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
