@@ -24,6 +24,16 @@ export default function TeacherDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is-admin", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      return data === true;
+    },
+    enabled: !!user,
+  });
+
   const { data: affiliate, isLoading } = useQuery({
     queryKey: ["teacher-affiliate", user?.id],
     queryFn: async () => {
