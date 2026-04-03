@@ -139,13 +139,13 @@ export const FeaturesSection = () => {
         {!user && (
           <div className="text-center mt-16">
             <p className="text-muted-foreground mb-4">
-              E muito mais! Descubra todas as funcionalidades criando sua conta grátis 🚀
+              E muito mais! Descubra todas as funcionalidades assinando a Aula Click 🚀
             </p>
             <Link 
               to="/signup"
               className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
             >
-              Criar Conta Grátis
+              Assinar Agora
               <span className="text-xl">→</span>
             </Link>
           </div>

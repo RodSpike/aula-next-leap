@@ -57,7 +57,7 @@ const Index = () => {
 
         // Check subscription status
         const { data: subData } = await supabase.functions.invoke('check-subscription');
-        if (subData?.subscribed || subData?.in_trial) {
+        if (subData?.subscribed) {
           setHasActiveSubscription(true);
         } else {
           // Fallback: check user_subscriptions table
