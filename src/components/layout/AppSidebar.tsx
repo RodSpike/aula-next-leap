@@ -71,6 +71,7 @@ export const AppSidebar = () => {
   const unreadCount = useUnreadMessages();
   const { gamificationData, getProgressToNextLevel, getXPForNextLevel } = useGamification();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [speechTutorOpen, setSpeechTutorOpen] = useState(false);
   const [profile, setProfile] = useState<any>(null);
