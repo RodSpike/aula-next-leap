@@ -488,13 +488,13 @@ export default function ConhecerCursos() {
             Pronto para Começar?
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Faça o teste de nivelamento gratuito e descubra seu nível de inglês. 
-            Experimente 2 dias grátis!
+            Faça o teste de nivelamento e descubra seu nível de inglês. 
+            Assine e comece a aprender hoje!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/signup">
-                Fazer Teste Grátis
+                Assinar Agora
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
