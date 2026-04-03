@@ -119,11 +119,15 @@ export default function AdminPanel() {
       if (loading) return;
 
       if (!user) {
+        if (previousAdminAccessGranted.current) {
+          setAdminAccessChecked(true);
+          return;
+        }
+
         setIsAdmin(false);
         setAdminAccessChecked(true);
         lastCheckedUserId.current = null;
         previousAdminAccessGranted.current = false;
-        navigate("/login");
         return;
       }
 
@@ -132,29 +136,32 @@ export default function AdminPanel() {
       }
 
       try {
-        // Use secure RPC to check admin role and avoid RLS pitfalls
         const { data: hasAdmin, error } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin',
         });
 
         if (error) {
-          console.error('Error checking admin access via RPC:', error);
+          throw error;
         }
 
         const isMaster = user.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
         const hasAdminAccess = hasAdmin === true || isMaster;
 
         if (!hasAdminAccess) {
+          if (previousAdminAccessGranted.current && lastCheckedUserId.current === user.id) {
+            setIsAdmin(true);
+            setAdminAccessChecked(true);
+            return;
+          }
+
           setIsAdmin(false);
           lastCheckedUserId.current = user.id;
           previousAdminAccessGranted.current = false;
           setAdminAccessChecked(true);
-          navigate("/dashboard");
           return;
         }
 
-        // Get current user email for admin controls without risking an access redirect
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -174,17 +181,21 @@ export default function AdminPanel() {
         previousAdminAccessGranted.current = true;
       } catch (error) {
         console.error('Unexpected error in checkAdminAccess:', error);
-        lastCheckedUserId.current = user.id;
-        setAdminAccessChecked(true);
 
-        if (!previousAdminAccessGranted.current) {
-          navigate("/dashboard");
+        if (previousAdminAccessGranted.current && lastCheckedUserId.current === user.id) {
+          setIsAdmin(true);
+          setAdminAccessChecked(true);
+          return;
         }
+
+        lastCheckedUserId.current = user.id;
+        setIsAdmin(false);
+        setAdminAccessChecked(true);
       }
     };
 
     verifyAdminAccess();
-  }, [user?.id, loading, navigate]);
+  }, [user?.id, loading, adminAccessChecked]);
 
   // Fetch admin data based on active tab
   useEffect(() => {
@@ -658,7 +669,42 @@ export default function AdminPanel() {
     );
   }
 
-  if (!user || !isAdmin) return null;
+  if (!user) return null;
+
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Acesso administrativo não confirmado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                A página não vai mais redirecionar você automaticamente durante a geração. Se a checagem oscilar, use o botão abaixo para validar de novo.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => {
+                    lastCheckedUserId.current = null;
+                    setAdminAccessChecked(false);
+                  }}
+                >
+                  Tentar novamente
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                  Voltar ao dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
