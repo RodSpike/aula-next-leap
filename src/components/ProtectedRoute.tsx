@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,63 +22,72 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
+  
+  // Track the user ID we last checked so we only re-check on actual user change
+  const lastCheckedUserId = useRef<string | null>(null);
+  // Keep previous access result to avoid flashing redirects during re-checks
+  const previousAccessGranted = useRef(false);
 
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
+        lastCheckedUserId.current = null;
+        previousAccessGranted.current = false;
+        setSubscriptionStatus(null);
+        setUserRole(null);
         setLoading(false);
         setAccessChecked(true);
         return;
       }
 
+      // If we already checked this exact user, skip re-checking
+      if (lastCheckedUserId.current === user.id && accessChecked) {
+        return;
+      }
+
+      // Only show loading if we haven't granted access before (avoids flicker on token refresh)
+      if (!previousAccessGranted.current) {
+        setLoading(true);
+      }
+
       try {
         console.log('[ProtectedRoute] Checking access for user:', user.id);
         
-        // FIRST: Check user role via secure Edge Function (bypasses RLS safely)
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         const { data: adminResp, error: adminError } = await supabase.functions.invoke('check-admin', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
-        console.log('[ProtectedRoute] Admin check via function:', { adminResp, adminError });
-
         const isAdmin = adminResp?.is_admin === true && !adminError;
         if (isAdmin) {
-          console.log('[ProtectedRoute] User is admin, granting permanent free access');
           setUserRole({ role: 'admin' });
           setSubscriptionStatus({ subscribed: true });
-          setLoading(false);
-          setAccessChecked(true);
-          return; // Admins have permanent free access - skip all other checks
-        }
-
-        // SECOND: Check for free user access granted by admin
-        console.log('[ProtectedRoute] Checking admin-granted free access...');
-        const { data: freeUserData, error: freeAccessError } = await supabase.functions.invoke('check-free-access');
-        console.log('[ProtectedRoute] Free access result:', { freeUserData, freeAccessError });
-        
-        if (freeUserData?.has_free_access) {
-          console.log('[ProtectedRoute] User has admin-granted free access');
-          setSubscriptionStatus({ subscribed: true });
+          previousAccessGranted.current = true;
+          lastCheckedUserId.current = user.id;
           setLoading(false);
           setAccessChecked(true);
           return;
         }
 
-        // THIRD: Check subscription for regular users via function first
-        console.log('[ProtectedRoute] Checking subscription...');
+        const { data: freeUserData } = await supabase.functions.invoke('check-free-access');
+        
+        if (freeUserData?.has_free_access) {
+          setSubscriptionStatus({ subscribed: true });
+          previousAccessGranted.current = true;
+          lastCheckedUserId.current = user.id;
+          setLoading(false);
+          setAccessChecked(true);
+          return;
+        }
+
         const { data, error } = await supabase.functions.invoke('check-subscription');
         let finalStatus: SubscriptionStatus = { subscribed: false };
 
-        if (error) {
-          console.error('[ProtectedRoute] Error checking subscription:', error);
-        } else if (data) {
-          console.log('[ProtectedRoute] Subscription data:', data);
+        if (!error && data) {
           finalStatus = data as SubscriptionStatus;
         }
 
-        // Fallback: read from user_subscriptions table directly
         try {
           const { data: subRow } = await supabase
             .from('user_subscriptions')
@@ -98,23 +107,25 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         }
 
         setSubscriptionStatus(finalStatus);
+        previousAccessGranted.current = finalStatus.subscribed;
+        lastCheckedUserId.current = user.id;
       } catch (error) {
         console.error('Error checking access:', error);
-        setSubscriptionStatus({ subscribed: false });
+        // On error, keep previous access if we had it (don't kick user out on transient failures)
+        if (!previousAccessGranted.current) {
+          setSubscriptionStatus({ subscribed: false });
+        }
+        lastCheckedUserId.current = user.id;
       } finally {
         setLoading(false);
         setAccessChecked(true);
       }
     };
 
-    // Reset state when user changes to prevent stale data
-    setAccessChecked(false);
-    setLoading(true);
     checkAccess();
-  }, [user]);
+  }, [user?.id]); // Only re-run when the actual user ID changes, not on object reference changes
 
-  // Always show loading spinner until access check is complete
-  if (authLoading || loading || !accessChecked) {
+  if (authLoading || (loading && !previousAccessGranted.current) || (!accessChecked && !previousAccessGranted.current)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -126,20 +137,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  // Admins have unrestricted access to all content (no subscription required)
-  // Regular users need valid subscription to access any protected content
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  
-  // Only these pages are allowed without subscription
   const allowedWithoutSubscription = ['/subscribe', '/settings'];
   const isAllowedWithoutSub = allowedWithoutSubscription.some(p => path === p || path.startsWith(p + '/'));
   
   const hasAccess = userRole?.role === 'admin' || 
-                    subscriptionStatus?.subscribed;
+                    subscriptionStatus?.subscribed ||
+                    previousAccessGranted.current;
 
-  // If no access and not on an allowed page, redirect to subscribe
   if (!hasAccess && !isAllowedWithoutSub) {
-    console.log('[ProtectedRoute] No access, redirecting to subscribe. Path:', path);
     return <Navigate to="/subscribe" replace />;
   }
 
