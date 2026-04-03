@@ -686,6 +686,10 @@ export default function AdminPanel() {
                 <History className="h-4 w-4" />
                 <span className="hidden sm:inline">Audit</span>
               </TabsTrigger>
+              <TabsTrigger value="teachers" className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <GraduationCap className="h-4 w-4" />
+                <span className="hidden sm:inline">Teachers</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 

@@ -226,12 +226,14 @@ export default function Signup() {
       <div className="flex items-center justify-center px-4 sm:px-6 lg:px-8 py-20">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center space-y-2">
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <Gift className="h-6 w-6 text-primary" />
-              <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
-                2 DIAS GRÁTIS
-              </span>
-            </div>
+            {referralCode ? (
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Gift className="h-6 w-6 text-primary" />
+                <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
+                  Indicação de Professor
+                </span>
+              </div>
+            ) : null}
             <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
             <p className="text-muted-foreground">
               Comece sua jornada de aprendizado hoje mesmo
