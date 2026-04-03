@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { BookOpen, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export function BulkTeacherGuideGenerator() {
   const { toast } = useToast();
