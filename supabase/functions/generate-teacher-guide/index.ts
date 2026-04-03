@@ -221,7 +221,7 @@ Generate a Teacher's Guide in JSON format with the following structure:
     {"title": "Resource name", "url": "", "type": "video/article/worksheet"}
   ],
   "flashcards": [
-    {"front": "English word, phrase, or question", "back": "Definition, translation hint, or answer", "category": "vocabulary|grammar|expression|comprehension"}
+    {"front": "A clue, definition, or description in English", "back": "The English word, phrase, or correct answer", "category": "vocabulary|grammar|expression|comprehension"}
   ],
   "image_suggestions": [
     {"description": "A clear description of an educational illustration to generate", "style": "illustration|realistic", "placement": "section index number or flashcard index", "placement_type": "section|flashcard"}
@@ -232,8 +232,8 @@ IMPORTANT RULES:
 - Return ONLY valid JSON. No markdown, no code blocks.
 - Write in English. Be specific and practical.
 - Include 3-5 objectives, 4-8 screen share content sections, 2-3 practice activities.
-- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. The "front" should be the term/question and "back" should be the definition/answer.
-- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office", "A clock showing different times of day"). Mix illustration and realistic styles. IMPORTANT: Image descriptions must NOT include any text, words, sentences, or speech bubbles — images should be purely visual illustrations without any written English to avoid spelling errors.
+- Include 5-8 flashcards covering key vocabulary, grammar points, or expressions from the lesson. IMPORTANT: Flashcards are used as a quiz tool — the "front" is a CLUE, DEFINITION, or DESCRIPTION (e.g., "A question used to ask someone's name"), and the "back" is the ANSWER the student must recall (e.g., "What is your name?"). The teacher shows the front and the student tries to guess the answer before flipping.
+- Include 3-4 image_suggestions for illustrations that would help the student understand concepts visually. Keep descriptions simple and clear (e.g., "A person greeting someone at an office with a speech bubble saying 'Hello!'", "A clock showing different times of day with labels 'morning', 'afternoon', 'evening'"). Mix illustration and realistic styles. Images MAY include English text if it's relevant to the lesson — but every word MUST be spelled correctly with perfect grammar. Describe the exact text you want in the image within the description.
 - For image placement, use the index of the section or flashcard where the image belongs.`;
 
     const rawContent = await callAI(prompt);
