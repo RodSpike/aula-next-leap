@@ -142,6 +142,61 @@ export default function TeacherLessonView() {
     setFlippedCards(prev => ({ ...prev, [index]: !prev[index] }));
   }, []);
 
+  const triggerSectionImageUpload = useCallback((sectionIndex: number) => {
+    setPendingSectionIndex(sectionIndex);
+    setTimeout(() => sectionImageInputRef.current?.click(), 0);
+  }, []);
+
+  const handleSectionImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const sectionIndex = pendingSectionIndex;
+    if (!file || sectionIndex === null || !lessonId || !guide) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 5MB", variant: "destructive" });
+      return;
+    }
+    try {
+      setUploadingSectionImage(sectionIndex);
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `${lessonId}/${Date.now()}-section-${sectionIndex}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("teacher-guide-images")
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage.from("teacher-guide-images").getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error("Failed to get public URL");
+
+      const updatedContent = [...screenContent];
+      updatedContent[sectionIndex] = { ...updatedContent[sectionIndex], image_url: publicUrl };
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Imagem adicionada com sucesso" });
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar imagem", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingSectionImage(null);
+      setPendingSectionIndex(null);
+      if (sectionImageInputRef.current) sectionImageInputRef.current.value = '';
+    }
+  }, [pendingSectionIndex, lessonId, guide, screenContent, queryClient, toast]);
+
+  const removeSectionImage = useCallback(async (sectionIndex: number) => {
+    if (!lessonId || !guide) return;
+    const updatedContent = [...screenContent];
+    const { image_url, ...rest } = updatedContent[sectionIndex];
+    updatedContent[sectionIndex] = rest;
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Imagem removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
+
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
     const updatedResources = additionalResources.filter((_, i) => i !== index);
