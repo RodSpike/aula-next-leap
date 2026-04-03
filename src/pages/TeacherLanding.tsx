@@ -31,13 +31,13 @@ const benefits = [
   },
   {
     icon: DollarSign,
-    title: "Ganhe Comissão (20%)",
-    description: "Receba 20% de comissão por cada aluno que assinar a plataforma através do seu link. A partir do 6º aluno, seu acesso é gratuito.",
+    title: "Comissão de 20% a partir do 6º Aluno",
+    description: "Com 5 alunos ativos, seu acesso mensal é gratuito. A partir do 6º aluno, você recebe 20% do valor pago por cada aluno excedente, enquanto a conta dele estiver ativa.",
   },
   {
     icon: Users,
     title: "Acesso Gratuito com 5 Alunos",
-    description: "Indique 5 alunos ativos e seu acesso à plataforma é totalmente gratuito. Sem custos, só benefícios.",
+    description: "Pague a mensalidade reduzida no primeiro mês (obrigatório). A partir do segundo mês, se tiver 5 alunos vinculados ativos, seu acesso é 100% gratuito.",
   },
 ];
 
