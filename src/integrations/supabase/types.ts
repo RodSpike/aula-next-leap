@@ -1694,6 +1694,7 @@ export type Database = {
           created_at: string
           differentiation_notes: string | null
           estimated_duration_minutes: number | null
+          flashcards: Json | null
           generated_at: string | null
           homework_suggestions: string[] | null
           id: string
@@ -1712,6 +1713,7 @@ export type Database = {
           created_at?: string
           differentiation_notes?: string | null
           estimated_duration_minutes?: number | null
+          flashcards?: Json | null
           generated_at?: string | null
           homework_suggestions?: string[] | null
           id?: string
@@ -1730,6 +1732,7 @@ export type Database = {
           created_at?: string
           differentiation_notes?: string | null
           estimated_duration_minutes?: number | null
+          flashcards?: Json | null
           generated_at?: string | null
           homework_suggestions?: string[] | null
           id?: string
