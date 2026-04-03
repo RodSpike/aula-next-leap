@@ -1,94 +1,67 @@
 
 
-# Phase 1: Pricing Overhaul + Stripe Fix
+## Plan: AI-Generated Flashcards and Illustrative Images for Lessons and Teacher Guides
 
-## Summary
-Remove the free trial, update pricing to R$99.90/month with semester (20% off) and annual (30% off) options. Create new Stripe prices and update all related code.
+### Overview
+Add flashcards and AI-generated images to the teacher guide generation flow. The AI will produce flashcard data and image descriptions as part of the guide JSON. Images will be generated via the Lovable AI Gateway's image generation model and stored in Supabase Storage. Flashcards will be interactive in the lesson view and included in PDF exports.
 
-## Current State
-- One Stripe product: `prod_TaRynDavvi9T2h` ("Aula Click Premium")
-- One price: `price_1SdH50K2ADuy4IKKXoAmsCSI` (R$59.90/month)
-- 2-day free trial configured in `create-checkout` edge function
-- UI references "2 dias gratis" and "R$59,90" in multiple places
+### Architecture
 
-## Step 1: Create New Stripe Prices
+```text
+generate-teacher-guide (Edge Function)
+  ├── Step 1: Call text AI → JSON with flashcards[] + image_prompts[]
+  ├── Step 2: For each image_prompt, call Lovable AI image generation
+  ├── Step 3: Upload images to Supabase Storage (new bucket)
+  ├── Step 4: Replace image prompts with public URLs in JSON
+  └── Step 5: Upsert guide with flashcards + images into teacher_guides
+```
 
-Using Stripe tools, create 3 new prices on the existing product `prod_TaRynDavvi9T2h`:
+### Changes
 
-| Plan | Price | Interval | Discount | Monthly equivalent |
-|------|-------|----------|----------|--------------------|
-| Monthly | R$99.90/mo | month | - | R$99.90 |
-| Semester | R$479.52/6mo | 6 months | 20% off | R$79.92 |
-| Annual | R$838.44/yr | year | 30% off | R$69.87 |
+**1. Database Migration**
+- Add `flashcards` (JSONB) column to `teacher_guides` table
+- Create a `teacher-guide-images` storage bucket (public)
 
-## Step 2: Update `create-checkout` Edge Function
+Flashcard structure:
+```json
+[
+  {
+    "front": "What does 'resilient' mean?",
+    "back": "Able to recover quickly from difficulties",
+    "image_url": "https://...",
+    "category": "vocabulary"
+  }
+]
+```
 
-**File:** `supabase/functions/create-checkout/index.ts`
-- Accept a `plan` parameter in request body (`monthly`, `semester`, `annual`)
-- Map plan to the corresponding price ID
-- Remove `trial_period_days: 2` from `subscription_data`
-- Remove trial-related metadata
-- Update success URL to `/dashboard` instead of `/welcome?session_id=...`
+**2. Update Edge Function (`generate-teacher-guide/index.ts`)**
+- Expand the AI prompt to include `flashcards` (5-8 per lesson) and `image_suggestions` in the JSON output
+- Each `image_suggestion` has: `description` (prompt for image gen), `style` ("illustration" or "realistic"), `placement` (which section it belongs to)
+- After getting the text JSON, loop through `image_suggestions` and call the Lovable AI image generation endpoint (`google/gemini-2.5-flash-image`)
+- Upload each generated image to `teacher-guide-images` bucket
+- Replace descriptions with public URLs in the final data
+- Save `flashcards` and updated `screen_share_content` (with `image_url` fields) to DB
 
-## Step 3: Update `check-subscription` Edge Function
+**3. Update `TeacherLessonView.tsx`**
+- Render images inline within `screen_share_content` sections when `image_url` is present
+- Add a new **Flashcards** section after the screen share content:
+  - Card flip interaction (click to reveal answer)
+  - Show image on front if available
+  - Include in PDF export as a table (front | back)
+- Images appear in PDF export as `<img>` tags
 
-**File:** `supabase/functions/check-subscription/index.ts`
-- Remove trial-specific logic (no more free trial)
-- Keep trialing status check from Stripe (for any legacy users)
+**4. Update `BulkTeacherGuideGenerator.tsx`**
+- No structural changes needed; bulk generation will automatically include flashcards and images since the edge function handles everything
 
-## Step 4: Update `validate-checkout` Edge Function
+### Key Considerations
+- Image generation adds ~3-5 seconds per image; limit to 3-5 images per guide to keep generation under 30 seconds total
+- Use `google/gemini-2.5-flash-image` for speed; fall back gracefully if image generation fails (guide still saves without images)
+- Flashcards work without images too; images are an enhancement
+- PDF export will inline the images using their public URLs
 
-**File:** `supabase/functions/validate-checkout/index.ts`
-- Remove `trial_ends_at` calculation
-- Set `subscription_status` to `'active'` instead of `'trialing'`
-
-## Step 5: Update `PricingSection` Component
-
-**File:** `src/components/PricingSection.tsx`
-- Show 3 plan cards (Monthly, Semester, Annual) instead of 1
-- Remove "2 dias gratis" badge and trial references
-- Update prices: R$99.90/mo, R$479.52/6mo, R$838.44/yr
-- Show savings percentage on semester and annual
-- Pass selected plan to `create-checkout`
-
-## Step 6: Update Subscribe Page
-
-**File:** `src/pages/Subscribe.tsx`
-- Remove all trial references ("2 dias gratis", "Sem cobrança agora", etc.)
-- Add plan selection (monthly/semester/annual)
-- Update prices and descriptions
-- Pass selected plan to checkout function
-
-## Step 7: Update Landing Page Text
-
-**Files:** `src/components/landing/HeroSection.tsx`, `src/components/landing/CTASection.tsx`
-- Remove "teste grátis" / "free trial" references
-- Update CTA to "Assinar Agora" or similar
-
-## Step 8: Update `handle_new_user` DB Function
-
-**Migration:** Update the `handle_new_user()` function
-- Remove `trial_ends_at` default assignment
-- Set `subscription_status` to `'inactive'` for all new users (no trial)
-
-## Step 9: Update ProtectedRoute
-
-**File:** `src/components/ProtectedRoute.tsx`
-- Remove `in_trial` logic since there's no more trial
-- Simplify to just check `subscribed` status
-
-## Step 10: Deploy and Test
-
-- Deploy updated edge functions
-- Test checkout flow for each plan tier
-- Verify subscription status checks work
-
----
-
-## Technical Notes
-
-- The old price `price_1SdH50K2ADuy4IKKXoAmsCSI` (R$59.90) will remain in Stripe for existing subscribers but won't be offered to new users
-- Existing trial users will continue their trial until it expires (Stripe handles this automatically)
-- Semester = `interval: "month", interval_count: 6`; Annual = `interval: "year"`
-- ~10 files modified, 3 new Stripe prices created
+### Files to Create/Edit
+- `supabase/migrations/` — new migration for `flashcards` column + storage bucket
+- `supabase/functions/generate-teacher-guide/index.ts` — add flashcards to prompt, add image generation loop
+- `src/pages/TeacherLessonView.tsx` — render flashcards section + inline images
+- `src/integrations/supabase/types.ts` — auto-updated after migration
 
