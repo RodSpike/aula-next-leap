@@ -669,7 +669,42 @@ export default function AdminPanel() {
     );
   }
 
-  if (!user || !isAdmin) return null;
+  if (!user) return null;
+
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Acesso administrativo não confirmado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                A página não vai mais redirecionar você automaticamente durante a geração. Se a checagem oscilar, use o botão abaixo para validar de novo.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => {
+                    lastCheckedUserId.current = null;
+                    setAdminAccessChecked(false);
+                  }}
+                >
+                  Tentar novamente
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                  Voltar ao dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
