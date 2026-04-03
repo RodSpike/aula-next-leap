@@ -30,7 +30,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  GraduationCap
 } from "lucide-react";
 import { SpeechTutorDialog } from "@/components/speech-tutor/SpeechTutorDialog";
 
