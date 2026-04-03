@@ -1,0 +1,1 @@
+ALTER TABLE public.teacher_affiliates ADD COLUMN pix_key TEXT DEFAULT NULL;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   GraduationCap, Users, DollarSign, Copy, ExternalLink,
-  ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, Loader2
+  ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, Loader2, Save
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function TeacherDashboard() {
   usePageMeta({
@@ -22,13 +24,23 @@ export default function TeacherDashboard() {
 
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  
 
-  const { data: isAdmin } = useQuery({
+  const { data: isAdmin, isLoading: adminLoading } = useQuery({
     queryKey: ["is-admin", user?.id],
     queryFn: async () => {
       if (!user) return false;
       const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      return data === true;
+    },
+    enabled: !!user,
+  });
+
+  const { data: isTeacher, isLoading: teacherLoading } = useQuery({
+    queryKey: ["is-teacher", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'teacher' });
       return data === true;
     },
     enabled: !!user,
@@ -77,7 +89,9 @@ export default function TeacherDashboard() {
     },
   });
 
-  if (authLoading || isLoading) {
+  const rolesLoading = adminLoading || teacherLoading;
+
+  if (authLoading || isLoading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -86,14 +100,12 @@ export default function TeacherDashboard() {
   }
 
   if (!user) {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
-  // Admins can access even without affiliate record
-  if (!affiliate && !isAdmin) {
-    navigate("/teacher/register");
-    return null;
+  // Admins and teachers can access even without affiliate record
+  if (!affiliate && !isAdmin && !isTeacher) {
+    return <Navigate to="/teacher/register" replace />;
   }
 
   const referralUrl = affiliate ? `${window.location.origin}/signup?ref=${affiliate.referral_code}` : '';
@@ -218,7 +230,12 @@ export default function TeacherDashboard() {
                 Compartilhe este link com seus alunos. Cada inscrição gera comissão para você.
               </p>
             </CardContent>
-          </Card>
+           </Card>
+        )}
+
+        {/* PIX Key */}
+        {affiliate && (
+          <PixKeyCard affiliateId={affiliate.id} currentPixKey={(affiliate as any).pix_key} />
         )}
 
         {/* Teacher's Guide - Course List */}
@@ -281,5 +298,55 @@ export default function TeacherDashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+function PixKeyCard({ affiliateId, currentPixKey }: { affiliateId: string; currentPixKey?: string | null }) {
+  const [pixKey, setPixKey] = useState(currentPixKey || "");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const savePixKey = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("teacher_affiliates")
+        .update({ pix_key: pixKey.trim() || null } as any)
+        .eq("id", affiliateId);
+      if (error) throw error;
+      toast({ title: "Chave PIX salva!", description: "Sua chave PIX foi atualizada com sucesso." });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message || "Erro ao salvar", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <DollarSign className="h-5 w-5" />
+          Chave PIX para Comissões
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-3">
+          Cadastre sua chave PIX para receber o pagamento das comissões.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={pixKey}
+            onChange={(e) => setPixKey(e.target.value)}
+            placeholder="CPF, e-mail, telefone ou chave aleatória"
+            className="flex-1"
+          />
+          <Button onClick={savePixKey} disabled={saving} variant="outline">
+            <Save className="h-4 w-4 mr-1" />
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
