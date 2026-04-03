@@ -235,7 +235,7 @@ export default function TeacherDashboard() {
 
         {/* PIX Key */}
         {affiliate && (
-          <PixKeyCard affiliateId={affiliate.id} currentPixKey={affiliate.pix_key} />
+          <PixKeyCard affiliateId={affiliate.id} currentPixKey={(affiliate as any).pix_key} />
         )}
 
         {/* Teacher's Guide - Course List */}
