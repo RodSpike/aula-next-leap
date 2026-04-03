@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { BookOpen, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export function BulkTeacherGuideGenerator() {
   const { toast } = useToast();
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentLesson: "" });
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [regenerateMode, setRegenerateMode] = useState(false);
 
   const { data: courses } = useQuery({
     queryKey: ["admin-courses-for-guides"],
@@ -54,14 +56,17 @@ export function BulkTeacherGuideGenerator() {
 
       if (error || !lessons) throw new Error("Failed to fetch lessons");
 
-      // Filter out lessons that already have guides
-      const existingLessonIds = new Set(
-        existingGuides?.filter((g) => g.course_id === courseId).map((g) => g.lesson_id) || []
-      );
-      const lessonsToGenerate = lessons.filter((l) => !existingLessonIds.has(l.id));
+      // Filter out lessons that already have guides (unless regenerating)
+      let lessonsToGenerate = lessons;
+      if (!regenerateMode) {
+        const existingLessonIds = new Set(
+          existingGuides?.filter((g) => g.course_id === courseId).map((g) => g.lesson_id) || []
+        );
+        lessonsToGenerate = lessons.filter((l) => !existingLessonIds.has(l.id));
+      }
 
       if (lessonsToGenerate.length === 0) {
-        toast({ title: "Completo", description: "Todas as lições já possuem guias." });
+        toast({ title: "Completo", description: "Todas as lições já possuem guias. Ative 'Regerar existentes' para atualizar." });
         setGenerating(false);
         setSelectedCourseId(null);
         return;
@@ -131,7 +136,18 @@ export function BulkTeacherGuideGenerator() {
               {progress.current}/{progress.total} lições processadas
             </p>
           </div>
-        )}
+         )}
+
+        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Regerar existentes</p>
+              <p className="text-xs text-muted-foreground">Atualiza guias já gerados com o novo formato interativo</p>
+            </div>
+          </div>
+          <Switch checked={regenerateMode} onCheckedChange={setRegenerateMode} disabled={generating} />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {courses?.map((course) => {
