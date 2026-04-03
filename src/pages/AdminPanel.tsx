@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,14 +110,81 @@ export default function AdminPanel() {
   const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [adminAccessChecked, setAdminAccessChecked] = useState(false);
+  const lastCheckedUserId = useRef<string | null>(null);
+  const previousAdminAccessGranted = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    } else if (user && !loading) {
-      checkAdminAccess();
-    }
-  }, [user, loading, navigate]);
+    const verifyAdminAccess = async () => {
+      if (loading) return;
+
+      if (!user) {
+        setIsAdmin(false);
+        setAdminAccessChecked(true);
+        lastCheckedUserId.current = null;
+        previousAdminAccessGranted.current = false;
+        navigate("/login");
+        return;
+      }
+
+      if (lastCheckedUserId.current === user.id && adminAccessChecked) {
+        return;
+      }
+
+      try {
+        // Use secure RPC to check admin role and avoid RLS pitfalls
+        const { data: hasAdmin, error } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin',
+        });
+
+        if (error) {
+          console.error('Error checking admin access via RPC:', error);
+        }
+
+        const isMaster = user.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
+        const hasAdminAccess = hasAdmin === true || isMaster;
+
+        if (!hasAdminAccess) {
+          setIsAdmin(false);
+          lastCheckedUserId.current = user.id;
+          previousAdminAccessGranted.current = false;
+          setAdminAccessChecked(true);
+          navigate("/dashboard");
+          return;
+        }
+
+        // Get current user email for admin controls without risking an access redirect
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('user_id', user.id)
+            .single();
+
+          setCurrentUserEmail(profile?.email || user.email || "");
+        } catch (profileError) {
+          console.error('Error fetching admin profile email:', profileError);
+          setCurrentUserEmail(user.email || "");
+        }
+
+        setIsAdmin(true);
+        setAdminAccessChecked(true);
+        lastCheckedUserId.current = user.id;
+        previousAdminAccessGranted.current = true;
+      } catch (error) {
+        console.error('Unexpected error in checkAdminAccess:', error);
+        lastCheckedUserId.current = user.id;
+        setAdminAccessChecked(true);
+
+        if (!previousAdminAccessGranted.current) {
+          navigate("/dashboard");
+        }
+      }
+    };
+
+    verifyAdminAccess();
+  }, [user?.id, loading, navigate]);
 
   // Fetch admin data based on active tab
   useEffect(() => {
@@ -488,40 +555,6 @@ export default function AdminPanel() {
     }
   }, [searchTerm, users]);
 
-  const checkAdminAccess = async () => {
-    try {
-      // Use secure RPC to check admin role and avoid RLS pitfalls
-      const { data: hasAdmin, error } = await supabase.rpc('has_role', {
-        _user_id: user!.id,
-        _role: 'admin',
-      });
-
-      const isMaster = user?.email ? MASTER_ADMIN_EMAILS.includes(user.email) : false;
-
-      if (error) {
-        console.error('Error checking admin access via RPC:', error);
-      }
-
-      if (!(hasAdmin === true || isMaster)) {
-        navigate("/dashboard");
-        return;
-      }
-
-      // Get current user email for admin controls
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('user_id', user!.id)
-        .single();
-        
-      setCurrentUserEmail(profile?.email || user?.email || "");
-      setIsAdmin(true);
-    } catch (error) {
-      console.error('Unexpected error in checkAdminAccess:', error);
-      navigate("/dashboard");
-    }
-  };
-
   const fetchAllUsers = async () => {
     try {
       setUsersLoading(true);
@@ -614,7 +647,7 @@ export default function AdminPanel() {
     }
   };
 
-  if (loading) {
+  if (loading || (!adminAccessChecked && !previousAdminAccessGranted.current)) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
         <div className="text-center">

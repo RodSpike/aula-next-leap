@@ -1,23 +1,68 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
-  MessageSquare, Home as HomeIcon, Monitor
+  MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video
 } from "lucide-react";
+
+const extractYouTubeId = (url?: string | null): string | null => {
+  if (!url) return null;
+
+  const patterns = [
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    const videoId = parsedUrl.searchParams.get("v");
+    if (videoId && videoId.length === 11) return videoId;
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+const normalizeResource = (resource: any) => {
+  if (resource && typeof resource === "object" && !Array.isArray(resource)) {
+    return resource;
+  }
+
+  return {
+    title: String(resource || "Recurso adicional"),
+    type: "resource",
+    url: "",
+  };
+};
 
 export default function TeacherLessonView() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showPlan, setShowPlan] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [exerciseAnswers, setExerciseAnswers] = useState<Record<string, string>>({});
+  const [editingVideoIndex, setEditingVideoIndex] = useState<number | null>(null);
+  const [videoDrafts, setVideoDrafts] = useState<Record<number, string>>({});
+  const [savingVideoIndex, setSavingVideoIndex] = useState<number | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -68,6 +113,22 @@ export default function TeacherLessonView() {
     enabled: !!lessonId,
   });
 
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["teacher-guide-admin-access", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      return data === true;
+    },
+    enabled: !!user,
+  });
+
+  const screenContent = (guide?.screen_share_content as any[] | null) || [];
+  const objectives = (guide?.objectives as string[] | null) || [];
+  const practiceActivities = (guide?.practice_activities as any[] | null) || [];
+  const homeworkSuggestions = (guide?.homework_suggestions as string[] | null) || [];
+  const additionalResources = ((guide?.additional_resources as any[] | null) || []).map(normalizeResource);
+
   const updateNote = useCallback((key: string, value: string) => {
     setNotes(prev => ({ ...prev, [key]: value }));
   }, []);
@@ -76,23 +137,100 @@ export default function TeacherLessonView() {
     setExerciseAnswers(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  const updateVideoDraft = useCallback((index: number, value: string) => {
+    setVideoDrafts((prev) => ({ ...prev, [index]: value }));
+  }, []);
+
+  const openVideoEditor = useCallback((index: number, currentUrl?: string | null) => {
+    setEditingVideoIndex(index);
+    setVideoDrafts((prev) => ({
+      ...prev,
+      [index]: currentUrl || "",
+    }));
+  }, []);
+
+  const closeVideoEditor = useCallback(() => {
+    setEditingVideoIndex(null);
+  }, []);
+
+  const saveVideoResource = useCallback(async (index: number) => {
+    if (!lessonId || !guide) return;
+
+    const rawUrl = (videoDrafts[index] || "").trim();
+    const videoId = extractYouTubeId(rawUrl);
+
+    if (!videoId) {
+      toast({
+        title: "Link inválido",
+        description: "Cole um link válido do YouTube para embutir o vídeo nesta aula.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const updatedResources = additionalResources.map((resource, resourceIndex) =>
+      resourceIndex === index
+        ? {
+            ...resource,
+            type: "video",
+            url: canonicalUrl,
+          }
+        : resource
+    );
+
+    try {
+      setSavingVideoIndex(index);
+
+      const { error } = await supabase
+        .from("teacher_guides")
+        .update({ additional_resources: updatedResources })
+        .eq("lesson_id", lessonId);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setEditingVideoIndex(null);
+      toast({
+        title: "Vídeo atualizado",
+        description: "O recurso agora aparece embutido dentro da aula e mantém o link no PDF.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar vídeo",
+        description: error.message || "Não foi possível atualizar o link do YouTube.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingVideoIndex(null);
+    }
+  }, [additionalResources, guide, lessonId, queryClient, toast, videoDrafts]);
+
   const exportToPdf = useCallback(async () => {
     const printArea = printRef.current;
     if (!printArea) return;
 
     // Clone the print area for PDF
     const clone = printArea.cloneNode(true) as HTMLElement;
-    
-    // Update all textareas to show their values as styled divs
-    const textareas = clone.querySelectorAll('textarea');
-    textareas.forEach(ta => {
+
+    const replaceInteractiveFields = (selector: string, className: string) => {
+      const fields = clone.querySelectorAll<HTMLTextAreaElement>(selector);
+
+      fields.forEach((field) => {
+        const div = document.createElement('div');
+        div.className = className;
+        div.textContent = field.value || '';
+        field.parentNode?.replaceChild(div, field);
+      });
+    };
+
+    replaceInteractiveFields('textarea[data-pdf-kind="answer"]', 'exercise-answer');
+    replaceInteractiveFields('textarea[data-pdf-kind="note"]', 'note');
+
+    const lingeringTextareas = clone.querySelectorAll('textarea');
+    lingeringTextareas.forEach((ta) => {
       const div = document.createElement('div');
-      div.style.color = '#2563eb';
-      div.style.fontStyle = 'italic';
-      div.style.whiteSpace = 'pre-wrap';
-      div.style.padding = '8px';
-      div.style.minHeight = '24px';
-      div.style.borderBottom = '1px solid #93c5fd';
+      div.className = 'note';
       div.textContent = ta.value || '';
       ta.parentNode?.replaceChild(div, ta);
     });
@@ -106,16 +244,17 @@ export default function TeacherLessonView() {
       <head>
         <title>${lesson?.title || 'Lesson'} - Aula Click</title>
         <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: #1a1a2e; }
-          h1 { color: #6d28d9; font-size: 24px; border-bottom: 2px solid #6d28d9; padding-bottom: 8px; }
-          h2 { color: #1e40af; font-size: 20px; margin-top: 24px; }
-          h3 { color: #374151; font-size: 16px; margin-top: 16px; }
-          .section { margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
-          .note { color: #2563eb; font-style: italic; padding: 8px; border-left: 3px solid #2563eb; margin: 8px 0; background: #eff6ff; }
-          .exercise-answer { color: #2563eb; font-style: italic; border-bottom: 1px solid #93c5fd; padding: 4px 0; }
-          .badge { display: inline-block; background: #6d28d9; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 8px; }
-          .teacher-note { display: none; }
-          .footer { margin-top: 32px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: hsl(215 25% 27%); }
+          h1 { color: hsl(212 95% 50%); font-size: 24px; border-bottom: 2px solid hsl(212 95% 50%); padding-bottom: 8px; }
+          h2 { color: hsl(212 95% 40%); font-size: 20px; margin-top: 24px; }
+          h3 { color: hsl(215 25% 27%); font-size: 16px; margin-top: 16px; }
+          .section { margin-bottom: 20px; padding: 16px; border: 1px solid hsl(214 32% 91%); border-radius: 8px; }
+          .note { color: hsl(199 89% 48%); font-style: italic; white-space: pre-wrap; padding: 8px; min-height: 24px; border-left: 3px solid hsl(199 89% 48%); margin: 8px 0; background: hsl(199 89% 48% / 0.08); }
+          .exercise-answer { color: hsl(199 89% 48%); font-style: italic; white-space: pre-wrap; min-height: 24px; border-bottom: 1px solid hsl(199 89% 48% / 0.35); padding: 4px 0 8px; }
+          .badge { display: inline-block; background: hsl(212 95% 50%); color: hsl(0 0% 100%); padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 8px; }
+          .teacher-note, .no-print, .embedded-video { display: none !important; }
+          .pdf-video-url { display: block; margin-top: 6px; word-break: break-word; font-size: 12px; color: hsl(215 25% 27%); }
+          .footer { margin-top: 32px; text-align: center; font-size: 12px; color: hsl(215 16% 47%); border-top: 1px solid hsl(214 32% 91%); padding-top: 12px; }
           @media print { body { padding: 0; } .no-print { display: none; } }
         </style>
       </head>
@@ -143,12 +282,6 @@ export default function TeacherLessonView() {
       </div>
     );
   }
-
-  const screenContent = (guide?.screen_share_content as any[] | null) || [];
-  const objectives = (guide?.objectives as string[] | null) || [];
-  const practiceActivities = (guide?.practice_activities as any[] | null) || [];
-  const homeworkSuggestions = (guide?.homework_suggestions as string[] | null) || [];
-  const additionalResources = (guide?.additional_resources as any[] | null) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -305,7 +438,7 @@ export default function TeacherLessonView() {
                   {/* Exercise answer area */}
                   {section.type === 'exercise' && (
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Respostas do Aluno
                       </label>
@@ -313,14 +446,15 @@ export default function TeacherLessonView() {
                         value={exerciseAnswers[`exercise-${i}`] || ''}
                         onChange={(e) => updateAnswer(`exercise-${i}`, e.target.value)}
                         placeholder="Digite as respostas do aluno aqui..."
-                        className="w-full min-h-[80px] p-3 border-2 border-blue-200 rounded-lg text-blue-600 italic placeholder:text-blue-300 focus:border-blue-400 focus:outline-none resize-y bg-blue-50/50"
+                        data-pdf-kind="answer"
+                        className="w-full min-h-[80px] resize-y rounded-lg border-2 border-info/30 bg-info/10 p-3 text-info italic placeholder:text-info/50 focus:border-info focus:outline-none"
                       />
                     </div>
                   )}
 
                   {/* Teacher annotation area */}
                   <div className="mt-2">
-                    <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                       <PenLine className="h-3 w-3" />
                       Anotações
                     </label>
@@ -328,7 +462,8 @@ export default function TeacherLessonView() {
                       value={notes[`note-${i}`] || ''}
                       onChange={(e) => updateNote(`note-${i}`, e.target.value)}
                       placeholder="Adicione notas aqui..."
-                      className="w-full min-h-[48px] p-2 border border-blue-200 rounded-lg text-blue-600 italic placeholder:text-blue-300 focus:border-blue-400 focus:outline-none resize-y bg-transparent text-sm"
+                      data-pdf-kind="note"
+                      className="w-full min-h-[48px] resize-y rounded-lg border border-info/30 bg-transparent p-2 text-sm text-info italic placeholder:text-info/50 focus:border-info focus:outline-none"
                     />
                   </div>
                 </CardContent>
@@ -350,7 +485,7 @@ export default function TeacherLessonView() {
                       {lesson.content.substring(0, 3000)}
                     </div>
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Anotações
                       </label>
@@ -358,7 +493,8 @@ export default function TeacherLessonView() {
                         value={notes['lesson-content'] || ''}
                         onChange={(e) => updateNote('lesson-content', e.target.value)}
                         placeholder="Adicione notas aqui..."
-                        className="w-full min-h-[48px] p-2 border border-blue-200 rounded-lg text-blue-600 italic placeholder:text-blue-300 focus:border-blue-400 focus:outline-none resize-y bg-transparent text-sm"
+                        data-pdf-kind="note"
+                        className="w-full min-h-[48px] resize-y rounded-lg border border-info/30 bg-transparent p-2 text-sm text-info italic placeholder:text-info/50 focus:border-info focus:outline-none"
                       />
                     </div>
                   </CardContent>
@@ -379,7 +515,7 @@ export default function TeacherLessonView() {
                   <CardContent className="p-6">
                     <p className="text-sm whitespace-pre-line">{activity.description}</p>
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-blue-600 flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-info flex items-center gap-1 mb-1">
                         <PenLine className="h-3 w-3" />
                         Respostas / Anotações
                       </label>
@@ -387,7 +523,8 @@ export default function TeacherLessonView() {
                         value={exerciseAnswers[`activity-${i}`] || ''}
                         onChange={(e) => updateAnswer(`activity-${i}`, e.target.value)}
                         placeholder="Digite respostas e notas aqui..."
-                        className="w-full min-h-[80px] p-3 border-2 border-blue-200 rounded-lg text-blue-600 italic placeholder:text-blue-300 focus:border-blue-400 focus:outline-none resize-y bg-blue-50/50"
+                        data-pdf-kind="answer"
+                        className="w-full min-h-[80px] resize-y rounded-lg border-2 border-info/30 bg-info/10 p-3 text-info italic placeholder:text-info/50 focus:border-info focus:outline-none"
                       />
                     </div>
                   </CardContent>
@@ -424,20 +561,127 @@ export default function TeacherLessonView() {
               <CardHeader className="bg-muted/30 py-3">
                 <CardTitle className="text-base">Recursos Adicionais</CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <ul className="space-y-2">
-                  {additionalResources.map((res: any, i: number) => (
-                    <li key={i} className="text-sm">
-                      <span className="font-medium">{res.title}</span>
-                      {res.url && (
-                        <a href={res.url} target="_blank" rel="noopener noreferrer" className="text-primary ml-2 underline">
-                          Abrir ↗
-                        </a>
+              <CardContent className="p-6 space-y-4">
+                {additionalResources.map((res: any, i: number) => {
+                  const resourceUrl = typeof res.url === "string" ? res.url.trim() : "";
+                  const youtubeId = extractYouTubeId(resourceUrl);
+                  const isVideoResource = res.type === "video";
+                  const isEditingThisVideo = editingVideoIndex === i;
+
+                  return (
+                    <div key={i} className="space-y-3 rounded-xl border border-border bg-background p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{res.title}</span>
+                            {res.type && (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {res.type}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {isVideoResource && !resourceUrl && (
+                            <p className="text-sm text-muted-foreground">
+                              Adicione um link do YouTube para que o vídeo possa ser reproduzido dentro do site.
+                            </p>
+                          )}
+
+                          {isVideoResource && resourceUrl && !youtubeId && (
+                            <p className="text-sm text-muted-foreground">
+                              Esse recurso ainda usa um link externo. Troque por um link do YouTube para incorporar o vídeo aqui.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="no-print flex flex-wrap items-center gap-2">
+                          {resourceUrl && (
+                            <Button asChild variant="outline" size="sm">
+                              <a href={resourceUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                                Abrir link
+                              </a>
+                            </Button>
+                          )}
+
+                          {isAdmin && isVideoResource && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openVideoEditor(i, resourceUrl)}
+                            >
+                              <Video className="h-4 w-4" />
+                              {youtubeId ? "Editar YouTube" : "Adicionar YouTube"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {isAdmin && isVideoResource && isEditingThisVideo && (
+                        <div className="no-print space-y-3 rounded-lg border border-border bg-muted/40 p-3">
+                          <p className="text-sm font-medium">
+                            Cole um link do YouTube para tocar o vídeo dentro da aula.
+                          </p>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              value={videoDrafts[i] ?? resourceUrl}
+                              onChange={(e) => updateVideoDraft(i, e.target.value)}
+                              placeholder="https://www.youtube.com/watch?v=..."
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => saveVideoResource(i)}
+                                disabled={savingVideoIndex === i}
+                              >
+                                {savingVideoIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={closeVideoEditor}
+                                disabled={savingVideoIndex === i}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       )}
-                      {res.type && <Badge variant="outline" className="ml-2 text-xs">{res.type}</Badge>}
-                    </li>
-                  ))}
-                </ul>
+
+                      {youtubeId && (
+                        <div className="embedded-video no-print overflow-hidden rounded-xl border border-border bg-muted">
+                          <div className="aspect-video">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+                              title={res.title || `Vídeo ${i + 1}`}
+                              className="h-full w-full"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              referrerPolicy="strict-origin-when-cross-origin"
+                              allowFullScreen
+                              loading="lazy"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {resourceUrl && (
+                        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Link para o aluno revisar depois da aula
+                          </p>
+                          <p className="pdf-video-url mt-1 break-all text-sm text-foreground">
+                            {resourceUrl}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}
