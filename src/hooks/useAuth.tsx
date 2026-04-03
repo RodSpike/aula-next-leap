@@ -25,40 +25,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let hasHandledInitialSession = false;
-    
-    // Set up auth state listener
+
+    const applyAuthState = (nextSession: Session | null) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Only handle navigation on actual login events, NOT token refreshes
-        // TOKEN_REFRESHED and INITIAL_SESSION should never trigger redirects
-        const isRealLogin = event === 'SIGNED_IN' && !hasHandledInitialSession;
-        
+      (event, nextSession) => {
+        // Never wipe the current user on a transient null refresh payload.
+        if (event === 'TOKEN_REFRESHED') {
+          if (nextSession) {
+            applyAuthState(nextSession);
+          } else {
+            setLoading(false);
+          }
+          return;
+        }
+
         if (event === 'INITIAL_SESSION') {
+          applyAuthState(nextSession);
           hasHandledInitialSession = true;
           return;
         }
-        
-        if (event === 'TOKEN_REFRESHED') {
-          return; // Never redirect on token refresh
+
+        if (event === 'SIGNED_OUT') {
+          hasHandledInitialSession = false;
+          applyAuthState(null);
+          return;
         }
-        
-        if (isRealLogin && session?.user) {
+
+        applyAuthState(nextSession);
+
+        // Only handle navigation on actual login events, NOT token refreshes
+        const isRealLogin = event === 'SIGNED_IN' && !hasHandledInitialSession;
+
+        if (isRealLogin && nextSession?.user) {
           hasHandledInitialSession = true;
           setTimeout(async () => {
             try {
               const { data: profile } = await supabase
                 .from('profiles')
                 .select('birthdate, cambridge_level')
-                .eq('user_id', session.user.id)
+                .eq('user_id', nextSession.user.id)
                 .single();
 
               // Check if user is admin
               const { data: hasAdminRole } = await supabase.rpc('has_role', {
-                _user_id: session.user.id,
+                _user_id: nextSession.user.id,
                 _role: 'admin',
               });
 
@@ -88,10 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      applyAuthState(currentSession);
     });
 
     return () => subscription.unsubscribe();
