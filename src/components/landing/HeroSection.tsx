@@ -95,7 +95,7 @@ export const HeroSection = ({ hasActiveSubscription = false }: HeroSectionProps)
                 <>
                   <Button variant="hero" size="xl" asChild className="group text-lg">
                     <Link to="/signup">
-                      Começar Teste Grátis
+                      Assinar Agora
                       <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
