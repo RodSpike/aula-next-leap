@@ -185,36 +185,56 @@ export default function TeacherLanding() {
             <CardContent className="p-0">
               <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
                 <div className="p-8 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">1–4 alunos</p>
-                  <p className="text-2xl font-bold text-foreground mb-1">7 dias grátis</p>
-                  <p className="text-sm text-muted-foreground">Trial de acesso + comissão</p>
+                  <p className="text-sm text-muted-foreground mb-2">1º mês</p>
+                  <p className="text-2xl font-bold text-foreground mb-1">Mensalidade reduzida</p>
+                  <p className="text-sm text-muted-foreground">Obrigatório no primeiro mês + acesso completo + tag de professor</p>
                 </div>
                 <div className="p-8 text-center bg-primary/5">
                   <div className="inline-flex items-center gap-1 bg-primary/15 text-primary px-3 py-1 rounded-full text-xs font-medium mb-2">
                     <Star className="h-3 w-3" />
                     Popular
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">5+ alunos ativos</p>
+                  <p className="text-sm text-muted-foreground mb-2">5 alunos ativos</p>
                   <p className="text-2xl font-bold text-primary mb-1">Acesso Gratuito</p>
-                  <p className="text-sm text-muted-foreground">Plataforma 100% grátis pra você</p>
+                  <p className="text-sm text-muted-foreground">A partir do 2º mês, não paga mensalidade</p>
                 </div>
                 <div className="p-8 text-center">
                   <p className="text-sm text-muted-foreground mb-2">6+ alunos</p>
                   <p className="text-2xl font-bold text-foreground mb-1">20% comissão</p>
-                  <p className="text-sm text-muted-foreground">Por cada mensalidade paga</p>
+                  <p className="text-sm text-muted-foreground">Por cada aluno excedente (do 6º em diante), enquanto a conta estiver ativa</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6 border-muted">
+            <CardContent className="p-6">
+              <h3 className="font-semibold mb-3">Exemplo prático:</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li className="flex gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <span><strong>6 alunos:</strong> 5 garantem seu acesso gratuito + você recebe 20% do valor pago pelo 6º aluno.</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <span><strong>7 alunos:</strong> 5 garantem seu acesso + você recebe 20% do valor pago por 2 alunos (6º e 7º).</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <span><strong>10 alunos:</strong> 5 garantem seu acesso + você recebe 20% do valor pago por 5 alunos (do 6º ao 10º).</span>
+                </li>
+              </ul>
             </CardContent>
           </Card>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-primary" />
-              Sem taxa de adesão
+              Primeiro mês obrigatório (taxa reduzida)
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-primary" />
-              Pagamentos mensais
+              Pagamentos via PIX
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-primary" />
