@@ -284,6 +284,12 @@ export const AppSidebar = () => {
             <NavSection title="Social" items={socialNav} />
             <NavSection title="Ferramentas" items={toolsNav} />
             
+            {isTeacher && (
+              <NavSection title="Professor" items={[
+                { name: "Painel do Professor", href: "/teacher-dashboard", icon: GraduationCap, color: "text-blue-600" },
+              ]} />
+            )}
+
             {isAdmin && (
               <NavSection title="Admin" items={[
                 { name: "Painel Admin", href: "/admin", icon: Shield, color: "text-red-500" },
