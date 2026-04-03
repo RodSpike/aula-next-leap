@@ -35,7 +35,7 @@ export default function Welcome() {
         // Show success message
         toast({
           title: "Bem-vindo à Aula Click!",
-          description: "Sua assinatura foi ativada com sucesso. Aproveite seus 2 dias grátis!",
+          description: "Sua assinatura foi ativada com sucesso. Aproveite a plataforma!",
         });
 
         // Redirect to placement test after 3 seconds
