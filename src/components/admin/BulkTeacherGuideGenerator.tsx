@@ -136,7 +136,18 @@ export function BulkTeacherGuideGenerator() {
               {progress.current}/{progress.total} lições processadas
             </p>
           </div>
-        )}
+         )}
+
+        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Regerar existentes</p>
+              <p className="text-xs text-muted-foreground">Atualiza guias já gerados com o novo formato interativo</p>
+            </div>
+          </div>
+          <Switch checked={regenerateMode} onCheckedChange={setRegenerateMode} disabled={generating} />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {courses?.map((course) => {
