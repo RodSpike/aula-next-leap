@@ -1644,6 +1644,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          pix_key: string | null
           referral_code: string
           specialties: string[] | null
           status: string
@@ -1660,6 +1661,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          pix_key?: string | null
           referral_code: string
           specialties?: string[] | null
           status?: string
@@ -1676,6 +1678,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          pix_key?: string | null
           referral_code?: string
           specialties?: string[] | null
           status?: string
