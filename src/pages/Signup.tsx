@@ -414,11 +414,10 @@ export default function Signup() {
               </Link>
             </div>
             
-            {/* Trial Info */}
             <div className="bg-accent/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                ✓ 2 dias de acesso completo grátis<br />
-                ✓ Sem compromisso • Cancele quando quiser
+                ✓ Acesso a cursos interativos<br />
+                ✓ Comunidade ativa de estudantes
               </p>
             </div>
           </CardContent>
