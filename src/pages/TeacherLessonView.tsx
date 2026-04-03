@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { cleanHtmlContent } from "@/utils/cleanHtmlContent";
 import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
   MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video,
-  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon
+  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
