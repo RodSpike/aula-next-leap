@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   GraduationCap, Users, DollarSign, Copy, ExternalLink,
-  ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, Loader2, Save
+  ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, Loader2, Save,
+  Info, UserPlus, Link2, Share2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -231,6 +233,82 @@ export default function TeacherDashboard() {
               </p>
             </CardContent>
            </Card>
+        )}
+
+        {/* How it works - Instructions for teachers */}
+        {affiliate && (
+          <Card className="border-primary/20">
+            <CardHeader className="bg-primary/5 py-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" />
+                Como funciona o sistema de indicações
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-5">
+              {/* How new students register */}
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  Novo aluno — Como se cadastrar pelo seu link
+                </h3>
+                <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1">
+                  <li>Compartilhe seu <strong>link de indicação</strong> (acima) com o aluno via WhatsApp, e-mail ou redes sociais.</li>
+                  <li>O aluno abre o link e é direcionado para a página de cadastro com seu código já vinculado.</li>
+                  <li>Ao criar a conta, o aluno fica automaticamente vinculado a você como professor indicador.</li>
+                  <li>Você pode acompanhar as indicações na seção "Indicações Recentes" abaixo.</li>
+                </ol>
+              </div>
+
+              <Separator />
+
+              {/* How existing students can link */}
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
+                  <Link2 className="h-4 w-4 text-primary" />
+                  Aluno já cadastrado — Como vincular a você
+                </h3>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Se um aluno já possui conta na plataforma, ele pode se vincular a você de duas formas:</p>
+                  <ol className="list-decimal pl-5 space-y-1">
+                    <li>O aluno acessa seu <strong>link de indicação</strong> e faz login — o sistema reconhece o código e registra o vínculo.</li>
+                    <li>Ou informe seu <strong>código de indicação</strong> (<code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{affiliate.referral_code}</code>) para que o aluno insira na plataforma.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Commission rules */}
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  Regras de comissão e acesso
+                </h3>
+                <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                  <li>O <strong>primeiro mês</strong> é obrigatório (taxa reduzida para professores).</li>
+                  <li>A partir do <strong>segundo mês</strong>, com <strong>5 alunos ativos</strong> vinculados, seu acesso mensal é <strong>gratuito</strong>.</li>
+                  <li>A partir do <strong>6º aluno</strong>, você recebe <strong>20% do valor pago</strong> por cada aluno extra, enquanto a conta dele estiver ativa.</li>
+                  <li>Exemplo: 7 alunos → 5 garantem seu acesso gratuito + 20% de comissão sobre os 2 alunos adicionais.</li>
+                  <li>Cadastre sua <strong>chave PIX</strong> abaixo para receber os pagamentos.</li>
+                </ul>
+              </div>
+
+              <Separator />
+
+              {/* Tips */}
+              <div className="space-y-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
+                  <Share2 className="h-4 w-4 text-primary" />
+                  Dicas para compartilhar
+                </h3>
+                <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                  <li>Compartilhe o link nas suas redes sociais e grupos de WhatsApp.</li>
+                  <li>Na comunidade da plataforma, alunos veem sua <strong>tag de Professor</strong> — isso gera confiança e contatos para aulas particulares.</li>
+                  <li>Se tiver inatividade (0 alunos por 2 meses), seu acesso volta ao valor padrão de aluno.</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* PIX Key */}
