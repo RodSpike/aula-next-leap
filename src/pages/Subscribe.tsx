@@ -194,6 +194,26 @@ export default function Subscribe() {
       </header>
 
       <div className="max-w-5xl mx-auto p-4 py-8">
+        {referralCode && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <Gift className="h-6 w-6 text-primary" />
+                <span className="text-primary font-bold text-lg">Indicação de Professor</span>
+              </div>
+              <p className="text-foreground">
+                {teacherName 
+                  ? <>Você foi indicado pelo professor <strong>{teacherName}</strong>!</>
+                  : <>Você foi indicado por um professor parceiro!</>
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Escolha seu plano abaixo e comece a aprender inglês com acompanhamento personalizado.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Escolha seu Plano</h1>
           <p className="text-muted-foreground">Acesso completo a toda a plataforma Aula Click</p>
