@@ -105,15 +105,46 @@ serve(async (req) => {
       }
     }
 
+    // Fetch previous weeks' questions to avoid repetition
+    console.log("Fetching previous weeks' questions to avoid repetition...");
+    const { data: previousChallenges } = await supabase
+      .from('click_of_week_challenges')
+      .select('questions')
+      .order('created_at', { ascending: false })
+      .limit(4);
+
+    let previousQuestionsSummary = "";
+    if (previousChallenges && previousChallenges.length > 0) {
+      const pastQuestions: string[] = [];
+      for (const ch of previousChallenges) {
+        const qs = ch.questions as any[];
+        if (Array.isArray(qs)) {
+          for (const q of qs.slice(0, 15)) {
+            pastQuestions.push(q.question);
+          }
+        }
+      }
+      if (pastQuestions.length > 0) {
+        previousQuestionsSummary = `\n\nCRITICAL - DO NOT REPEAT THESE QUESTIONS OR SIMILAR PATTERNS from previous weeks:\n${pastQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nCreate completely NEW and DIFFERENT questions. Use different grammar topics, different vocabulary words, different sentence structures, and different scenarios. Be creative and varied!`;
+      }
+    }
+
     // Generate 50 questions using AI
     console.log("Generating 50 questions with AI...");
 
     const systemPrompt = `You are an expert English language teacher creating quiz questions for Brazilian students learning English.
 Generate exactly 50 multiple-choice questions testing English knowledge across these categories:
-- Grammar (verb tenses, articles, prepositions, conditionals)
-- Vocabulary (synonyms, antonyms, word meanings, idioms)
+- Grammar (verb tenses, articles, prepositions, conditionals, modal verbs, passive voice, reported speech, relative clauses)
+- Vocabulary (synonyms, antonyms, word meanings, idioms, phrasal verbs, collocations, word formation)
 - Reading comprehension (short passages with questions)
-- Common mistakes Brazilians make in English
+- Common mistakes Brazilians make in English (false cognates, preposition usage, word order)
+
+VARIETY IS ESSENTIAL - Each week must feel completely fresh:
+- Use different themes each time (travel, technology, food, sports, music, nature, work, health, etc.)
+- Rotate grammar topics - don't repeat the same structures
+- Use varied sentence contexts and scenarios
+- Mix formal and informal English
+- Include British and American English differences occasionally
 
 CRITICAL GRAMMAR RULES - YOU MUST FOLLOW THESE EXACTLY:
 
@@ -126,25 +157,22 @@ CRITICAL GRAMMAR RULES - YOU MUST FOLLOW THESE EXACTLY:
      * "AN umbrella" (correct - "umbrella" starts with vowel sound /ʌ/)
      * "A university" (correct - "university" starts with /juː/ consonant sound)
      * "AN hour" (correct - "hour" starts with vowel sound, H is silent)
-     * "A European" (correct - starts with /juː/ consonant sound)
-     * "AN honest person" (correct - H is silent, starts with vowel sound)
    - NEVER ask "a or an" where the answer depends on a word NOT shown in the options!
 
 2. For article questions, ALWAYS include the full phrase in the question and options.
-   BAD: "Choose a/an: ___ new car" with options ["a", "an"]
-   GOOD: "Complete: I bought ___ yesterday." with options ["a new car", "an new car", "the new car", "new car"]
 
 3. Double-check every answer before including it. The correct_answer index MUST match the actually correct option.
 
-4. Explanations must be accurate and educational. For article questions, always explain the SOUND rule.
+4. Explanations must be accurate and educational.
 
 Requirements:
 1. Each question must have exactly 4 options
-2. Questions should range from beginner to advanced
+2. Questions should range from beginner to advanced (roughly 15 easy, 20 medium, 15 hard)
 3. Include clear, accurate explanations for each correct answer
 4. Make questions engaging and practical
 5. Return ONLY valid JSON, no markdown
 6. VERIFY each answer is grammatically correct before including
+${previousQuestionsSummary}
 
 Return a JSON array with exactly 50 objects in this format:
 {
@@ -171,9 +199,9 @@ Return a JSON array with exactly 50 objects in this format:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: "Generate 50 diverse English quiz questions with mixed difficulty. IMPORTANT: Double-check every answer for grammatical accuracy, especially article usage (a/an). The correct_answer index must point to the genuinely correct option. Return only the JSON, no additional text." }
+          { role: "user", content: "Generate 50 completely NEW and UNIQUE English quiz questions with mixed difficulty. Do NOT reuse any question patterns from previous weeks. Use fresh themes, different grammar structures, and creative scenarios. Double-check every answer for accuracy. Return only the JSON." }
         ],
-        temperature: 0.5,
+        temperature: 0.7,
       }),
     });
 
