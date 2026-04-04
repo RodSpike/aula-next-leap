@@ -295,8 +295,6 @@ export default function ReferralLanding() {
                 Criar minha conta
               </Link>
             </Button>
-              </Link>
-            </Button>
             <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
               <Shield className="h-3 w-3" />
               Seus dados estão seguros. Cancele a qualquer momento.
