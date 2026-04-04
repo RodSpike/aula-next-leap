@@ -16,12 +16,16 @@ import ReferralLanding from "@/pages/ReferralLanding";
 
 export default function Signup() {
   const [searchParams] = useSearchParams();
-  const hasReferral = !!searchParams.get("ref");
+  const hasReferral = !!searchParams.get("ref") && !searchParams.get("form");
 
-  // If referral code present and not on /signup/form, show landing page
-  if (hasReferral && !searchParams.get("form")) {
+  if (hasReferral) {
     return <ReferralLanding />;
   }
+
+  return <SignupForm />;
+}
+
+function SignupForm() {
   usePageMeta({
     title: 'Criar Conta - Aula Click',
     description: 'Crie sua conta na Aula Click. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
