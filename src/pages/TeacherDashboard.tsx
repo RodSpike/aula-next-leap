@@ -58,9 +58,39 @@ export default function TeacherDashboard() {
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
+      
+      // Auto-create affiliate record for teachers/admins who don't have one
+      if (!data && (isAdmin || isTeacher)) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, email")
+          .eq("user_id", user.id)
+          .single();
+        
+        const referralCode = `PROF${user.id.substring(0, 6).toUpperCase()}`;
+        const { data: newAffiliate, error: insertError } = await supabase
+          .from("teacher_affiliates")
+          .insert({
+            user_id: user.id,
+            full_name: profile?.display_name || profile?.email || user.email || "Professor",
+            cpf: "",
+            referral_code: referralCode,
+            commission_rate: 20,
+            status: "approved",
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error("Error auto-creating affiliate:", insertError);
+          return null;
+        }
+        return newAffiliate;
+      }
+      
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !adminLoading && !teacherLoading,
   });
 
   const { data: referrals } = useQuery({
@@ -214,22 +244,39 @@ export default function TeacherDashboard() {
         )}
 
         {/* Referral Link */}
-        {affiliate?.status === "approved" && (
+        {affiliate && referralUrl && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Seu Link de Indicação</CardTitle>
+              <CardTitle className="text-lg">Seu Link e Código de Indicação</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-4 py-2 text-sm font-mono truncate">
-                  {referralUrl}
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Link de indicação</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="flex-1 bg-muted rounded-lg px-4 py-2 text-sm font-mono truncate">
+                    {referralUrl}
+                  </div>
+                  <Button onClick={copyLink} variant="outline" size="icon">
+                    <Copy className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button onClick={copyLink} variant="outline" size="icon">
-                  <Copy className="h-4 w-4" />
-                </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Compartilhe este link com seus alunos. Cada inscrição gera comissão para você.
+              <div>
+                <Label className="text-xs text-muted-foreground">Código de indicação</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="bg-muted rounded-lg px-4 py-2 text-sm font-mono">
+                    {affiliate.referral_code}
+                  </div>
+                  <Button onClick={() => {
+                    navigator.clipboard.writeText(affiliate.referral_code);
+                    toast({ title: "Código copiado!" });
+                  }} variant="outline" size="icon">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Compartilhe o link ou código com seus alunos. Cada inscrição gera comissão para você.
               </p>
             </CardContent>
            </Card>
