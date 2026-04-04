@@ -516,7 +516,7 @@ export default function TeacherLessonView() {
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   {/* Admin image upload */}
-                  {isAdmin && !section.image_url && (
+                  {canEdit && !section.image_url && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -542,7 +542,7 @@ export default function TeacherLessonView() {
                         className="section-image max-w-full max-h-[300px] rounded-xl border border-border object-contain"
                         loading="lazy"
                       />
-                      {isAdmin && (
+                      {canEdit && (
                         <div className="flex gap-2 no-print">
                           <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => triggerSectionImageUpload(i)}>
                             <RotateCcw className="h-3 w-3" /> Trocar
@@ -556,7 +556,7 @@ export default function TeacherLessonView() {
                   )}
 
                   {/* Section content - with HTML cleaning */}
-                  {editingSectionContent === i && isAdmin ? (
+                  {editingSectionContent === i && canEdit ? (
                     <div className="space-y-2 no-print">
                       <Textarea
                         value={sectionContentDraft}
@@ -577,7 +577,7 @@ export default function TeacherLessonView() {
                   ) : (
                     <div className="relative group">
                       <div className="text-sm whitespace-pre-line leading-relaxed">{cleanHtmlContent(section.content)}</div>
-                      {isAdmin && (
+                      {canEdit && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -774,12 +774,12 @@ export default function TeacherLessonView() {
           )}
 
           {/* Additional Resources */}
-          {(additionalResources.length > 0 || isAdmin) && (
+          {(additionalResources.length > 0 || canEdit) && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Recursos Adicionais</CardTitle>
-                  {isAdmin && (
+                  {canEdit && (
                     <Button type="button" variant="outline" size="sm" className="no-print" onClick={() => setAddingResource(true)}>
                       <Plus className="h-4 w-4" /> Adicionar
                     </Button>
@@ -813,12 +813,12 @@ export default function TeacherLessonView() {
                               </a>
                             </Button>
                           )}
-                          {isAdmin && isVideoResource && (
+                          {canEdit && isVideoResource && (
                             <Button type="button" variant="secondary" size="sm" onClick={() => openVideoEditor(i, resourceUrl)}>
                               <Video className="h-4 w-4" /> {youtubeId ? "Editar YouTube" : "Adicionar YouTube"}
                             </Button>
                           )}
-                          {isAdmin && (
+                          {canEdit && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
@@ -840,7 +840,7 @@ export default function TeacherLessonView() {
                         </div>
                       </div>
 
-                      {isAdmin && isVideoResource && isEditingThisVideo && (
+                      {canEdit && isVideoResource && isEditingThisVideo && (
                         <div className="no-print space-y-3 rounded-lg border border-border bg-muted/40 p-3">
                           <p className="text-sm font-medium">Cole um link do YouTube.</p>
                           <div className="flex flex-col gap-2 sm:flex-row">
@@ -883,7 +883,7 @@ export default function TeacherLessonView() {
                 })}
 
                 {/* Add new resource form */}
-                {isAdmin && addingResource && (
+                {canEdit && addingResource && (
                   <div className="no-print space-y-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
                     <p className="text-sm font-semibold">Novo Recurso</p>
                     <div className="flex gap-2">
