@@ -58,9 +58,39 @@ export default function TeacherDashboard() {
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
+      
+      // Auto-create affiliate record for teachers/admins who don't have one
+      if (!data && (isAdmin || isTeacher)) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, email")
+          .eq("user_id", user.id)
+          .single();
+        
+        const referralCode = `PROF${user.id.substring(0, 6).toUpperCase()}`;
+        const { data: newAffiliate, error: insertError } = await supabase
+          .from("teacher_affiliates")
+          .insert({
+            user_id: user.id,
+            full_name: profile?.display_name || profile?.email || user.email || "Professor",
+            cpf: "",
+            referral_code: referralCode,
+            commission_rate: 20,
+            status: "approved",
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error("Error auto-creating affiliate:", insertError);
+          return null;
+        }
+        return newAffiliate;
+      }
+      
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !adminLoading && !teacherLoading,
   });
 
   const { data: referrals } = useQuery({
