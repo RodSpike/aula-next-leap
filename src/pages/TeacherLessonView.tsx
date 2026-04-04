@@ -117,6 +117,19 @@ export default function TeacherLessonView() {
     enabled: !!user,
   });
 
+  const { data: isTeacherRole = false } = useQuery({
+    queryKey: ["teacher-guide-teacher-access", user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "teacher" });
+      return data === true;
+    },
+    enabled: !!user,
+  });
+
+  // Teachers and admins can edit guides
+  const canEdit = isAdmin || isTeacherRole;
+
   const screenContent = (guide?.screen_share_content as any[] | null) || [];
   const objectives = (guide?.objectives as string[] | null) || [];
   const practiceActivities = (guide?.practice_activities as any[] | null) || [];
