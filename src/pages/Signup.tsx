@@ -7,13 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, User, Chrome, Gift } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import ReferralLanding from "@/pages/ReferralLanding";
 
 export default function Signup() {
+  const [searchParams] = useSearchParams();
+  const hasReferral = !!searchParams.get("ref") && !searchParams.get("form");
+
+  if (hasReferral) {
+    return <ReferralLanding />;
+  }
+
+  return <SignupForm />;
+}
+
+function SignupForm() {
   usePageMeta({
     title: 'Criar Conta - Aula Click',
     description: 'Crie sua conta na Aula Click. Aprenda inglês online com cursos interativos, tutor com IA e comunidade ativa.',
