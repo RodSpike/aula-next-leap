@@ -244,22 +244,39 @@ export default function TeacherDashboard() {
         )}
 
         {/* Referral Link */}
-        {affiliate?.status === "approved" && (
+        {affiliate && referralUrl && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Seu Link de Indicação</CardTitle>
+              <CardTitle className="text-lg">Seu Link e Código de Indicação</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-4 py-2 text-sm font-mono truncate">
-                  {referralUrl}
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Link de indicação</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="flex-1 bg-muted rounded-lg px-4 py-2 text-sm font-mono truncate">
+                    {referralUrl}
+                  </div>
+                  <Button onClick={copyLink} variant="outline" size="icon">
+                    <Copy className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button onClick={copyLink} variant="outline" size="icon">
-                  <Copy className="h-4 w-4" />
-                </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Compartilhe este link com seus alunos. Cada inscrição gera comissão para você.
+              <div>
+                <Label className="text-xs text-muted-foreground">Código de indicação</Label>
+                <div className="flex gap-2 mt-1">
+                  <div className="bg-muted rounded-lg px-4 py-2 text-sm font-mono">
+                    {affiliate.referral_code}
+                  </div>
+                  <Button onClick={() => {
+                    navigator.clipboard.writeText(affiliate.referral_code);
+                    toast({ title: "Código copiado!" });
+                  }} variant="outline" size="icon">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Compartilhe o link ou código com seus alunos. Cada inscrição gera comissão para você.
               </p>
             </CardContent>
            </Card>
