@@ -127,8 +127,8 @@ export default function TeacherLessonView() {
     enabled: !!user,
   });
 
-  // Teachers and admins can edit guides
-  const canEdit = isAdmin || isTeacherRole;
+  // Only admins can edit guides (teachers who are also admins)
+  const canEdit = isAdmin;
 
   const screenContent = (guide?.screen_share_content as any[] | null) || [];
   const objectives = (guide?.objectives as string[] | null) || [];
