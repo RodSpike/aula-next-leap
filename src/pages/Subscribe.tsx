@@ -52,6 +52,29 @@ export default function Subscribe() {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Capture referral code from URL or sessionStorage
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [teacherName, setTeacherName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ref = searchParams.get('ref') || sessionStorage.getItem('teacher_referral_code');
+    if (ref) {
+      setReferralCode(ref);
+      sessionStorage.setItem('teacher_referral_code', ref);
+      // Look up teacher name
+      supabase
+        .from("teacher_affiliates")
+        .select("full_name")
+        .eq("referral_code", ref)
+        .eq("status", "approved")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.full_name) setTeacherName(data.full_name);
+        });
+    }
+  }, [searchParams]);
 
   const [checkingAccess, setCheckingAccess] = useState(true);
 
