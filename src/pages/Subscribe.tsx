@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard, ArrowLeft, Crown } from "lucide-react";
+import { Check, CreditCard, ArrowLeft, Crown, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +52,29 @@ export default function Subscribe() {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Capture referral code from URL or sessionStorage
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [teacherName, setTeacherName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ref = searchParams.get('ref') || sessionStorage.getItem('teacher_referral_code');
+    if (ref) {
+      setReferralCode(ref);
+      sessionStorage.setItem('teacher_referral_code', ref);
+      // Look up teacher name
+      supabase
+        .from("teacher_affiliates")
+        .select("full_name")
+        .eq("referral_code", ref)
+        .eq("status", "approved")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.full_name) setTeacherName(data.full_name);
+        });
+    }
+  }, [searchParams]);
 
   const [checkingAccess, setCheckingAccess] = useState(true);
 
@@ -171,6 +194,26 @@ export default function Subscribe() {
       </header>
 
       <div className="max-w-5xl mx-auto p-4 py-8">
+        {referralCode && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-6 text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <Gift className="h-6 w-6 text-primary" />
+                <span className="text-primary font-bold text-lg">Indicação de Professor</span>
+              </div>
+              <p className="text-foreground">
+                {teacherName 
+                  ? <>Você foi indicado pelo professor <strong>{teacherName}</strong>!</>
+                  : <>Você foi indicado por um professor parceiro!</>
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Escolha seu plano abaixo e comece a aprender inglês com acompanhamento personalizado.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Escolha seu Plano</h1>
           <p className="text-muted-foreground">Acesso completo a toda a plataforma Aula Click</p>

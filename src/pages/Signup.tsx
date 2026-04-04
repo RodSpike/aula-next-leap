@@ -227,16 +227,28 @@ export default function Signup() {
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center space-y-2">
             {referralCode ? (
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Gift className="h-6 w-6 text-primary" />
-                <span className="bg-gradient-primary bg-clip-text text-transparent font-semibold">
-                  Indicação de Professor
-                </span>
+              <div className="space-y-3 mb-2">
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Gift className="h-6 w-6 text-primary" />
+                    <span className="text-primary font-bold text-lg">
+                      Indicação de Professor
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Você foi indicado por um professor parceiro! Crie sua conta para garantir acesso com <strong className="text-primary">condições especiais</strong>.
+                  </p>
+                </div>
               </div>
             ) : null}
-            <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              {referralCode ? "Crie sua conta e assine" : "Crie sua conta"}
+            </CardTitle>
             <p className="text-muted-foreground">
-              Comece sua jornada de aprendizado hoje mesmo
+              {referralCode 
+                ? "Cadastre-se para acessar os planos com desconto de indicação"
+                : "Comece sua jornada de aprendizado hoje mesmo"
+              }
             </p>
           </CardHeader>
           
@@ -420,6 +432,11 @@ export default function Signup() {
               <p className="text-sm text-muted-foreground">
                 ✓ Acesso a cursos interativos<br />
                 ✓ Comunidade ativa de estudantes
+                {referralCode && (
+                  <>
+                    <br />✓ <strong className="text-primary">Desconto especial por indicação</strong>
+                  </>
+                )}
               </p>
             </div>
           </CardContent>
