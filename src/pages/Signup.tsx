@@ -432,6 +432,11 @@ export default function Signup() {
               <p className="text-sm text-muted-foreground">
                 ✓ Acesso a cursos interativos<br />
                 ✓ Comunidade ativa de estudantes
+                {referralCode && (
+                  <>
+                    <br />✓ <strong className="text-primary">Desconto especial por indicação</strong>
+                  </>
+                )}
               </p>
             </div>
           </CardContent>
