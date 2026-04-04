@@ -291,8 +291,10 @@ export default function ReferralLanding() {
               Crie sua conta e escolha seu plano para ter acesso completo.
             </p>
             <Button size="lg" variant="hero" className="w-full text-lg py-6" asChild>
-              <Link to={`/signup/form?ref=${referralCode}`}>
+              <Link to={`/signup?ref=${referralCode}&form=1`}>
                 Criar minha conta
+              </Link>
+            </Button>
               </Link>
             </Button>
             <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
