@@ -1639,7 +1639,7 @@ export type Database = {
         Row: {
           bio: string | null
           commission_rate: number
-          cpf: string
+          cpf: string | null
           cpf_verified: boolean
           created_at: string
           full_name: string
@@ -1656,7 +1656,7 @@ export type Database = {
         Insert: {
           bio?: string | null
           commission_rate?: number
-          cpf: string
+          cpf?: string | null
           cpf_verified?: boolean
           created_at?: string
           full_name: string
@@ -1673,7 +1673,7 @@ export type Database = {
         Update: {
           bio?: string | null
           commission_rate?: number
-          cpf?: string
+          cpf?: string | null
           cpf_verified?: boolean
           created_at?: string
           full_name?: string
