@@ -11,7 +11,7 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   GraduationCap, Users, DollarSign, Copy, ExternalLink,
   ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, Loader2, Save,
-  Info, UserPlus, Link2, Share2
+  Info, UserPlus, Link2, Share2, Eye, EyeOff
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
