@@ -26,7 +26,7 @@ export default function TeacherDashboard() {
 
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
+  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
 
   const { data: isAdmin, isLoading: adminLoading } = useQuery({
     queryKey: ["is-admin", user?.id],
