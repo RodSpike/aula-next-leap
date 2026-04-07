@@ -591,9 +591,20 @@ export default function TeacherLessonView() {
                   )}
 
                   {section.teacher_notes && (
-                    <div className="teacher-note bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary">
-                      <p className="font-semibold mb-1">📌 Nota do Professor:</p>
-                      <p>{cleanHtmlContent(section.teacher_notes)}</p>
+                    <div className="teacher-note">
+                      <button
+                        type="button"
+                        onClick={() => setNotes(prev => ({ ...prev, [`teacher-note-open-${i}`]: prev[`teacher-note-open-${i}`] ? '' : 'open' }))}
+                        className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors py-1"
+                      >
+                        📌 Notas do Professor
+                        {notes[`teacher-note-open-${i}`] ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                      {notes[`teacher-note-open-${i}`] && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-primary mt-1">
+                          <p>{cleanHtmlContent(section.teacher_notes)}</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
