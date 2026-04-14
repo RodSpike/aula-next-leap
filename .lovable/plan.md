@@ -1,67 +1,49 @@
 
 
-## Plan: AI-Generated Flashcards and Illustrative Images for Lessons and Teacher Guides
+## Plan: Allow Admins to Add New Sections to Teacher Guides
 
-### Overview
-Add flashcards and AI-generated images to the teacher guide generation flow. The AI will produce flashcard data and image descriptions as part of the guide JSON. Images will be generated via the Lovable AI Gateway's image generation model and stored in Supabase Storage. Flashcards will be interactive in the lesson view and included in PDF exports.
+### What will change
 
-### Architecture
+Admins will see an "Adicionar Seção" button at the bottom of the screen share content area in `TeacherLessonView.tsx`. Clicking it opens an inline form where they can:
 
-```text
-generate-teacher-guide (Edge Function)
-  ├── Step 1: Call text AI → JSON with flashcards[] + image_prompts[]
-  ├── Step 2: For each image_prompt, call Lovable AI image generation
-  ├── Step 3: Upload images to Supabase Storage (new bucket)
-  ├── Step 4: Replace image prompts with public URLs in JSON
-  └── Step 5: Upsert guide with flashcards + images into teacher_guides
-```
+1. **Choose section type**: Lição, Revisão, Vocabulário, Exercício, Diálogo, Conteúdo Adicional
+2. **Add a title** for the section
+3. **Add content text** (textarea)
+4. **Upload an image** (optional)
+5. **Toggle "Respostas do Aluno"** checkbox -- if checked, the section type is set to `exercise`, which already renders the student answer textarea
+6. **Teacher notes** field is always included automatically (a textarea for the admin to write teacher-only notes)
 
-### Changes
+On save, the new section object is appended to the `screen_share_content` JSON array in the `teacher_guides` table. The existing rendering logic already handles all these fields (`content`, `image_url`, `teacher_notes`, exercise answer fields for `type === 'exercise'`).
 
-**1. Database Migration**
-- Add `flashcards` (JSONB) column to `teacher_guides` table
-- Create a `teacher-guide-images` storage bucket (public)
+Additionally, admins will get a **delete section** button (with confirmation) and a **reorder** capability (move up/down) on each existing section.
 
-Flashcard structure:
-```json
-[
-  {
-    "front": "What does 'resilient' mean?",
-    "back": "Able to recover quickly from difficulties",
-    "image_url": "https://...",
-    "category": "vocabulary"
-  }
-]
-```
+### Technical details
 
-**2. Update Edge Function (`generate-teacher-guide/index.ts`)**
-- Expand the AI prompt to include `flashcards` (5-8 per lesson) and `image_suggestions` in the JSON output
-- Each `image_suggestion` has: `description` (prompt for image gen), `style` ("illustration" or "realistic"), `placement` (which section it belongs to)
-- After getting the text JSON, loop through `image_suggestions` and call the Lovable AI image generation endpoint (`google/gemini-2.5-flash-image`)
-- Upload each generated image to `teacher-guide-images` bucket
-- Replace descriptions with public URLs in the final data
-- Save `flashcards` and updated `screen_share_content` (with `image_url` fields) to DB
+**File**: `src/pages/TeacherLessonView.tsx`
 
-**3. Update `TeacherLessonView.tsx`**
-- Render images inline within `screen_share_content` sections when `image_url` is present
-- Add a new **Flashcards** section after the screen share content:
-  - Card flip interaction (click to reveal answer)
-  - Show image on front if available
-  - Include in PDF export as a table (front | back)
-- Images appear in PDF export as `<img>` tags
+1. **New state variables**:
+   - `addingSection` (boolean)
+   - `newSection` object: `{ title, content, type, teacher_notes, include_student_answers, image_file }`
 
-**4. Update `BulkTeacherGuideGenerator.tsx`**
-- No structural changes needed; bulk generation will automatically include flashcards and images since the edge function handles everything
+2. **"Adicionar Seção" button**: Rendered after the last section card, visible only when `canEdit` is true. Opens the inline form.
 
-### Key Considerations
-- Image generation adds ~3-5 seconds per image; limit to 3-5 images per guide to keep generation under 30 seconds total
-- Use `google/gemini-2.5-flash-image` for speed; fall back gracefully if image generation fails (guide still saves without images)
-- Flashcards work without images too; images are an enhancement
-- PDF export will inline the images using their public URLs
+3. **Save handler** (`addNewSection`):
+   - If image file provided, upload to `teacher-guide-images` bucket
+   - Build section object: `{ type, title, content, teacher_notes, image_url? }`
+   - If `include_student_answers` is checked, set `type = 'exercise'`
+   - Append to `screen_share_content` array
+   - Update `teacher_guides` table
+   - Invalidate query
 
-### Files to Create/Edit
-- `supabase/migrations/` — new migration for `flashcards` column + storage bucket
-- `supabase/functions/generate-teacher-guide/index.ts` — add flashcards to prompt, add image generation loop
-- `src/pages/TeacherLessonView.tsx` — render flashcards section + inline images
-- `src/integrations/supabase/types.ts` — auto-updated after migration
+4. **Delete section** (`deleteSection`):
+   - Remove section from array by index
+   - Update `teacher_guides` table
+   - Uses AlertDialog for confirmation
+
+5. **Move section up/down** (`moveSectionUp`, `moveSectionDown`):
+   - Swap array elements
+   - Update `teacher_guides` table
+
+### No database changes needed
+The `screen_share_content` column is already a JSONB array -- we just append new objects to it.
 
