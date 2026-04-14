@@ -593,7 +593,40 @@ export default function TeacherLessonView() {
                       {!['exercise', 'vocabulary', 'dialogue', 'explanation', 'example'].includes(section.type) && <BookOpen className="h-4 w-4 text-primary" />}
                       {section.title}
                     </CardTitle>
-                    <Badge variant="outline" className="text-xs capitalize">{section.type}</Badge>
+                    <div className="flex items-center gap-1">
+                      {canEdit && (
+                        <div className="flex items-center gap-1 no-print">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveSection(i, 'up')} disabled={i === 0}>
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveSection(i, 'down')} disabled={i === screenContent.length - 1}>
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir seção?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  A seção "{section.title}" será removida permanentemente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteSection(i)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                      <Badge variant="outline" className="text-xs capitalize">{section.type}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
