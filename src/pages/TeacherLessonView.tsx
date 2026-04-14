@@ -253,6 +253,73 @@ export default function TeacherLessonView() {
     }
   }, [editingSectionContent, lessonId, guide, screenContent, sectionContentDraft, queryClient, toast]);
 
+  const addNewSection = useCallback(async () => {
+    if (!lessonId || !guide) return;
+    if (!newSectionTitle.trim()) {
+      toast({ title: "Título obrigatório", variant: "destructive" });
+      return;
+    }
+    try {
+      setSavingNewSection(true);
+      let imageUrl: string | undefined;
+      if (newSectionImageFile) {
+        const ext = newSectionImageFile.name.split('.').pop() || 'jpg';
+        const fileName = `${lessonId}/${Date.now()}-new-section.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("teacher-guide-images")
+          .upload(fileName, newSectionImageFile, { contentType: newSectionImageFile.type, upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage.from("teacher-guide-images").getPublicUrl(fileName);
+        imageUrl = publicUrlData?.publicUrl;
+      }
+      const sectionType = newSectionIncludeAnswers ? 'exercise' : newSectionType;
+      const newSection: any = {
+        type: sectionType,
+        title: newSectionTitle.trim(),
+        content: newSectionContent.trim(),
+        teacher_notes: newSectionTeacherNotes.trim() || "",
+      };
+      if (imageUrl) newSection.image_url = imageUrl;
+      const updatedContent = [...screenContent, newSection];
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setAddingSection(false);
+      setNewSectionTitle(""); setNewSectionContent(""); setNewSectionTeacherNotes("");
+      setNewSectionType("lesson"); setNewSectionIncludeAnswers(false); setNewSectionImageFile(null);
+      toast({ title: "Seção adicionada com sucesso" });
+    } catch (error: any) {
+      toast({ title: "Erro ao adicionar seção", description: error.message, variant: "destructive" });
+    } finally { setSavingNewSection(false); }
+  }, [lessonId, guide, newSectionTitle, newSectionContent, newSectionTeacherNotes, newSectionType, newSectionIncludeAnswers, newSectionImageFile, screenContent, queryClient, toast]);
+
+  const deleteSection = useCallback(async (index: number) => {
+    if (!lessonId || !guide) return;
+    const updatedContent = screenContent.filter((_, i) => i !== index);
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Seção removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
+
+  const moveSection = useCallback(async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= screenContent.length || !lessonId || !guide) return;
+    const updatedContent = [...screenContent];
+    [updatedContent[index], updatedContent[targetIndex]] = [updatedContent[targetIndex], updatedContent[index]];
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
+
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
     const updatedResources = additionalResources.filter((_, i) => i !== index);
