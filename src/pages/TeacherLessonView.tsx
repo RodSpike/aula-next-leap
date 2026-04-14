@@ -19,7 +19,8 @@ import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
   MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video,
-  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save
+  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
