@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useCallback } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { cleanHtmlContent } from "@/utils/cleanHtmlContent";
@@ -16,7 +19,8 @@ import {
   Loader2, ArrowLeft, BookOpen, Target, Clock, Lightbulb,
   Users, CheckCircle, FileDown, PenLine, ChevronDown, ChevronUp,
   MessageSquare, Home as HomeIcon, Monitor, ExternalLink, Video,
-  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save
+  Trash2, Plus, FileText as FileTextIcon, Link as LinkIcon, RotateCcw, Image as ImageIcon, Save,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -69,6 +73,17 @@ export default function TeacherLessonView() {
   const [editingSectionContent, setEditingSectionContent] = useState<number | null>(null);
   const [sectionContentDraft, setSectionContentDraft] = useState("");
   const [savingSectionContent, setSavingSectionContent] = useState(false);
+  // Add section state
+  const [addingSection, setAddingSection] = useState(false);
+  const [newSectionType, setNewSectionType] = useState("lesson");
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [newSectionContent, setNewSectionContent] = useState("");
+  const [newSectionTeacherNotes, setNewSectionTeacherNotes] = useState("");
+  const [newSectionIncludeAnswers, setNewSectionIncludeAnswers] = useState(false);
+  const [newSectionImageFile, setNewSectionImageFile] = useState<File | null>(null);
+  const [savingNewSection, setSavingNewSection] = useState(false);
+  const [deletingSectionIndex, setDeletingSectionIndex] = useState<number | null>(null);
+  const newSectionImageRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
@@ -237,6 +252,73 @@ export default function TeacherLessonView() {
       setSavingSectionContent(false);
     }
   }, [editingSectionContent, lessonId, guide, screenContent, sectionContentDraft, queryClient, toast]);
+
+  const addNewSection = useCallback(async () => {
+    if (!lessonId || !guide) return;
+    if (!newSectionTitle.trim()) {
+      toast({ title: "Título obrigatório", variant: "destructive" });
+      return;
+    }
+    try {
+      setSavingNewSection(true);
+      let imageUrl: string | undefined;
+      if (newSectionImageFile) {
+        const ext = newSectionImageFile.name.split('.').pop() || 'jpg';
+        const fileName = `${lessonId}/${Date.now()}-new-section.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("teacher-guide-images")
+          .upload(fileName, newSectionImageFile, { contentType: newSectionImageFile.type, upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage.from("teacher-guide-images").getPublicUrl(fileName);
+        imageUrl = publicUrlData?.publicUrl;
+      }
+      const sectionType = newSectionIncludeAnswers ? 'exercise' : newSectionType;
+      const newSection: any = {
+        type: sectionType,
+        title: newSectionTitle.trim(),
+        content: newSectionContent.trim(),
+        teacher_notes: newSectionTeacherNotes.trim() || "",
+      };
+      if (imageUrl) newSection.image_url = imageUrl;
+      const updatedContent = [...screenContent, newSection];
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      setAddingSection(false);
+      setNewSectionTitle(""); setNewSectionContent(""); setNewSectionTeacherNotes("");
+      setNewSectionType("lesson"); setNewSectionIncludeAnswers(false); setNewSectionImageFile(null);
+      toast({ title: "Seção adicionada com sucesso" });
+    } catch (error: any) {
+      toast({ title: "Erro ao adicionar seção", description: error.message, variant: "destructive" });
+    } finally { setSavingNewSection(false); }
+  }, [lessonId, guide, newSectionTitle, newSectionContent, newSectionTeacherNotes, newSectionType, newSectionIncludeAnswers, newSectionImageFile, screenContent, queryClient, toast]);
+
+  const deleteSection = useCallback(async (index: number) => {
+    if (!lessonId || !guide) return;
+    const updatedContent = screenContent.filter((_, i) => i !== index);
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+      toast({ title: "Seção removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
+
+  const moveSection = useCallback(async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= screenContent.length || !lessonId || !guide) return;
+    const updatedContent = [...screenContent];
+    [updatedContent[index], updatedContent[targetIndex]] = [updatedContent[targetIndex], updatedContent[index]];
+    try {
+      const { error } = await supabase.from("teacher_guides").update({ screen_share_content: updatedContent }).eq("lesson_id", lessonId);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["teacher-guide", lessonId] });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  }, [lessonId, guide, screenContent, queryClient, toast]);
 
   const deleteResource = useCallback(async (index: number) => {
     if (!lessonId || !guide) return;
@@ -511,7 +593,40 @@ export default function TeacherLessonView() {
                       {!['exercise', 'vocabulary', 'dialogue', 'explanation', 'example'].includes(section.type) && <BookOpen className="h-4 w-4 text-primary" />}
                       {section.title}
                     </CardTitle>
-                    <Badge variant="outline" className="text-xs capitalize">{section.type}</Badge>
+                    <div className="flex items-center gap-1">
+                      {canEdit && (
+                        <div className="flex items-center gap-1 no-print">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveSection(i, 'up')} disabled={i === 0}>
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => moveSection(i, 'down')} disabled={i === screenContent.length - 1}>
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir seção?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  A seção "{section.title}" será removida permanentemente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteSection(i)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                      <Badge variant="outline" className="text-xs capitalize">{section.type}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
@@ -695,7 +810,134 @@ export default function TeacherLessonView() {
             </>
           )}
 
-          {/* Flashcards Section */}
+          {/* Add Section Button - Admin Only */}
+          {canEdit && guide && (
+            <div className="no-print">
+              {!addingSection ? (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-dashed border-2 py-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => setAddingSection(true)}
+                >
+                  <Plus className="h-5 w-5" />
+                  Adicionar Seção
+                </Button>
+              ) : (
+                <Card className="border-primary/30">
+                  <CardHeader className="bg-primary/5 py-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-primary" />
+                      Nova Seção
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Tipo da Seção</Label>
+                        <Select value={newSectionType} onValueChange={setNewSectionType}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lesson">Lição</SelectItem>
+                            <SelectItem value="review">Revisão</SelectItem>
+                            <SelectItem value="vocabulary">Vocabulário</SelectItem>
+                            <SelectItem value="exercise">Exercício</SelectItem>
+                            <SelectItem value="dialogue">Diálogo</SelectItem>
+                            <SelectItem value="additional">Conteúdo Adicional</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Título</Label>
+                        <Input
+                          value={newSectionTitle}
+                          onChange={(e) => setNewSectionTitle(e.target.value)}
+                          placeholder="Ex: Present Perfect - Review"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Conteúdo</Label>
+                      <Textarea
+                        value={newSectionContent}
+                        onChange={(e) => setNewSectionContent(e.target.value)}
+                        placeholder="Digite o conteúdo da seção..."
+                        className="min-h-[120px]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Notas do Professor (automático)</Label>
+                      <Textarea
+                        value={newSectionTeacherNotes}
+                        onChange={(e) => setNewSectionTeacherNotes(e.target.value)}
+                        placeholder="Notas visíveis apenas para o professor..."
+                        className="min-h-[60px] border-primary/30 bg-primary/5"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="include-answers"
+                          checked={newSectionIncludeAnswers}
+                          onCheckedChange={(checked) => setNewSectionIncludeAnswers(checked === true)}
+                        />
+                        <Label htmlFor="include-answers" className="text-sm cursor-pointer">
+                          Incluir campo de respostas do aluno
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Imagem (opcional)</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={newSectionImageRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast({ title: "Arquivo muito grande", description: "Máximo 5MB", variant: "destructive" });
+                                return;
+                              }
+                              setNewSectionImageFile(file);
+                            }
+                          }}
+                        />
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => newSectionImageRef.current?.click()}>
+                          <ImageIcon className="h-4 w-4" />
+                          {newSectionImageFile ? newSectionImageFile.name : "Escolher imagem"}
+                        </Button>
+                        {newSectionImageFile && (
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setNewSectionImageFile(null)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={addNewSection} disabled={savingNewSection} className="gap-2">
+                        {savingNewSection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        Salvar Seção
+                      </Button>
+                      <Button variant="outline" onClick={() => { setAddingSection(false); setNewSectionImageFile(null); }}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+
           {flashcards.length > 0 && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
