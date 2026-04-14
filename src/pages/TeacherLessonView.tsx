@@ -810,7 +810,134 @@ export default function TeacherLessonView() {
             </>
           )}
 
-          {/* Flashcards Section */}
+          {/* Add Section Button - Admin Only */}
+          {canEdit && guide && (
+            <div className="no-print">
+              {!addingSection ? (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-dashed border-2 py-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => setAddingSection(true)}
+                >
+                  <Plus className="h-5 w-5" />
+                  Adicionar Seção
+                </Button>
+              ) : (
+                <Card className="border-primary/30">
+                  <CardHeader className="bg-primary/5 py-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-primary" />
+                      Nova Seção
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Tipo da Seção</Label>
+                        <Select value={newSectionType} onValueChange={setNewSectionType}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lesson">Lição</SelectItem>
+                            <SelectItem value="review">Revisão</SelectItem>
+                            <SelectItem value="vocabulary">Vocabulário</SelectItem>
+                            <SelectItem value="exercise">Exercício</SelectItem>
+                            <SelectItem value="dialogue">Diálogo</SelectItem>
+                            <SelectItem value="additional">Conteúdo Adicional</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Título</Label>
+                        <Input
+                          value={newSectionTitle}
+                          onChange={(e) => setNewSectionTitle(e.target.value)}
+                          placeholder="Ex: Present Perfect - Review"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Conteúdo</Label>
+                      <Textarea
+                        value={newSectionContent}
+                        onChange={(e) => setNewSectionContent(e.target.value)}
+                        placeholder="Digite o conteúdo da seção..."
+                        className="min-h-[120px]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Notas do Professor (automático)</Label>
+                      <Textarea
+                        value={newSectionTeacherNotes}
+                        onChange={(e) => setNewSectionTeacherNotes(e.target.value)}
+                        placeholder="Notas visíveis apenas para o professor..."
+                        className="min-h-[60px] border-primary/30 bg-primary/5"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="include-answers"
+                          checked={newSectionIncludeAnswers}
+                          onCheckedChange={(checked) => setNewSectionIncludeAnswers(checked === true)}
+                        />
+                        <Label htmlFor="include-answers" className="text-sm cursor-pointer">
+                          Incluir campo de respostas do aluno
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Imagem (opcional)</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={newSectionImageRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast({ title: "Arquivo muito grande", description: "Máximo 5MB", variant: "destructive" });
+                                return;
+                              }
+                              setNewSectionImageFile(file);
+                            }
+                          }}
+                        />
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => newSectionImageRef.current?.click()}>
+                          <ImageIcon className="h-4 w-4" />
+                          {newSectionImageFile ? newSectionImageFile.name : "Escolher imagem"}
+                        </Button>
+                        {newSectionImageFile && (
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setNewSectionImageFile(null)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={addNewSection} disabled={savingNewSection} className="gap-2">
+                        {savingNewSection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        Salvar Seção
+                      </Button>
+                      <Button variant="outline" onClick={() => { setAddingSection(false); setNewSectionImageFile(null); }}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+
           {flashcards.length > 0 && (
             <Card>
               <CardHeader className="bg-muted/30 py-3">
