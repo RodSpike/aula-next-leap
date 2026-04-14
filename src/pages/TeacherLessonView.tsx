@@ -73,6 +73,17 @@ export default function TeacherLessonView() {
   const [editingSectionContent, setEditingSectionContent] = useState<number | null>(null);
   const [sectionContentDraft, setSectionContentDraft] = useState("");
   const [savingSectionContent, setSavingSectionContent] = useState(false);
+  // Add section state
+  const [addingSection, setAddingSection] = useState(false);
+  const [newSectionType, setNewSectionType] = useState("lesson");
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [newSectionContent, setNewSectionContent] = useState("");
+  const [newSectionTeacherNotes, setNewSectionTeacherNotes] = useState("");
+  const [newSectionIncludeAnswers, setNewSectionIncludeAnswers] = useState(false);
+  const [newSectionImageFile, setNewSectionImageFile] = useState<File | null>(null);
+  const [savingNewSection, setSavingNewSection] = useState(false);
+  const [deletingSectionIndex, setDeletingSectionIndex] = useState<number | null>(null);
+  const newSectionImageRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   usePageMeta({
